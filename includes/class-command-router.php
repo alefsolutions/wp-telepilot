@@ -48,6 +48,12 @@ class TelePress_Command_Router {
 			case '/help':
 				return $this->handle_help( $identity );
 
+			case '/menu':
+				return $this->handle_menu( $identity );
+
+			case '/settings':
+				return $this->handle_settings( $identity );
+
 			case '/link':
 				return $this->handle_link( $command, $update );
 
@@ -57,6 +63,7 @@ class TelePress_Command_Router {
 			case '/chatid':
 				return $this->handle_chat_id( $identity );
 
+			case '/site':
 			case '/dashboard':
 				return $this->handle_dashboard( $identity );
 
@@ -167,7 +174,7 @@ class TelePress_Command_Router {
 		if ( ! empty( $identity['wp_user'] ) && $identity['wp_user'] instanceof WP_User ) {
 			$message = sprintf(
 				/* translators: 1: WordPress display name, 2: Telegram chat ID. */
-				__( "TelePress is connected to WordPress user %1$s.\n\nCurrent chat ID: %2$s\n\nUse /help to see commands available to your account.", 'telepress' ),
+				__( "TelePress is connected to WordPress user %1$s.\n\nCurrent chat ID: %2$s\n\nUse /menu to open the command hub or /site to view your site overview.", 'telepress' ),
 				$identity['wp_user']->display_name,
 				$chat_id
 			);
@@ -176,7 +183,8 @@ class TelePress_Command_Router {
 		return TelePress_Telegram_Response_Builder::success(
 			$message,
 			array(
-				'command' => '/start',
+				'command'      => '/start',
+				'reply_markup' => $this->build_home_keyboard( $identity ),
 			)
 		);
 	}
@@ -194,13 +202,15 @@ class TelePress_Command_Router {
 
 		$commands[] = __( 'Available now:', 'telepress' );
 		$commands[] = '/start';
-			$commands[] = '/help';
-			$commands[] = '/chatid';
-			$commands[] = '/link CODE';
+		$commands[] = '/help';
+		$commands[] = '/menu';
+		$commands[] = '/site';
+		$commands[] = '/chatid';
+		$commands[] = '/link CODE';
 
 		if ( ! empty( $identity['wp_user'] ) && $identity['wp_user'] instanceof WP_User ) {
 			$commands[] = '/unlink';
-			$commands[] = '/dashboard';
+			$commands[] = '/settings';
 			if ( $this->permission_service->user_can( $identity['wp_user'], 'moderate_comments' ) ) {
 				$commands[] = '/comments pending';
 			}
@@ -240,7 +250,54 @@ class TelePress_Command_Router {
 		return TelePress_Telegram_Response_Builder::success(
 			implode( "\n", $commands ),
 			array(
-				'command' => '/help',
+				'command'      => '/help',
+				'reply_markup' => $this->build_home_keyboard( $identity ),
+			)
+		);
+	}
+
+	private function handle_menu( $identity ) {
+		$permission_result = $this->permission_service->require_capability( $identity, 'read' );
+
+		if ( true !== $permission_result ) {
+			return $permission_result;
+		}
+
+		return TelePress_Telegram_Response_Builder::success(
+			__(
+				"TelePress Menu\nChoose an area below. Lists stay in Telegram, while longer editing still belongs in WordPress.",
+				'telepress'
+			),
+			array(
+				'command'      => '/menu',
+				'reply_markup' => $this->build_home_keyboard( $identity ),
+			)
+		);
+	}
+
+	private function handle_settings( $identity ) {
+		$permission_result = $this->permission_service->require_capability( $identity, 'manage_options' );
+
+		if ( true !== $permission_result ) {
+			return $permission_result;
+		}
+
+		$settings = get_option( 'telepress_settings', array() );
+		$url      = admin_url( 'admin.php?page=telepress' );
+
+		return TelePress_Telegram_Response_Builder::success(
+			sprintf(
+				__(
+					"TelePress Settings\nAdmin URL: %1$s\nTransport: %2$s\nLinking: %3$s",
+					'telepress'
+				),
+				$url,
+				! empty( $settings['transport_mode'] ) ? ucfirst( (string) $settings['transport_mode'] ) : __( 'Webhook', 'telepress' ),
+				! empty( $settings['linking_enabled'] ) ? __( 'Enabled', 'telepress' ) : __( 'Disabled', 'telepress' )
+			),
+			array(
+				'command'      => '/settings',
+				'reply_markup' => $this->build_home_keyboard( $identity ),
 			)
 		);
 	}
@@ -263,6 +320,16 @@ class TelePress_Command_Router {
 	}
 
 	private function handle_link( $command, $update ) {
+		$private_chat_result = $this->require_private_action(
+			array(
+				'chat_type' => isset( $update['message']['chat']['type'] ) ? sanitize_key( $update['message']['chat']['type'] ) : '',
+			)
+		);
+
+		if ( true !== $private_chat_result ) {
+			return $private_chat_result;
+		}
+
 		if ( empty( $command['args'][0] ) ) {
 			return TelePress_Telegram_Response_Builder::error(
 				__( 'Usage: `/link CODE`', 'telepress' ),
@@ -290,6 +357,12 @@ class TelePress_Command_Router {
 	}
 
 	private function handle_unlink( $identity ) {
+		$private_chat_result = $this->require_private_action( $identity );
+
+		if ( true !== $private_chat_result ) {
+			return $private_chat_result;
+		}
+
 		$link_result = $this->permission_service->require_linked_user( $identity );
 
 		if ( true !== $link_result ) {
@@ -333,8 +406,9 @@ class TelePress_Command_Router {
 		return TelePress_Telegram_Response_Builder::success(
 			$this->dashboard_service->render_summary_message( $summary ),
 			array(
-				'command' => '/dashboard',
-				'data'    => $summary,
+				'command'      => '/site',
+				'data'         => $summary,
+				'reply_markup' => $this->dashboard_service->build_overview_keyboard( $identity['wp_user'] ),
 			)
 		);
 	}
@@ -358,6 +432,12 @@ class TelePress_Command_Router {
 					'reply_markup' => $this->comments_service->build_pending_keyboard( $comments, $identity['telegram_user_id'] ),
 				)
 			);
+		}
+
+		$private_chat_result = $this->require_private_action( $identity );
+
+		if ( true !== $private_chat_result ) {
+			return $private_chat_result;
 		}
 
 		$comment_id = ! empty( $command['args'][1] ) ? absint( $command['args'][1] ) : 0;
@@ -406,6 +486,12 @@ class TelePress_Command_Router {
 	}
 
 	private function handle_comment_callback( $command, $identity ) {
+		$private_chat_result = $this->require_private_action( $identity );
+
+		if ( true !== $private_chat_result ) {
+			return $private_chat_result;
+		}
+
 		$permission_result = $this->permission_service->require_capability( $identity, 'moderate_comments' );
 
 		if ( true !== $permission_result ) {
@@ -512,7 +598,10 @@ class TelePress_Command_Router {
 		if ( 'stats' === $subcommand ) {
 			return TelePress_Telegram_Response_Builder::success(
 				$this->posts_service->render_stats_message( $this->posts_service->stats() ),
-				array( 'command' => '/posts' )
+				array(
+					'command'      => '/posts',
+					'reply_markup' => $this->build_home_keyboard( $identity ),
+				)
 			);
 		}
 
@@ -522,6 +611,11 @@ class TelePress_Command_Router {
 		}
 
 		if ( 'publish' === $subcommand ) {
+			$private_chat_result = $this->require_private_action( $identity );
+			if ( true !== $private_chat_result ) {
+				return $private_chat_result;
+			}
+
 			$permission_result = $this->permission_service->require_capability( $identity, 'publish_posts' );
 			if ( true !== $permission_result ) {
 				return $permission_result;
@@ -545,6 +639,11 @@ class TelePress_Command_Router {
 		}
 
 		if ( 'unpublish' === $subcommand ) {
+			$private_chat_result = $this->require_private_action( $identity );
+			if ( true !== $private_chat_result ) {
+				return $private_chat_result;
+			}
+
 			$permission_result = $this->permission_service->require_capability( $identity, 'edit_post', $post_id );
 			if ( true !== $permission_result ) {
 				return $permission_result;
@@ -563,6 +662,11 @@ class TelePress_Command_Router {
 	}
 
 	private function handle_post_callback( $command, $identity ) {
+		$private_chat_result = $this->require_private_action( $identity );
+		if ( true !== $private_chat_result ) {
+			return $private_chat_result;
+		}
+
 		$post_action = isset( $command['args'][0] ) ? (string) $command['args'][0] : '';
 		$post_id     = isset( $command['args'][1] ) ? absint( $command['args'][1] ) : 0;
 		$token       = isset( $command['args'][2] ) ? (string) $command['args'][2] : '';
@@ -632,6 +736,11 @@ class TelePress_Command_Router {
 		}
 
 		if ( 'publish' === $subcommand ) {
+			$private_chat_result = $this->require_private_action( $identity );
+			if ( true !== $private_chat_result ) {
+				return $private_chat_result;
+			}
+
 			$permission_result = $this->permission_service->require_capability( $identity, 'publish_pages' );
 			if ( true !== $permission_result ) {
 				return $permission_result;
@@ -651,6 +760,11 @@ class TelePress_Command_Router {
 		}
 
 		if ( 'draft' === $subcommand ) {
+			$private_chat_result = $this->require_private_action( $identity );
+			if ( true !== $private_chat_result ) {
+				return $private_chat_result;
+			}
+
 			$permission_result = $this->permission_service->require_capability( $identity, 'edit_page', $page_id );
 			if ( true !== $permission_result ) {
 				return $permission_result;
@@ -666,6 +780,11 @@ class TelePress_Command_Router {
 		}
 
 		if ( in_array( $subcommand, array( 'trash', 'restore' ), true ) ) {
+			$private_chat_result = $this->require_private_action( $identity );
+			if ( true !== $private_chat_result ) {
+				return $private_chat_result;
+			}
+
 			$permission_result = $this->permission_service->require_capability( $identity, 'edit_page', $page_id );
 			if ( true !== $permission_result ) {
 				return $permission_result;
@@ -684,6 +803,11 @@ class TelePress_Command_Router {
 	}
 
 	private function handle_page_callback( $command, $identity ) {
+		$private_chat_result = $this->require_private_action( $identity );
+		if ( true !== $private_chat_result ) {
+			return $private_chat_result;
+		}
+
 		$page_action = isset( $command['args'][0] ) ? (string) $command['args'][0] : '';
 		$page_id     = isset( $command['args'][1] ) ? absint( $command['args'][1] ) : 0;
 		$token       = isset( $command['args'][2] ) ? (string) $command['args'][2] : '';
@@ -764,6 +888,11 @@ class TelePress_Command_Router {
 
 		$attachment_id = ! empty( $args[1] ) ? absint( $args[1] ) : 0;
 		if ( 'delete' === $subcommand && $attachment_id ) {
+			$private_chat_result = $this->require_private_action( $identity );
+			if ( true !== $private_chat_result ) {
+				return $private_chat_result;
+			}
+
 			$permission_result = $this->permission_service->require_capability( $identity, 'delete_post', $attachment_id );
 			if ( true !== $permission_result ) {
 				return $permission_result;
@@ -782,6 +911,11 @@ class TelePress_Command_Router {
 	}
 
 	private function handle_media_callback( $command, $identity ) {
+		$private_chat_result = $this->require_private_action( $identity );
+		if ( true !== $private_chat_result ) {
+			return $private_chat_result;
+		}
+
 		$action        = isset( $command['args'][0] ) ? (string) $command['args'][0] : '';
 		$attachment_id = isset( $command['args'][1] ) ? absint( $command['args'][1] ) : 0;
 		$token         = isset( $command['args'][2] ) ? (string) $command['args'][2] : '';
@@ -821,6 +955,11 @@ class TelePress_Command_Router {
 	}
 
 	private function handle_users( $command, $identity ) {
+		$private_chat_result = $this->require_private_action( $identity );
+		if ( true !== $private_chat_result ) {
+			return $private_chat_result;
+		}
+
 		$permission_result = $this->permission_service->require_capability( $identity, 'list_users' );
 		if ( true !== $permission_result ) {
 			return $permission_result;
@@ -972,6 +1111,11 @@ class TelePress_Command_Router {
 	}
 
 	private function handle_user_callback( $command, $identity ) {
+		$private_chat_result = $this->require_private_action( $identity );
+		if ( true !== $private_chat_result ) {
+			return $private_chat_result;
+		}
+
 		$action  = isset( $command['args'][0] ) ? (string) $command['args'][0] : '';
 		$user_id = isset( $command['args'][1] ) ? absint( $command['args'][1] ) : 0;
 		$token   = isset( $command['args'][2] ) ? (string) $command['args'][2] : '';
@@ -1159,6 +1303,11 @@ class TelePress_Command_Router {
 		}
 
 		if ( 'create' === $subcommand ) {
+			$private_chat_result = $this->require_private_action( $identity );
+			if ( true !== $private_chat_result ) {
+				return $private_chat_result;
+			}
+
 			$name = implode( ' ', array_slice( $args, 1 ) );
 			if ( '' === trim( $name ) ) {
 				return TelePress_Telegram_Response_Builder::error( sprintf( __( 'Usage: `/%1$s create Name`', 'telepress' ), $resource ) );
@@ -1178,6 +1327,11 @@ class TelePress_Command_Router {
 		$term_id = ! empty( $args[1] ) ? absint( $args[1] ) : 0;
 
 		if ( 'rename' === $subcommand && $term_id ) {
+			$private_chat_result = $this->require_private_action( $identity );
+			if ( true !== $private_chat_result ) {
+				return $private_chat_result;
+			}
+
 			$name = implode( ' ', array_slice( $args, 2 ) );
 			if ( '' === trim( $name ) ) {
 				return TelePress_Telegram_Response_Builder::error( sprintf( __( 'Usage: `/%1$s rename 12 New Name`', 'telepress' ), $resource ) );
@@ -1195,6 +1349,11 @@ class TelePress_Command_Router {
 		}
 
 		if ( 'delete' === $subcommand && $term_id ) {
+			$private_chat_result = $this->require_private_action( $identity );
+			if ( true !== $private_chat_result ) {
+				return $private_chat_result;
+			}
+
 			return TelePress_Telegram_Response_Builder::success(
 				sprintf( __( 'Confirm delete for %1$s #%2$d', 'telepress' ), rtrim( $resource, 's' ), $term_id ),
 				array(
@@ -1208,6 +1367,11 @@ class TelePress_Command_Router {
 	}
 
 	private function handle_term_callback( $command, $identity ) {
+		$private_chat_result = $this->require_private_action( $identity );
+		if ( true !== $private_chat_result ) {
+			return $private_chat_result;
+		}
+
 		$taxonomy = isset( $command['args'][0] ) ? (string) $command['args'][0] : '';
 		$action   = isset( $command['args'][1] ) ? (string) $command['args'][1] : '';
 		$term_id  = isset( $command['args'][2] ) ? absint( $command['args'][2] ) : 0;
@@ -1253,5 +1417,62 @@ class TelePress_Command_Router {
 		}
 
 		return array( $args, $page );
+	}
+
+	private function require_private_action( $identity ) {
+		return $this->permission_service->require_private_chat( $identity );
+	}
+
+	private function build_home_keyboard( $identity ) {
+		$rows   = array();
+		$rows[] = array(
+			array(
+				'text'          => __( 'Site Overview', 'telepress' ),
+				'callback_data' => '/site',
+			),
+			array(
+				'text'          => __( 'Menu', 'telepress' ),
+				'callback_data' => '/menu',
+			),
+		);
+
+		if ( ! empty( $identity['wp_user'] ) && $identity['wp_user'] instanceof WP_User ) {
+			if ( $this->permission_service->user_can( $identity['wp_user'], 'edit_posts' ) ) {
+				$rows[] = array(
+					array(
+						'text'          => __( 'Posts', 'telepress' ),
+						'callback_data' => '/posts latest',
+					),
+					array(
+						'text'          => __( 'Pages', 'telepress' ),
+						'callback_data' => '/pages list',
+					),
+				);
+			}
+
+			if ( $this->permission_service->user_can( $identity['wp_user'], 'moderate_comments' ) ) {
+				$rows[] = array(
+					array(
+						'text'          => __( 'Comments', 'telepress' ),
+						'callback_data' => '/comments pending',
+					),
+					array(
+						'text'          => __( 'Media', 'telepress' ),
+						'callback_data' => '/media recent',
+					),
+				);
+			}
+
+			if ( $this->permission_service->user_can( $identity['wp_user'], 'list_users' ) ) {
+				$rows[] = array(
+					array(
+						'text'          => __( 'Users', 'telepress' ),
+						'callback_data' => '/users list',
+					),
+				);
+			}
+		}
+
+		return TelePress_Telegram_Response_Builder::keyboard( $rows );
 	}
 }

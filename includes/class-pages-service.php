@@ -143,15 +143,18 @@ class TelePress_Pages_Service {
 			)
 		);
 
-		return TelePress_Telegram_Response_Builder::keyboard(
-			array(
+		return TelePress_Telegram_Response_Builder::append_rows(
+			TelePress_Telegram_Response_Builder::keyboard(
 				array(
 					array(
-						'text'          => sprintf( __( 'Confirm %1$s #%2$d', 'telepress' ), ucfirst( $action ), $page_id ),
-						'callback_data' => 'tp:page:' . $action . ':' . (int) $page_id . ':' . $token,
+						array(
+							'text'          => sprintf( __( 'Confirm %1$s #%2$d', 'telepress' ), ucfirst( $action ), $page_id ),
+							'callback_data' => 'tp:page:' . $action . ':' . (int) $page_id . ':' . $token,
+						),
 					),
-				),
-			)
+				)
+			),
+			$this->navigation_rows()
 		);
 	}
 
@@ -201,7 +204,10 @@ class TelePress_Pages_Service {
 			$rows[] = $pagination;
 		}
 
-		return TelePress_Telegram_Response_Builder::keyboard( $rows );
+		return TelePress_Telegram_Response_Builder::append_rows(
+			TelePress_Telegram_Response_Builder::keyboard( $rows ),
+			$this->navigation_rows()
+		);
 	}
 
 	private function build_pagination_row( $subcommand, $search_term, $page, $total_pages ) {
@@ -286,6 +292,21 @@ class TelePress_Pages_Service {
 			'per_page'    => $limit,
 			'total_items' => (int) $query->found_posts,
 			'total_pages' => max( 1, (int) $query->max_num_pages ),
+		);
+	}
+
+	private function navigation_rows() {
+		return array(
+			array(
+				array(
+					'text'          => __( 'Menu', 'telepress' ),
+					'callback_data' => '/menu',
+				),
+				array(
+					'text'          => __( 'Site', 'telepress' ),
+					'callback_data' => '/site',
+				),
+			),
 		);
 	}
 }

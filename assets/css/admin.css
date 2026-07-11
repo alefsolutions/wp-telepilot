@@ -1,14 +1,15 @@
 :root {
-  --telepress-orange: #ff6600;
-  --telepress-navy: #002b5c;
+  --telepress-accent: #0ea5d3;
+  --telepress-accent-strong: #0b88af;
+  --telepress-charcoal: #1f2933;
   --telepress-ink: #1f2933;
-  --telepress-muted: #5f6b76;
-  --telepress-light: #f5f7fa;
-  --telepress-border: #d9e2ec;
-  --telepress-success: #13795b;
-  --telepress-success-bg: #ecfdf3;
-  --telepress-warn: #a15c00;
-  --telepress-warn-bg: #fff7ed;
+  --telepress-muted: #52606d;
+  --telepress-light: #f3f7f9;
+  --telepress-border: #d5dde3;
+  --telepress-success: #0f766e;
+  --telepress-success-bg: #ecfeff;
+  --telepress-warn: #9a6700;
+  --telepress-warn-bg: #fff8db;
   --telepress-danger: #b42318;
   --telepress-danger-bg: #fef3f2;
 }
@@ -21,8 +22,8 @@
   min-height: calc(100vh - 32px);
   padding: 32px;
   background:
-    radial-gradient(circle at top, rgba(255, 102, 0, 0.08), transparent 25rem),
-    linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
+    radial-gradient(circle at top, rgba(14, 165, 211, 0.12), transparent 25rem),
+    linear-gradient(180deg, #f8fbfd 0%, #eef4f7 100%);
   color: var(--telepress-ink);
 }
 
@@ -40,10 +41,22 @@
   padding: 32px;
   border-radius: 32px;
   background:
-    radial-gradient(circle at top right, rgba(255, 102, 0, 0.18), transparent 18rem),
-    linear-gradient(135deg, #002b5c, #001c3d);
+    radial-gradient(circle at top right, rgba(14, 165, 211, 0.24), transparent 18rem),
+    linear-gradient(135deg, #1f2933, #111827);
   color: #fff;
-  box-shadow: 0 28px 70px rgba(0, 43, 92, 0.22);
+  box-shadow: 0 28px 70px rgba(15, 23, 42, 0.22);
+}
+
+.telepress-hero-copy {
+  display: flex;
+  flex-direction: column;
+}
+
+.telepress-hero-logo {
+  width: 72px;
+  height: auto;
+  margin-bottom: 18px;
+  filter: drop-shadow(0 10px 24px rgba(14, 165, 211, 0.24));
 }
 
 .telepress-kicker,
@@ -74,7 +87,7 @@
 }
 
 .telepress-panel h2 {
-  color: var(--telepress-navy);
+  color: var(--telepress-charcoal);
   font-size: 28px;
 }
 
@@ -97,6 +110,9 @@
 .telepress-hero-card {
   padding: 24px;
   color: var(--telepress-ink);
+  background:
+    linear-gradient(180deg, rgba(14, 165, 211, 0.08), rgba(255, 255, 255, 0.94)),
+    #fff;
 }
 
 .telepress-badge,
@@ -140,7 +156,7 @@
 
 .telepress-hero-metrics strong {
   display: block;
-  color: var(--telepress-navy);
+  color: var(--telepress-charcoal);
   font-size: 22px;
 }
 
@@ -173,7 +189,7 @@
 }
 
 .telepress-section-label {
-  color: var(--telepress-orange);
+  color: var(--telepress-accent);
 }
 
 .telepress-tabs {
@@ -184,10 +200,10 @@
 
 .telepress-tab {
   padding: 10px 16px;
-  border: 1px solid rgba(0, 43, 92, 0.12);
+  border: 1px solid rgba(31, 41, 51, 0.12);
   border-radius: 999px;
   background: #fff;
-  color: var(--telepress-navy);
+  color: var(--telepress-charcoal);
   cursor: pointer;
   font-weight: 700;
 }
@@ -195,8 +211,8 @@
 .telepress-tab.is-active,
 .telepress-tab:hover,
 .telepress-tab:focus {
-  border-color: var(--telepress-orange);
-  color: var(--telepress-orange);
+  border-color: var(--telepress-accent);
+  color: var(--telepress-accent);
   outline: none;
 }
 
@@ -233,7 +249,7 @@
 .telepress-field span,
 .telepress-check span {
   font-weight: 700;
-  color: var(--telepress-navy);
+  color: var(--telepress-charcoal);
 }
 
 .telepress-field small,
@@ -269,8 +285,9 @@
 
 .telepress-field input:focus,
 .telepress-field textarea:focus {
-  border-color: var(--telepress-orange);
+  border-color: var(--telepress-accent);
   outline: none;
+  box-shadow: 0 0 0 3px rgba(14, 165, 211, 0.14);
 }
 
 .telepress-checkbox-grid {
@@ -300,7 +317,7 @@
   padding: 12px 22px;
   border: 0;
   border-radius: 999px;
-  background: var(--telepress-orange);
+  background: linear-gradient(135deg, var(--telepress-accent), var(--telepress-accent-strong));
   box-shadow: none;
   text-shadow: none;
   font-weight: 700;
@@ -308,7 +325,7 @@
 
 .telepress-actions .button-primary:hover,
 .telepress-actions .button-primary:focus {
-  background: #e75c00;
+  background: linear-gradient(135deg, var(--telepress-accent-strong), #086f90);
 }
 
 .telepress-status-list {
@@ -362,7 +379,13 @@
 }
 
 .telepress-table th {
-  color: var(--telepress-navy);
+  color: var(--telepress-charcoal);
+}
+
+.telepress-hero-note {
+  margin: 18px 0 0;
+  color: var(--telepress-muted);
+  line-height: 1.7;
 }
 
 .telepress-table td,

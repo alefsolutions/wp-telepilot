@@ -49,4 +49,17 @@ class TelePress_Permission_Service {
 			)
 		);
 	}
+
+	public function require_private_chat( $identity ) {
+		if ( ! empty( $identity['chat_type'] ) && 'private' === $identity['chat_type'] ) {
+			return true;
+		}
+
+		return TelePress_Telegram_Response_Builder::error(
+			__( 'This action is only available in a private chat with your TelePress bot.', 'telepress' ),
+			array(
+				'code' => 'telepress_private_chat_required',
+			)
+		);
+	}
 }

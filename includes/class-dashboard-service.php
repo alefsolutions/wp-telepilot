@@ -5,7 +5,15 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 class TelePress_Dashboard_Service {
+	const CACHE_KEY = 'telepress_dashboard_summary';
+
 	public function get_summary() {
+		$cached = get_transient( self::CACHE_KEY );
+
+		if ( is_array( $cached ) ) {
+			return $cached;
+		}
+
 		global $wpdb;
 
 		$health_label         = $this->get_health_label();
@@ -16,7 +24,7 @@ class TelePress_Dashboard_Service {
 		$update_counts        = $this->get_update_counts();
 		$database_version     = method_exists( $wpdb, 'db_version' ) ? $wpdb->db_version() : '';
 
-		return array(
+		$summary = array(
 			'site_name'             => get_bloginfo( 'name' ),
 			'site_url'              => home_url( '/' ),
 			'wordpress_version'     => get_bloginfo( 'version' ),
@@ -30,11 +38,15 @@ class TelePress_Dashboard_Service {
 			'pending_comments'      => $pending_comments,
 			'pending_updates'       => $update_counts,
 		);
+
+		set_transient( self::CACHE_KEY, $summary, MINUTE_IN_SECONDS );
+
+		return $summary;
 	}
 
 	public function render_summary_message( $summary ) {
 		$lines   = array();
-		$lines[] = __( 'Dashboard Summary', 'telepress' );
+		$lines[] = __( 'Site Overview', 'telepress' );
 		$lines[] = sprintf( __( 'Site: %s', 'telepress' ), $summary['site_name'] );
 		$lines[] = sprintf( __( 'URL: %s', 'telepress' ), $summary['site_url'] );
 		$lines[] = sprintf( __( 'WordPress: %s', 'telepress' ), $summary['wordpress_version'] );
@@ -53,6 +65,57 @@ class TelePress_Dashboard_Service {
 		);
 
 		return implode( "\n", $lines );
+	}
+
+	public function build_overview_keyboard( $wp_user ) {
+		$rows   = array();
+		$rows[] = array(
+			array(
+				'text'          => __( 'Refresh', 'telepress' ),
+				'callback_data' => '/site',
+			),
+			array(
+				'text'          => __( 'Menu', 'telepress' ),
+				'callback_data' => '/menu',
+			),
+		);
+
+		if ( $wp_user instanceof WP_User && user_can( $wp_user, 'edit_posts' ) ) {
+			$rows[] = array(
+				array(
+					'text'          => __( 'Posts', 'telepress' ),
+					'callback_data' => '/posts latest',
+				),
+				array(
+					'text'          => __( 'Pages', 'telepress' ),
+					'callback_data' => '/pages list',
+				),
+			);
+		}
+
+		if ( $wp_user instanceof WP_User && user_can( $wp_user, 'moderate_comments' ) ) {
+			$rows[] = array(
+				array(
+					'text'          => __( 'Comments', 'telepress' ),
+					'callback_data' => '/comments pending',
+				),
+				array(
+					'text'          => __( 'Media', 'telepress' ),
+					'callback_data' => '/media recent',
+				),
+			);
+		}
+
+		if ( $wp_user instanceof WP_User && user_can( $wp_user, 'list_users' ) ) {
+			$rows[] = array(
+				array(
+					'text'          => __( 'Users', 'telepress' ),
+					'callback_data' => '/users list',
+				),
+			);
+		}
+
+		return TelePress_Telegram_Response_Builder::keyboard( $rows );
 	}
 
 	private function get_health_label() {

@@ -7,6 +7,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 class TelePress_Activator {
 	public static function activate() {
 		TelePress_Audit_Log_Repository::create_table();
+		TelePress_Processed_Updates_Repository::create_table();
 
 		$defaults = array(
 			'bot_token'             => '',
@@ -14,6 +15,7 @@ class TelePress_Activator {
 			'transport_mode'        => 'webhook',
 			'allowed_chat_ids'      => '',
 			'default_notifications' => array( 'new_comment', 'failed_login', 'plugin_updates', 'theme_updates', 'core_updates' ),
+			'stale_update_window'   => TelePress_Telegram_Service::DEFAULT_STALE_WINDOW,
 			'log_retention_days'    => 30,
 			'rate_limit_per_minute' => 20,
 			'linking_enabled'       => 1,

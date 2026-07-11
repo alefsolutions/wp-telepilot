@@ -42,6 +42,7 @@ class TelePress_Bootstrap {
 		$days     = isset( $settings['log_retention_days'] ) ? (int) $settings['log_retention_days'] : 30;
 
 		TelePress_Audit_Log_Repository::purge_expired_logs( $days );
+		TelePress_Processed_Updates_Repository::purge_expired( min( $days, 14 ) );
 		$this->notification_service->maybe_send_update_notifications();
 	}
 

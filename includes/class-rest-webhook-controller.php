@@ -23,7 +23,26 @@ class TelePress_REST_Webhook_Controller {
 	public function handle_webhook( WP_REST_Request $request ) {
 		$settings = get_option( 'telepress_settings', array() );
 		$secret   = isset( $settings['webhook_secret'] ) ? (string) $settings['webhook_secret'] : '';
+		$mode     = isset( $settings['transport_mode'] ) ? (string) $settings['transport_mode'] : 'webhook';
 		$header   = $this->get_webhook_secret_header( $request );
+
+		if ( 'webhook' !== $mode ) {
+			$this->update_diagnostics(
+				array(
+					'last_webhook_ignored_at' => time(),
+					'last_webhook_auth_status'=> 'ignored',
+					'last_webhook_auth_error' => 'Webhook update received while polling mode is active.',
+				)
+			);
+
+			return new WP_REST_Response(
+				array(
+					'ok'      => true,
+					'message' => __( 'Webhook ignored because TelePress is currently using polling mode.', 'telepress' ),
+				),
+				202
+			);
+		}
 
 		if ( '' !== $secret && ! hash_equals( $secret, $header ) ) {
 			$this->update_diagnostics(

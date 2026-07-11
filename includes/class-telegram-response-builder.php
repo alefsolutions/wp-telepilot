@@ -55,4 +55,22 @@ class TelePress_Telegram_Response_Builder {
 			'inline_keyboard' => $inline_keyboard,
 		);
 	}
+
+	public static function append_rows( $keyboard, $rows ) {
+		$existing = array();
+
+		if ( ! empty( $keyboard['inline_keyboard'] ) && is_array( $keyboard['inline_keyboard'] ) ) {
+			$existing = $keyboard['inline_keyboard'];
+		}
+
+		$extra = self::keyboard( $rows );
+
+		if ( empty( $extra['inline_keyboard'] ) ) {
+			return $keyboard;
+		}
+
+		return array(
+			'inline_keyboard' => array_merge( $existing, $extra['inline_keyboard'] ),
+		);
+	}
 }

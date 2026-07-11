@@ -103,7 +103,10 @@ class TelePress_Comments_Service {
 			);
 		}
 
-		return TelePress_Telegram_Response_Builder::keyboard( $rows );
+		return TelePress_Telegram_Response_Builder::append_rows(
+			TelePress_Telegram_Response_Builder::keyboard( $rows ),
+			$this->navigation_rows()
+		);
 	}
 
 	public function moderate_comment( $comment_id, $action ) {
@@ -161,15 +164,33 @@ class TelePress_Comments_Service {
 			)
 		);
 
-		return TelePress_Telegram_Response_Builder::keyboard(
-			array(
+		return TelePress_Telegram_Response_Builder::append_rows(
+			TelePress_Telegram_Response_Builder::keyboard(
 				array(
 					array(
-						'text'          => sprintf( __( 'Confirm %1$s #%2$d', 'telepress' ), ucfirst( $action ), $comment_id ),
-						'callback_data' => 'tp:comment:' . $action . ':' . (int) $comment_id . ':' . $token,
+						array(
+							'text'          => sprintf( __( 'Confirm %1$s #%2$d', 'telepress' ), ucfirst( $action ), $comment_id ),
+							'callback_data' => 'tp:comment:' . $action . ':' . (int) $comment_id . ':' . $token,
+						),
 					),
+				)
+			),
+			$this->navigation_rows()
+		);
+	}
+
+	private function navigation_rows() {
+		return array(
+			array(
+				array(
+					'text'          => __( 'Menu', 'telepress' ),
+					'callback_data' => '/menu',
 				),
-			)
+				array(
+					'text'          => __( 'Site', 'telepress' ),
+					'callback_data' => '/site',
+				),
+			),
 		);
 	}
 }

@@ -187,7 +187,10 @@ class TelePress_Posts_Service {
 			$rows[] = $pagination;
 		}
 
-		return TelePress_Telegram_Response_Builder::keyboard( $rows );
+		return TelePress_Telegram_Response_Builder::append_rows(
+			TelePress_Telegram_Response_Builder::keyboard( $rows ),
+			$this->navigation_rows()
+		);
 	}
 
 	private function build_pagination_row( $subcommand, $search_term, $page, $total_pages ) {
@@ -311,15 +314,33 @@ class TelePress_Posts_Service {
 			)
 		);
 
-		return TelePress_Telegram_Response_Builder::keyboard(
-			array(
+		return TelePress_Telegram_Response_Builder::append_rows(
+			TelePress_Telegram_Response_Builder::keyboard(
 				array(
 					array(
-						'text'          => sprintf( __( 'Confirm %1$s #%2$d', 'telepress' ), ucfirst( $action ), $post_id ),
-						'callback_data' => 'tp:post:' . $action . ':' . (int) $post_id . ':' . $token,
+						array(
+							'text'          => sprintf( __( 'Confirm %1$s #%2$d', 'telepress' ), ucfirst( $action ), $post_id ),
+							'callback_data' => 'tp:post:' . $action . ':' . (int) $post_id . ':' . $token,
+						),
 					),
+				)
+			),
+			$this->navigation_rows()
+		);
+	}
+
+	private function navigation_rows() {
+		return array(
+			array(
+				array(
+					'text'          => __( 'Menu', 'telepress' ),
+					'callback_data' => '/menu',
 				),
-			)
+				array(
+					'text'          => __( 'Site', 'telepress' ),
+					'callback_data' => '/site',
+				),
+			),
 		);
 	}
 }

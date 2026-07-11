@@ -98,24 +98,29 @@ class TelePress_Settings_Page {
 		$last_delivery_failure    = TelePress_Audit_Log_Repository::latest_log_by_action( 'telegram_response_failed' );
 		$dashboard_service        = new TelePress_Dashboard_Service();
 		$dashboard_summary        = $dashboard_service->get_summary();
+		$logo_url                 = $this->get_logo_url();
 		?>
 		<div class="wrap telepress-admin">
 			<div class="telepress-shell">
 				<section class="telepress-hero">
-					<div>
+					<div class="telepress-hero-copy">
+						<?php if ( $logo_url ) : ?>
+							<img class="telepress-hero-logo" src="<?php echo esc_url( $logo_url ); ?>" alt="<?php esc_attr_e( 'TelePress logo', 'telepress' ); ?>" />
+						<?php endif; ?>
 						<p class="telepress-kicker"><?php esc_html_e( 'Telegram-first WordPress operations', 'telepress' ); ?></p>
 						<h1><?php esc_html_e( 'TelePress Control Center', 'telepress' ); ?></h1>
 						<p class="telepress-lead">
-							<?php esc_html_e( 'Configure secure Telegram access, monitor rollout readiness, and prepare the MVP command surface from one place.', 'telepress' ); ?>
+							<?php esc_html_e( 'Configure secure Telegram access, monitor transport health, and ship a dependable mobile operations companion for WordPress.', 'telepress' ); ?>
 						</p>
 					</div>
 					<div class="telepress-hero-card">
-						<span class="telepress-badge"><?php esc_html_e( 'Phase 1', 'telepress' ); ?></span>
+						<span class="telepress-badge"><?php esc_html_e( 'Phase 0 + 1', 'telepress' ); ?></span>
 						<ul class="telepress-hero-metrics">
 							<li><strong><?php echo esc_html( get_bloginfo( 'version' ) ); ?></strong><span><?php esc_html_e( 'WordPress', 'telepress' ); ?></span></li>
 							<li><strong><?php echo esc_html( PHP_VERSION ); ?></strong><span><?php esc_html_e( 'PHP', 'telepress' ); ?></span></li>
 							<li><strong><?php echo esc_html( (string) $linking_count ); ?></strong><span><?php esc_html_e( 'Linked users', 'telepress' ); ?></span></li>
 						</ul>
+						<p class="telepress-hero-note"><?php esc_html_e( 'Brand focus: secure linking, reliable transport, and action-first Telegram workflows.', 'telepress' ); ?></p>
 					</div>
 				</section>
 
@@ -358,6 +363,10 @@ class TelePress_Settings_Page {
 								<span><?php esc_html_e( 'Stale updates dropped', 'telepress' ); ?></span>
 								<strong><?php echo esc_html( (string) ( isset( $diagnostics['stale_updates_dropped'] ) ? (int) $diagnostics['stale_updates_dropped'] : 0 ) ); ?></strong>
 							</li>
+							<li class="<?php echo empty( $diagnostics['duplicate_updates_ignored'] ) ? 'is-good' : 'is-warn'; ?>">
+								<span><?php esc_html_e( 'Duplicate updates ignored', 'telepress' ); ?></span>
+								<strong><?php echo esc_html( (string) ( isset( $diagnostics['duplicate_updates_ignored'] ) ? (int) $diagnostics['duplicate_updates_ignored'] : 0 ) ); ?></strong>
+							</li>
 						</ul>
 						<?php if ( ! empty( $diagnostics['last_webhook_auth_error'] ) ) : ?>
 							<p class="telepress-inline-note"><?php echo esc_html( sprintf( __( 'Last webhook auth error: %s', 'telepress' ), $diagnostics['last_webhook_auth_error'] ) ); ?></p>
@@ -395,7 +404,7 @@ class TelePress_Settings_Page {
 							<li><?php esc_html_e( 'Message the bot with /start or /chatid to reveal your current Telegram chat ID.', 'telepress' ); ?></li>
 							<li><?php esc_html_e( 'Add that chat ID to Allowed Chat IDs if you want to restrict access to specific chats.', 'telepress' ); ?></li>
 							<li><?php esc_html_e( 'Generate a one-time link code from your WordPress profile, then send /link CODE in Telegram.', 'telepress' ); ?></li>
-							<li><?php esc_html_e( 'Use /help to see the commands that are available for your WordPress account.', 'telepress' ); ?></li>
+							<li><?php esc_html_e( 'Use /menu for the guided command hub or /site for the site overview once your account is linked.', 'telepress' ); ?></li>
 						</ol>
 					</section>
 
@@ -448,10 +457,11 @@ class TelePress_Settings_Page {
 			return;
 		}
 
-		$telegram_id   = get_user_meta( $user->ID, TelePress_User_Linking_Service::META_TELEGRAM_ID, true );
-		$telegram_chat = get_user_meta( $user->ID, TelePress_User_Linking_Service::META_TELEGRAM_CHAT, true );
-		$link_code     = get_user_meta( $user->ID, TelePress_User_Linking_Service::META_LINK_CODE, true );
-		$expires       = (int) get_user_meta( $user->ID, TelePress_User_Linking_Service::META_LINK_EXPIRES, true );
+		$linking_service = new TelePress_User_Linking_Service();
+		$telegram_id     = get_user_meta( $user->ID, TelePress_User_Linking_Service::META_TELEGRAM_ID, true );
+		$telegram_chat   = get_user_meta( $user->ID, TelePress_User_Linking_Service::META_TELEGRAM_CHAT, true );
+		$link_code       = $linking_service->get_active_link_code( $user->ID );
+		$expires         = (int) get_user_meta( $user->ID, TelePress_User_Linking_Service::META_LINK_EXPIRES, true );
 		?>
 		<h2><?php esc_html_e( 'TelePress', 'telepress' ); ?></h2>
 		<table class="form-table" role="presentation">
@@ -460,7 +470,7 @@ class TelePress_Settings_Page {
 				<td>
 					<?php if ( $link_code && $expires > time() ) : ?>
 						<input id="telepress-link-code" type="text" class="regular-text code" readonly value="<?php echo esc_attr( $link_code ); ?>" />
-						<p class="description"><?php esc_html_e( 'Send `/link CODE` to your TelePress bot within the next hour.', 'telepress' ); ?></p>
+						<p class="description"><?php esc_html_e( 'Send `/link CODE` to your TelePress bot within the next hour. TelePress stores only the hashed version of this code on the server.', 'telepress' ); ?></p>
 					<?php else : ?>
 						<p class="description"><?php esc_html_e( 'Generate a one-time code below to link your Telegram account.', 'telepress' ); ?></p>
 					<?php endif; ?>
@@ -701,6 +711,18 @@ class TelePress_Settings_Page {
 				'description' => __( 'Show available commands', 'telepress' ),
 			),
 			array(
+				'command'     => 'menu',
+				'description' => __( 'Open the TelePress command hub', 'telepress' ),
+			),
+			array(
+				'command'     => 'site',
+				'description' => __( 'View the site overview and shortcuts', 'telepress' ),
+			),
+			array(
+				'command'     => 'settings',
+				'description' => __( 'Open TelePress settings information', 'telepress' ),
+			),
+			array(
 				'command'     => 'chatid',
 				'description' => __( 'Show the current Telegram chat ID', 'telepress' ),
 			),
@@ -714,7 +736,7 @@ class TelePress_Settings_Page {
 			),
 			array(
 				'command'     => 'dashboard',
-				'description' => __( 'View the WordPress dashboard summary', 'telepress' ),
+				'description' => __( 'Legacy alias for the site overview', 'telepress' ),
 			),
 			array(
 				'command'     => 'comments',
@@ -850,5 +872,15 @@ class TelePress_Settings_Page {
 			),
 			60
 		);
+	}
+
+	private function get_logo_url() {
+		$logo_path = TELEPRESS_PATH . 'TELEPRESS LOGO.png';
+
+		if ( ! file_exists( $logo_path ) ) {
+			return '';
+		}
+
+		return str_replace( ' ', '%20', TELEPRESS_URL . 'TELEPRESS LOGO.png' );
 	}
 }

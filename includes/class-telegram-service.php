@@ -8,6 +8,7 @@ class TelePress_Telegram_Service {
 	const DIAGNOSTICS_OPTION         = 'telepress_transport_diagnostics';
 	const STALE_UPDATE_WINDOW_OPTION = 'stale_update_window';
 	const DEFAULT_STALE_WINDOW       = 180;
+	const POLL_LOCK_TRANSIENT        = 'telepress_poll_lock';
 	private $client;
 	private $user_resolver;
 	private $permission_service;
@@ -40,10 +41,33 @@ class TelePress_Telegram_Service {
 	}
 
 	public function handle_update( $update, $transport = 'webhook' ) {
+		if ( ! empty( $update['update_id'] ) && TelePress_Processed_Updates_Repository::has_processed( (int) $update['update_id'] ) ) {
+			$this->update_diagnostics(
+				array(
+					'last_duplicate_update_at' => time(),
+					'last_duplicate_update_id' => (int) $update['update_id'],
+					'last_transport'           => $transport,
+				),
+				array(
+					'duplicate_updates_ignored' => 1,
+				)
+			);
+
+			return TelePress_Telegram_Response_Builder::success(
+				__( 'Duplicate Telegram update ignored.', 'telepress' ),
+				array(
+					'command'       => '',
+					'skip_dispatch' => true,
+					'code'          => 'telepress_duplicate_update',
+				)
+			);
+		}
+
 		$this->record_transport_activity( $transport, $update );
 
 		if ( $this->is_stale_update( $update ) ) {
 			$this->record_stale_update( $transport, $update );
+			$this->mark_update_processed( $update, $transport, 'stale' );
 			return TelePress_Telegram_Response_Builder::error(
 				__( 'Skipped a stale Telegram update.', 'telepress' ),
 				array(
@@ -81,6 +105,7 @@ class TelePress_Telegram_Service {
 			);
 
 			$this->dispatch_response( $identity, $update, $result, $transport );
+			$this->mark_update_processed( $update, $transport, 'rejected' );
 
 			return $result;
 		}
@@ -91,6 +116,7 @@ class TelePress_Telegram_Service {
 
 		if ( true !== $rate_limit_result ) {
 			$this->log_command_event( 'telegram_rate_limited', $identity, $update, $rate_limit_result );
+			$this->mark_update_processed( $update, $transport, 'rate_limited' );
 
 			return $rate_limit_result;
 		}
@@ -117,10 +143,26 @@ class TelePress_Telegram_Service {
 			$this->log_command_event( 'telegram_permission_denied', $identity, $update, $result );
 		}
 
+		$this->mark_update_processed( $update, $transport, ! empty( $result['ok'] ) ? 'processed' : 'failed' );
+
 		return $result;
 	}
 
 	public function poll_updates() {
+		if ( $this->poll_lock_exists() ) {
+			$this->update_diagnostics(
+				array(
+					'last_poll_at'     => time(),
+					'last_poll_status' => 'locked',
+					'last_poll_error'  => __( 'A previous polling worker is still active.', 'telepress' ),
+				)
+			);
+
+			return new WP_Error( 'telepress_poll_locked', __( 'TelePress polling is already running.', 'telepress' ) );
+		}
+
+		$this->acquire_poll_lock();
+
 		$offset   = (int) get_option( 'telepress_telegram_poll_offset', 0 );
 		$response = $this->client->get_updates( $offset, 10, 0 );
 		$this->update_diagnostics(
@@ -144,6 +186,7 @@ class TelePress_Telegram_Service {
 					'failure_reason'  => $response->get_error_message(),
 				)
 			);
+			$this->release_poll_lock();
 			return $response;
 		}
 
@@ -154,6 +197,7 @@ class TelePress_Telegram_Service {
 					'last_poll_count'  => 0,
 				)
 			);
+			$this->release_poll_lock();
 			return array();
 		}
 
@@ -175,6 +219,7 @@ class TelePress_Telegram_Service {
 				'last_poll_error'  => '',
 			)
 		);
+		$this->release_poll_lock();
 
 		return $response['result'];
 	}
@@ -277,7 +322,7 @@ class TelePress_Telegram_Service {
 	private function dispatch_response( $identity, $update, $result, $transport ) {
 		$chat_id = ! empty( $identity['chat_id'] ) ? $identity['chat_id'] : null;
 
-		if ( empty( $chat_id ) || empty( $result['message'] ) ) {
+		if ( ! empty( $result['skip_dispatch'] ) || empty( $chat_id ) || empty( $result['message'] ) ) {
 			return;
 		}
 
@@ -285,13 +330,26 @@ class TelePress_Telegram_Service {
 			$this->client->answer_callback_query( (string) $update['callback_query']['id'] );
 		}
 
-		$response = $this->client->send_message(
-			$chat_id,
-			$result['message'],
-			array(
-				'reply_markup' => ! empty( $result['reply_markup'] ) ? $result['reply_markup'] : array(),
-			)
+		$args = array(
+			'reply_markup' => ! empty( $result['reply_markup'] ) ? $result['reply_markup'] : array(),
 		);
+
+		if ( ! empty( $update['callback_query']['message']['message_id'] ) ) {
+			$response = $this->client->edit_message_text(
+				$chat_id,
+				(int) $update['callback_query']['message']['message_id'],
+				$result['message'],
+				$args
+			);
+		} else {
+			$response = $this->client->send_message( $chat_id, $result['message'], $args );
+		}
+
+		if ( is_wp_error( $response ) ) {
+			if ( ! empty( $update['callback_query']['message']['message_id'] ) ) {
+				$response = $this->client->send_message( $chat_id, $result['message'], $args );
+			}
+		}
 
 		if ( is_wp_error( $response ) ) {
 			$this->update_diagnostics(
@@ -358,6 +416,12 @@ class TelePress_Telegram_Service {
 
 		if ( empty( $update['message']['photo'] ) && empty( $update['message']['document'] ) ) {
 			return null;
+		}
+
+		$private_chat_result = $this->permission_service->require_private_chat( $identity );
+
+		if ( true !== $private_chat_result ) {
+			return $private_chat_result;
 		}
 
 		$permission_result = $this->permission_service->require_capability( $identity, 'upload_files' );
@@ -479,5 +543,25 @@ class TelePress_Telegram_Service {
 		}
 
 		update_option( self::DIAGNOSTICS_OPTION, $diagnostics, false );
+	}
+
+	private function mark_update_processed( $update, $transport, $result ) {
+		if ( empty( $update['update_id'] ) ) {
+			return;
+		}
+
+		TelePress_Processed_Updates_Repository::mark_processed( (int) $update['update_id'], $transport, $result );
+	}
+
+	private function poll_lock_exists() {
+		return (bool) get_transient( self::POLL_LOCK_TRANSIENT );
+	}
+
+	private function acquire_poll_lock() {
+		set_transient( self::POLL_LOCK_TRANSIENT, time(), MINUTE_IN_SECONDS );
+	}
+
+	private function release_poll_lock() {
+		delete_transient( self::POLL_LOCK_TRANSIENT );
 	}
 }

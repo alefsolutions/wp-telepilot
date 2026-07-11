@@ -6,6 +6,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 class TelePress_User_Linking_Service {
 	const META_LINK_CODE      = '_telepress_link_code';
+	const META_LINK_CODE_HASH = '_telepress_link_code_hash';
 	const META_LINK_EXPIRES   = '_telepress_link_expires';
 	const META_TELEGRAM_ID    = '_telepress_telegram_user_id';
 	const META_TELEGRAM_CHAT  = '_telepress_telegram_chat_id';
@@ -16,10 +17,25 @@ class TelePress_User_Linking_Service {
 		$user_id = absint( $user_id );
 		$code    = strtoupper( wp_generate_password( 8, false, false ) );
 
-		update_user_meta( $user_id, self::META_LINK_CODE, $code );
+		update_user_meta( $user_id, self::META_LINK_CODE_HASH, wp_hash_password( $code ) );
 		update_user_meta( $user_id, self::META_LINK_EXPIRES, time() + HOUR_IN_SECONDS );
+		set_transient( $this->get_display_transient_key( $user_id ), $code, HOUR_IN_SECONDS );
 
 		return $code;
+	}
+
+	public function get_active_link_code( $user_id ) {
+		$user_id = absint( $user_id );
+		$expires = (int) get_user_meta( $user_id, self::META_LINK_EXPIRES, true );
+
+		if ( ! $expires || $expires < time() ) {
+			$this->clear_link_code( $user_id );
+			return '';
+		}
+
+		$code = get_transient( $this->get_display_transient_key( $user_id ) );
+
+		return is_string( $code ) ? $code : '';
 	}
 
 	public function consume_link_code( $code, $message ) {
@@ -41,8 +57,7 @@ class TelePress_User_Linking_Service {
 		update_user_meta( $user->ID, self::META_TELEGRAM_CHAT, $chat_id );
 		update_user_meta( $user->ID, self::META_TELEGRAM_NAME, $username );
 		update_user_meta( $user->ID, self::META_LINKED_AT, time() );
-		delete_user_meta( $user->ID, self::META_LINK_CODE );
-		delete_user_meta( $user->ID, self::META_LINK_EXPIRES );
+		$this->clear_link_code( $user->ID );
 
 		TelePress_Audit_Log_Repository::log(
 			array(
@@ -81,8 +96,7 @@ class TelePress_User_Linking_Service {
 		delete_user_meta( $user_id, self::META_TELEGRAM_CHAT );
 		delete_user_meta( $user_id, self::META_TELEGRAM_NAME );
 		delete_user_meta( $user_id, self::META_LINKED_AT );
-		delete_user_meta( $user_id, self::META_LINK_CODE );
-		delete_user_meta( $user_id, self::META_LINK_EXPIRES );
+		$this->clear_link_code( $user_id );
 
 		return true;
 	}
@@ -90,27 +104,38 @@ class TelePress_User_Linking_Service {
 	private function find_user_by_code( $code ) {
 		$users = get_users(
 			array(
-				'meta_key'   => self::META_LINK_CODE,
-				'meta_value' => $code,
-				'number'     => 1,
-				'count_total'=> false,
+				'meta_key'    => self::META_LINK_CODE_HASH,
+				'number'      => 50,
+				'count_total' => false,
 			)
 		);
 
-		if ( empty( $users ) ) {
-			return null;
+		foreach ( $users as $user ) {
+			$expires = (int) get_user_meta( $user->ID, self::META_LINK_EXPIRES, true );
+
+			if ( $expires < time() ) {
+				$this->clear_link_code( $user->ID );
+				continue;
+			}
+
+			$hash = (string) get_user_meta( $user->ID, self::META_LINK_CODE_HASH, true );
+
+			if ( $hash && wp_check_password( $code, $hash ) ) {
+				return $user;
+			}
 		}
 
-		$user    = $users[0];
-		$expires = (int) get_user_meta( $user->ID, self::META_LINK_EXPIRES, true );
+		return null;
+	}
 
-		if ( $expires < time() ) {
-			delete_user_meta( $user->ID, self::META_LINK_CODE );
-			delete_user_meta( $user->ID, self::META_LINK_EXPIRES );
+	private function clear_link_code( $user_id ) {
+		delete_user_meta( $user_id, self::META_LINK_CODE );
+		delete_user_meta( $user_id, self::META_LINK_CODE_HASH );
+		delete_user_meta( $user_id, self::META_LINK_EXPIRES );
+		delete_transient( $this->get_display_transient_key( $user_id ) );
+	}
 
-			return null;
-		}
-
-		return $user;
+	private function get_display_transient_key( $user_id ) {
+		return 'telepress_link_code_' . absint( $user_id );
 	}
 }

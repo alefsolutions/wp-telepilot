@@ -167,7 +167,10 @@ class TelePress_Taxonomies_Service {
 			$rows[] = $pagination;
 		}
 
-		return TelePress_Telegram_Response_Builder::keyboard( $rows );
+		return TelePress_Telegram_Response_Builder::append_rows(
+			TelePress_Telegram_Response_Builder::keyboard( $rows ),
+			$this->navigation_rows()
+		);
 	}
 
 	public function build_delete_confirmation_keyboard( $taxonomy, $term_id, $telegram_user_id ) {
@@ -181,15 +184,18 @@ class TelePress_Taxonomies_Service {
 			)
 		);
 
-		return TelePress_Telegram_Response_Builder::keyboard(
-			array(
+		return TelePress_Telegram_Response_Builder::append_rows(
+			TelePress_Telegram_Response_Builder::keyboard(
 				array(
 					array(
-						'text'          => sprintf( __( 'Confirm delete #%d', 'telepress' ), $term_id ),
-						'callback_data' => 'tp:term:' . $taxonomy . ':delete:' . (int) $term_id . ':' . $token,
+						array(
+							'text'          => sprintf( __( 'Confirm delete #%d', 'telepress' ), $term_id ),
+							'callback_data' => 'tp:term:' . $taxonomy . ':delete:' . (int) $term_id . ':' . $token,
+						),
 					),
-				),
-			)
+				)
+			),
+			$this->navigation_rows()
 		);
 	}
 
@@ -225,5 +231,20 @@ class TelePress_Taxonomies_Service {
 
 	private function normalize_taxonomy( $taxonomy ) {
 		return 'post_tag' === $taxonomy || 'tags' === $taxonomy ? 'post_tag' : 'category';
+	}
+
+	private function navigation_rows() {
+		return array(
+			array(
+				array(
+					'text'          => __( 'Menu', 'telepress' ),
+					'callback_data' => '/menu',
+				),
+				array(
+					'text'          => __( 'Site', 'telepress' ),
+					'callback_data' => '/site',
+				),
+			),
+		);
 	}
 }

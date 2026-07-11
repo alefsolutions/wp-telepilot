@@ -8,6 +8,7 @@ class TelePress_Deactivator {
 	public static function deactivate() {
 		wp_clear_scheduled_hook( 'telepress_daily_maintenance' );
 		wp_clear_scheduled_hook( 'telepress_poll_updates' );
+		delete_transient( TelePress_Telegram_Service::POLL_LOCK_TRANSIENT );
 
 		$settings = get_option( 'telepress_settings', array() );
 		$token    = isset( $settings['bot_token'] ) ? (string) $settings['bot_token'] : '';

@@ -1,0 +1,406 @@
+:root {
+  --telepress-orange: #ff6600;
+  --telepress-navy: #002b5c;
+  --telepress-ink: #1f2933;
+  --telepress-muted: #5f6b76;
+  --telepress-light: #f5f7fa;
+  --telepress-border: #d9e2ec;
+  --telepress-success: #13795b;
+  --telepress-success-bg: #ecfdf3;
+  --telepress-warn: #a15c00;
+  --telepress-warn-bg: #fff7ed;
+  --telepress-danger: #b42318;
+  --telepress-danger-bg: #fef3f2;
+}
+
+.telepress-admin {
+  margin: 0 0 0 -20px;
+}
+
+.telepress-shell {
+  min-height: calc(100vh - 32px);
+  padding: 32px;
+  background:
+    radial-gradient(circle at top, rgba(255, 102, 0, 0.08), transparent 25rem),
+    linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
+  color: var(--telepress-ink);
+}
+
+.telepress-admin *,
+.telepress-admin *::before,
+.telepress-admin *::after {
+  box-sizing: border-box;
+}
+
+.telepress-hero {
+  display: grid;
+  grid-template-columns: minmax(0, 1.4fr) minmax(280px, 0.8fr);
+  gap: 24px;
+  margin-bottom: 24px;
+  padding: 32px;
+  border-radius: 32px;
+  background:
+    radial-gradient(circle at top right, rgba(255, 102, 0, 0.18), transparent 18rem),
+    linear-gradient(135deg, #002b5c, #001c3d);
+  color: #fff;
+  box-shadow: 0 28px 70px rgba(0, 43, 92, 0.22);
+}
+
+.telepress-kicker,
+.telepress-section-label {
+  margin: 0 0 12px;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+}
+
+.telepress-kicker {
+  color: rgba(255, 255, 255, 0.72);
+}
+
+.telepress-hero h1,
+.telepress-panel h2 {
+  margin: 0;
+  color: inherit;
+  font-family: "Sora", "Avenir Next", sans-serif;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+}
+
+.telepress-hero h1 {
+  font-size: 38px;
+  line-height: 1.1;
+}
+
+.telepress-panel h2 {
+  color: var(--telepress-navy);
+  font-size: 28px;
+}
+
+.telepress-lead {
+  max-width: 48rem;
+  margin: 16px 0 0;
+  color: rgba(255, 255, 255, 0.82);
+  font-size: 16px;
+  line-height: 1.9;
+}
+
+.telepress-hero-card,
+.telepress-panel {
+  border: 1px solid var(--telepress-border);
+  border-radius: 32px;
+  background: #fff;
+  box-shadow: 0 24px 70px rgba(15, 23, 42, 0.06);
+}
+
+.telepress-hero-card {
+  padding: 24px;
+  color: var(--telepress-ink);
+}
+
+.telepress-badge,
+.telepress-status-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+
+.telepress-badge {
+  padding: 8px 14px;
+  background: var(--telepress-success-bg);
+  color: var(--telepress-success);
+}
+
+.telepress-hero-metrics {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+  padding: 0;
+  margin: 18px 0 0;
+  list-style: none;
+}
+
+.telepress-hero-metrics li,
+.telepress-check,
+.telepress-status-list li {
+  border-radius: 24px;
+  border: 1px solid var(--telepress-border);
+  background: #f8fbff;
+}
+
+.telepress-hero-metrics li {
+  padding: 18px 16px;
+}
+
+.telepress-hero-metrics strong {
+  display: block;
+  color: var(--telepress-navy);
+  font-size: 22px;
+}
+
+.telepress-hero-metrics span {
+  display: block;
+  margin-top: 6px;
+  color: var(--telepress-muted);
+}
+
+.telepress-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.4fr) minmax(320px, 0.8fr);
+  gap: 24px;
+}
+
+.telepress-panel {
+  padding: 28px;
+}
+
+.telepress-panel-wide {
+  grid-column: 1 / -1;
+}
+
+.telepress-panel-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.telepress-section-label {
+  color: var(--telepress-orange);
+}
+
+.telepress-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.telepress-tab {
+  padding: 10px 16px;
+  border: 1px solid rgba(0, 43, 92, 0.12);
+  border-radius: 999px;
+  background: #fff;
+  color: var(--telepress-navy);
+  cursor: pointer;
+  font-weight: 700;
+}
+
+.telepress-tab.is-active,
+.telepress-tab:hover,
+.telepress-tab:focus {
+  border-color: var(--telepress-orange);
+  color: var(--telepress-orange);
+  outline: none;
+}
+
+.telepress-tab-panel {
+  display: none;
+}
+
+.telepress-tab-panel.is-active {
+  display: block;
+}
+
+.telepress-field-grid,
+.telepress-checkbox-grid {
+  display: grid;
+  gap: 16px;
+}
+
+.telepress-field-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.telepress-field,
+.telepress-check {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 18px;
+}
+
+.telepress-field-full {
+  grid-column: 1 / -1;
+}
+
+.telepress-field span,
+.telepress-check span {
+  font-weight: 700;
+  color: var(--telepress-navy);
+}
+
+.telepress-field small,
+.telepress-inline-note,
+.telepress-empty-state {
+  color: var(--telepress-muted);
+  line-height: 1.7;
+}
+
+.telepress-setup-list {
+  margin: 0;
+  padding-left: 22px;
+  color: var(--telepress-ink);
+  line-height: 1.9;
+}
+
+.telepress-setup-list li + li {
+  margin-top: 10px;
+}
+
+.telepress-field input[type="text"],
+.telepress-field input[type="password"],
+.telepress-field input[type="number"],
+.telepress-field select,
+.telepress-field textarea {
+  width: 100%;
+  padding: 14px 16px;
+  border: 1px solid var(--telepress-border);
+  border-radius: 18px;
+  background: var(--telepress-light);
+  box-shadow: none;
+}
+
+.telepress-field input:focus,
+.telepress-field textarea:focus {
+  border-color: var(--telepress-orange);
+  outline: none;
+}
+
+.telepress-checkbox-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.telepress-check {
+  gap: 12px;
+  flex-direction: row;
+  align-items: center;
+}
+
+.telepress-check-inline {
+  max-width: 40rem;
+}
+
+.telepress-check input {
+  margin: 0;
+}
+
+.telepress-actions {
+  margin-top: 24px;
+}
+
+.telepress-actions .button-primary {
+  height: auto;
+  padding: 12px 22px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--telepress-orange);
+  box-shadow: none;
+  text-shadow: none;
+  font-weight: 700;
+}
+
+.telepress-actions .button-primary:hover,
+.telepress-actions .button-primary:focus {
+  background: #e75c00;
+}
+
+.telepress-status-list {
+  display: grid;
+  gap: 14px;
+  padding: 0;
+  margin: 0;
+  list-style: none;
+}
+
+.telepress-status-list li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 16px 18px;
+}
+
+.telepress-status-list li span {
+  color: var(--telepress-ink);
+  font-weight: 600;
+}
+
+.telepress-status-list li strong {
+  font-size: 12px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.telepress-status-list li.is-good strong,
+.telepress-status-pill.is-good {
+  color: var(--telepress-success);
+}
+
+.telepress-status-list li.is-warn strong {
+  color: var(--telepress-warn);
+}
+
+.telepress-status-pill {
+  min-width: 90px;
+  padding: 7px 12px;
+}
+
+.telepress-status-pill.is-good {
+  background: var(--telepress-success-bg);
+}
+
+.telepress-status-pill.is-bad {
+  color: var(--telepress-danger);
+  background: var(--telepress-danger-bg);
+}
+
+.telepress-table th {
+  color: var(--telepress-navy);
+}
+
+.telepress-table td,
+.telepress-table th {
+  padding-top: 14px;
+  padding-bottom: 14px;
+}
+
+@media (max-width: 1080px) {
+  .telepress-grid,
+  .telepress-hero,
+  .telepress-field-grid,
+  .telepress-checkbox-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 782px) {
+  .telepress-shell {
+    min-height: auto;
+    padding: 20px;
+  }
+
+  .telepress-panel,
+  .telepress-hero {
+    padding: 22px;
+    border-radius: 24px;
+  }
+
+  .telepress-hero h1 {
+    font-size: 30px;
+  }
+
+  .telepress-panel-heading {
+    flex-direction: column;
+  }
+
+  .telepress-hero-metrics {
+    grid-template-columns: 1fr;
+  }
+}

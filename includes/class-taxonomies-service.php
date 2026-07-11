@@ -88,6 +88,8 @@ class TelePress_Taxonomies_Service {
 			);
 		}
 
+		$lines[] = __( 'Tip: use search when your category or tag list grows large.', 'telepress' );
+
 		return implode( "\n", $lines );
 	}
 

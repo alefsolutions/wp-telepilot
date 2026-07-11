@@ -139,6 +139,8 @@ class TelePress_Posts_Service {
 			);
 		}
 
+		$lines[] = __( 'Tip: use the buttons below, or run `/posts search keyword` for a targeted lookup.', 'telepress' );
+
 		return implode( "\n", $lines );
 	}
 

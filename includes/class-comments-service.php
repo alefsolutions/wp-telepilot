@@ -45,6 +45,8 @@ class TelePress_Comments_Service {
 			);
 		}
 
+		$lines[] = __( 'Tip: approvals and destructive moderation actions are kept in private chat for safety.', 'telepress' );
+
 		return implode( "\n", $lines );
 	}
 

@@ -98,6 +98,8 @@ class TelePress_Media_Service {
 			);
 		}
 
+		$lines[] = __( 'Tip: send a photo or document in this private chat to upload it straight into WordPress.', 'telepress' );
+
 		return implode( "\n", $lines );
 	}
 

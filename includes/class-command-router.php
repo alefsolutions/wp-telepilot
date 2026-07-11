@@ -265,7 +265,7 @@ class TelePress_Command_Router {
 
 		return TelePress_Telegram_Response_Builder::success(
 			__(
-				"TelePress Menu\nChoose an area below. Lists stay in Telegram, while longer editing still belongs in WordPress.",
+				"TelePress Menu\nChoose an area below. Use Telegram for quick review and short actions, then jump into WordPress when you need full editing.",
 				'telepress'
 			),
 			array(
@@ -1471,6 +1471,22 @@ class TelePress_Command_Router {
 					),
 				);
 			}
+
+			$admin_row = array(
+				array(
+					'text' => __( 'Open wp-admin', 'telepress' ),
+					'url'  => admin_url(),
+				),
+			);
+
+			if ( $this->permission_service->user_can( $identity['wp_user'], 'manage_options' ) ) {
+				$admin_row[] = array(
+					'text' => __( 'Settings', 'telepress' ),
+					'url'  => admin_url( 'admin.php?page=telepress' ),
+				);
+			}
+
+			$rows[] = $admin_row;
 		}
 
 		return TelePress_Telegram_Response_Builder::keyboard( $rows );

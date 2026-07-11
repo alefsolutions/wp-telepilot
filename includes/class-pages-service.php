@@ -83,6 +83,8 @@ class TelePress_Pages_Service {
 			);
 		}
 
+		$lines[] = __( 'Tip: use the buttons below, or run `/pages search keyword` to narrow the list.', 'telepress' );
+
 		return implode( "\n", $lines );
 	}
 

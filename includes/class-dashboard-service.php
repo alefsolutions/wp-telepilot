@@ -115,6 +115,22 @@ class TelePress_Dashboard_Service {
 			);
 		}
 
+		$admin_row = array(
+			array(
+				'text' => __( 'Open wp-admin', 'telepress' ),
+				'url'  => admin_url(),
+			),
+		);
+
+		if ( $wp_user instanceof WP_User && user_can( $wp_user, 'manage_options' ) ) {
+			$admin_row[] = array(
+				'text' => __( 'TelePress Settings', 'telepress' ),
+				'url'  => admin_url( 'admin.php?page=telepress' ),
+			);
+		}
+
+		$rows[] = $admin_row;
+
 		return TelePress_Telegram_Response_Builder::keyboard( $rows );
 	}
 

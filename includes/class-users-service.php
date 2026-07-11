@@ -93,6 +93,8 @@ class TelePress_Users_Service {
 			);
 		}
 
+		$lines[] = __( 'Tip: use `/users search keyword` to jump to a person quickly.', 'telepress' );
+
 		return implode( "\n", $lines );
 	}
 

@@ -408,6 +408,23 @@ class TelePress_Settings_Page {
 						</ol>
 					</section>
 
+					<section class="telepress-panel">
+						<div class="telepress-panel-heading">
+							<div>
+								<p class="telepress-section-label"><?php esc_html_e( 'Command Surface', 'telepress' ); ?></p>
+								<h2><?php esc_html_e( 'Primary Telegram Commands', 'telepress' ); ?></h2>
+							</div>
+						</div>
+						<ul class="telepress-setup-list">
+							<li><code>/start</code> <?php esc_html_e( 'Starts onboarding and confirms the current chat ID.', 'telepress' ); ?></li>
+							<li><code>/menu</code> <?php esc_html_e( 'Opens the guided TelePress command hub.', 'telepress' ); ?></li>
+							<li><code>/site</code> <?php esc_html_e( 'Shows the site overview and operational shortcuts.', 'telepress' ); ?></li>
+							<li><code>/help</code> <?php esc_html_e( 'Lists the available command surface for the linked account.', 'telepress' ); ?></li>
+							<li><code>/link CODE</code> <?php esc_html_e( 'Links Telegram to a WordPress user in private chat.', 'telepress' ); ?></li>
+							<li><code>/unlink</code> <?php esc_html_e( 'Removes the Telegram link and revokes access.', 'telepress' ); ?></li>
+						</ul>
+					</section>
+
 					<section class="telepress-panel telepress-panel-wide">
 						<div class="telepress-panel-heading">
 							<div>

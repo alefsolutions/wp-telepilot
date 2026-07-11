@@ -32,7 +32,19 @@ class TelePress_Telegram_Response_Builder {
 			$buttons = array();
 
 			foreach ( $row as $button ) {
-				if ( empty( $button['text'] ) || empty( $button['callback_data'] ) ) {
+				if ( empty( $button['text'] ) ) {
+					continue;
+				}
+
+				if ( ! empty( $button['url'] ) ) {
+					$buttons[] = array(
+						'text' => (string) $button['text'],
+						'url'  => esc_url_raw( (string) $button['url'] ),
+					);
+					continue;
+				}
+
+				if ( empty( $button['callback_data'] ) ) {
 					continue;
 				}
 

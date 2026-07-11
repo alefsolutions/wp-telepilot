@@ -892,12 +892,12 @@ class TelePress_Settings_Page {
 	}
 
 	private function get_logo_url() {
-		$logo_path = TELEPRESS_PATH . 'TELEPRESS LOGO.png';
+		$logo_path = TELEPRESS_PATH . 'assets/images/telepress-logo.png';
 
 		if ( ! file_exists( $logo_path ) ) {
 			return '';
 		}
 
-		return str_replace( ' ', '%20', TELEPRESS_URL . 'TELEPRESS LOGO.png' );
+		return TELEPRESS_URL . 'assets/images/telepress-logo.png';
 	}
 }

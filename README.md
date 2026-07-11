@@ -1,6 +1,6 @@
 # TelePress
 
-![TelePress Header](README_HEADER.png)
+![TelePress Header](assets/images/readme-header.png)
 
 TelePress is a Telegram-first WordPress operations plugin. It lets authorized WordPress users link their Telegram account, inspect site state, and carry out short, structured operational tasks from chat without recreating all of `wp-admin` inside Telegram.
 
@@ -71,11 +71,10 @@ From `WordPress Admin -> TelePress`, you can:
 - PHP 8.0 or newer
 - HTTPS for webhook mode
 
-## Project docs
+## Local planning docs
 
-- [Phase 0 feature inventory](docs/phase-0-feature-inventory.md)
-- [Phase 0 threat model](docs/phase-0-threat-model.md)
-- [Phase 0 scope freeze](docs/phase-0-scope-freeze.md)
+- Product and planning notes are kept locally in `docs/`
+- The `docs/` tree is git-ignored on purpose
 
 ## Current direction
 

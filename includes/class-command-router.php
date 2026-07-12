@@ -431,7 +431,7 @@ class TelePress_Command_Router {
 		if ( 'pending' === $subcommand ) {
 			$comments = $this->comments_service->list_pending( 5 );
 
-			return TelePress_Telegram_Response_Builder::success(
+			return TelePress_Telegram_Response_Builder::success_html(
 				$this->comments_service->render_pending_message( $comments ),
 				array(
 					'command'      => '/comments',
@@ -565,7 +565,7 @@ class TelePress_Command_Router {
 
 		if ( 'latest' === $subcommand ) {
 			$result = $this->posts_service->latest_page( $page );
-			return TelePress_Telegram_Response_Builder::success(
+			return TelePress_Telegram_Response_Builder::success_html(
 				$this->posts_service->render_page_message( $result, __( 'Latest Posts', 'telepress' ) ),
 				array(
 					'command'      => '/posts',
@@ -576,7 +576,7 @@ class TelePress_Command_Router {
 
 		if ( 'drafts' === $subcommand ) {
 			$result = $this->posts_service->drafts_page( $page );
-			return TelePress_Telegram_Response_Builder::success(
+			return TelePress_Telegram_Response_Builder::success_html(
 				$this->posts_service->render_page_message( $result, __( 'Draft Posts', 'telepress' ) ),
 				array(
 					'command'      => '/posts',
@@ -592,7 +592,7 @@ class TelePress_Command_Router {
 			}
 
 			$posts = $this->posts_service->search_page( $term, $page );
-			return TelePress_Telegram_Response_Builder::success(
+			return TelePress_Telegram_Response_Builder::success_html(
 				$this->posts_service->render_page_message( $posts, sprintf( __( 'Post Search: %s', 'telepress' ), $term ) ),
 				array(
 					'command'      => '/posts',
@@ -602,7 +602,7 @@ class TelePress_Command_Router {
 		}
 
 		if ( 'stats' === $subcommand ) {
-			return TelePress_Telegram_Response_Builder::success(
+			return TelePress_Telegram_Response_Builder::success_html(
 				$this->posts_service->render_stats_message( $this->posts_service->stats() ),
 				array(
 					'command'      => '/posts',
@@ -711,7 +711,7 @@ class TelePress_Command_Router {
 
 		if ( 'list' === $subcommand ) {
 			$pages = $this->pages_service->latest_page( $page );
-			return TelePress_Telegram_Response_Builder::success(
+			return TelePress_Telegram_Response_Builder::success_html(
 				$this->pages_service->render_page_message( $pages, __( 'Recent Pages', 'telepress' ) ),
 				array(
 					'command'      => '/pages',
@@ -727,7 +727,7 @@ class TelePress_Command_Router {
 			}
 
 			$pages = $this->pages_service->search_page( $term, $page );
-			return TelePress_Telegram_Response_Builder::success(
+			return TelePress_Telegram_Response_Builder::success_html(
 				$this->pages_service->render_page_message( $pages, sprintf( __( 'Page Search: %s', 'telepress' ), $term ) ),
 				array(
 					'command'      => '/pages',
@@ -867,7 +867,7 @@ class TelePress_Command_Router {
 
 		if ( 'recent' === $subcommand ) {
 			$items = $this->media_service->recent_page( $page );
-			return TelePress_Telegram_Response_Builder::success(
+			return TelePress_Telegram_Response_Builder::success_html(
 				$this->media_service->render_page_message( $items, __( 'Recent Media', 'telepress' ) ),
 				array(
 					'command'      => '/media',
@@ -883,7 +883,7 @@ class TelePress_Command_Router {
 			}
 
 			$items = $this->media_service->search_page( $term, $page );
-			return TelePress_Telegram_Response_Builder::success(
+			return TelePress_Telegram_Response_Builder::success_html(
 				$this->media_service->render_page_message( $items, sprintf( __( 'Media Search: %s', 'telepress' ), $term ) ),
 				array(
 					'command'      => '/media',
@@ -976,7 +976,7 @@ class TelePress_Command_Router {
 
 		if ( 'list' === $subcommand ) {
 			$users = $this->users_service->recent_page( $page );
-			return TelePress_Telegram_Response_Builder::success(
+			return TelePress_Telegram_Response_Builder::success_html(
 				$this->users_service->render_page_message( $users, __( 'Recent Users', 'telepress' ) ),
 				array(
 					'command'      => '/users',
@@ -996,7 +996,7 @@ class TelePress_Command_Router {
 
 			$users = $this->users_service->search_page( $term, $page );
 
-			return TelePress_Telegram_Response_Builder::success(
+			return TelePress_Telegram_Response_Builder::success_html(
 				$this->users_service->render_page_message( $users, sprintf( __( 'User Search: %s', 'telepress' ), $term ) ),
 				array(
 					'command'      => '/users',
@@ -1301,7 +1301,7 @@ class TelePress_Command_Router {
 				return TelePress_Telegram_Response_Builder::error( $result->get_error_message() );
 			}
 
-			return TelePress_Telegram_Response_Builder::success(
+			return TelePress_Telegram_Response_Builder::success_html(
 				$this->taxonomies_service->render_terms_message( $result, sprintf( __( '%s List', 'telepress' ), ucfirst( $resource ) ) ),
 				array(
 					'command'      => '/' . $resource,
@@ -1321,7 +1321,7 @@ class TelePress_Command_Router {
 				return TelePress_Telegram_Response_Builder::error( $result->get_error_message() );
 			}
 
-			return TelePress_Telegram_Response_Builder::success(
+			return TelePress_Telegram_Response_Builder::success_html(
 				$this->taxonomies_service->render_terms_message( $result, sprintf( __( '%1$s Search: %2$s', 'telepress' ), ucfirst( $resource ), $term ) ),
 				array(
 					'command'      => '/' . $resource,

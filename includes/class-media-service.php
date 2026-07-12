@@ -94,7 +94,7 @@ class TelePress_Media_Service {
 
 		foreach ( $result['items'] as $item ) {
 			$lines[] = sprintf(
-				__( "• #%1$d %2$s\n  Preview: %3$s", 'telepress' ),
+				__( "- #%1$d %2$s\n  Preview: %3$s", 'telepress' ),
 				$item->ID,
 				TelePress_Telegram_Response_Builder::escape( get_the_title( $item ) ),
 				TelePress_Telegram_Response_Builder::escape( wp_get_attachment_url( $item->ID ) )

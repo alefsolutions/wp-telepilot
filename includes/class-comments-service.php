@@ -38,7 +38,7 @@ class TelePress_Comments_Service {
 			$post_title = get_the_title( $comment->comment_post_ID );
 			$lines[]   = sprintf(
 				/* translators: 1: comment id, 2: author, 3: post title, 4: excerpt. */
-				__( '• #%1$d by %2$s on %3$s: %4$s', 'telepress' ),
+				__( '- #%1$d by %2$s on %3$s: %4$s', 'telepress' ),
 				$comment->comment_ID,
 				TelePress_Telegram_Response_Builder::escape( $comment->comment_author ? $comment->comment_author : __( 'Anonymous', 'telepress' ) ),
 				TelePress_Telegram_Response_Builder::escape( $post_title ? $post_title : __( 'Unknown Post', 'telepress' ) ),

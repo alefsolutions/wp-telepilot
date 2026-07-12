@@ -16,7 +16,7 @@ class TelePress_Pages_Service {
 		return get_posts(
 			array(
 				'post_type'        => 'page',
-				'post_status'      => array( 'publish', 'draft', 'private', 'trash' ),
+				'post_status'      => array( 'publish', 'draft', 'private' ),
 				'posts_per_page'   => max( 1, absint( $limit ) ),
 				'orderby'          => 'modified',
 				'order'            => 'DESC',
@@ -29,7 +29,7 @@ class TelePress_Pages_Service {
 		return $this->query_pages_page(
 			array(
 				'post_type'   => 'page',
-				'post_status' => array( 'publish', 'draft', 'private', 'trash' ),
+				'post_status' => array( 'publish', 'draft', 'private' ),
 			),
 			$page,
 			$limit
@@ -40,7 +40,7 @@ class TelePress_Pages_Service {
 		return $this->query_pages_page(
 			array(
 				'post_type'   => 'page',
-				'post_status' => array( 'publish', 'draft', 'private', 'trash' ),
+				'post_status' => array( 'publish', 'draft', 'private' ),
 				's'           => sanitize_text_field( $term ),
 			),
 			$page,
@@ -79,7 +79,7 @@ class TelePress_Pages_Service {
 
 		foreach ( $result['items'] as $page ) {
 			$lines[] = sprintf(
-				__( '• #%1$d %2$s [%3$s]', 'telepress' ),
+				__( '- #%1$d %2$s [%3$s]', 'telepress' ),
 				$page->ID,
 				TelePress_Telegram_Response_Builder::escape( get_the_title( $page ) ),
 				TelePress_Telegram_Response_Builder::escape( $page->post_status )
@@ -276,29 +276,41 @@ class TelePress_Pages_Service {
 	}
 
 	private function query_pages_page( $args, $page, $limit ) {
-		$page  = max( 1, absint( $page ) );
-		$limit = max( 1, absint( $limit ) );
+		$page      = max( 1, absint( $page ) );
+		$limit     = max( 1, absint( $limit ) );
+		$cache_key = 'telepress_pages_' . md5( wp_json_encode( array( $args, $page, $limit ) ) );
+		$cached    = get_transient( $cache_key );
+
+		if ( is_array( $cached ) ) {
+			return $cached;
+		}
 
 		$query = new WP_Query(
 			array_merge(
 				$args,
 				array(
-					'posts_per_page'   => $limit,
-					'paged'            => $page,
-					'orderby'          => 'modified',
-					'order'            => 'DESC',
-					'suppress_filters' => false,
+					'posts_per_page'         => $limit,
+					'paged'                  => $page,
+					'orderby'                => 'modified',
+					'order'                  => 'DESC',
+					'suppress_filters'       => false,
+					'update_post_meta_cache' => false,
+					'update_post_term_cache' => false,
 				)
 			)
 		);
 
-		return array(
+		$result = array(
 			'items'       => $query->posts,
 			'page'        => $page,
 			'per_page'    => $limit,
 			'total_items' => (int) $query->found_posts,
 			'total_pages' => max( 1, (int) $query->max_num_pages ),
 		);
+
+		set_transient( $cache_key, $result, 30 );
+
+		return $result;
 	}
 
 	private function navigation_rows() {

@@ -84,7 +84,7 @@ class TelePress_Taxonomies_Service {
 
 		foreach ( $result['items'] as $term ) {
 			$lines[] = sprintf(
-				__( '• #%1$d %2$s (%3$d)', 'telepress' ),
+				__( '- #%1$d %2$s (%3$d)', 'telepress' ),
 				$term->term_id,
 				TelePress_Telegram_Response_Builder::escape( $term->name ),
 				$term->count

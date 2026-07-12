@@ -135,7 +135,7 @@ class TelePress_Posts_Service {
 
 		foreach ( $result['items'] as $post ) {
 			$lines[] = sprintf(
-				__( '• #%1$d %2$s [%3$s]', 'telepress' ),
+				__( '- #%1$d %2$s [%3$s]', 'telepress' ),
 				$post->ID,
 				TelePress_Telegram_Response_Builder::escape( get_the_title( $post ) ),
 				TelePress_Telegram_Response_Builder::escape( $post->post_status )

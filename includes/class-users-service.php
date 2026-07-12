@@ -88,7 +88,7 @@ class TelePress_Users_Service {
 			$roles       = implode( ', ', array_map( 'sanitize_text_field', $user->roles ) );
 			$is_disabled = $this->is_disabled( $user->ID ) ? __( 'disabled', 'telepress' ) : __( 'active', 'telepress' );
 			$lines[]     = sprintf(
-				__( '• #%1$d %2$s [%3$s] (%4$s)', 'telepress' ),
+				__( '- #%1$d %2$s [%3$s] (%4$s)', 'telepress' ),
 				$user->ID,
 				TelePress_Telegram_Response_Builder::escape( $user->user_login ),
 				TelePress_Telegram_Response_Builder::escape( $roles ? $roles : __( 'no role', 'telepress' ) ),

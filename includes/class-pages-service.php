@@ -48,6 +48,17 @@ class TelePress_Pages_Service {
 		);
 	}
 
+	public function trashed_page( $page = 1, $limit = self::PER_PAGE ) {
+		return $this->query_pages_page(
+			array(
+				'post_type'   => 'page',
+				'post_status' => array( 'trash' ),
+			),
+			$page,
+			$limit
+		);
+	}
+
 	public function render_list_message( $pages, $heading ) {
 		if ( empty( $pages ) ) {
 			return $heading . "\n" . __( 'No pages matched that request.', 'telepress' );
@@ -243,6 +254,10 @@ class TelePress_Pages_Service {
 	private function build_command( $subcommand, $search_term, $page ) {
 		if ( 'search' === $subcommand ) {
 			return trim( '/pages search ' . $search_term . ' page:' . $page );
+		}
+
+		if ( 'trashed' === $subcommand ) {
+			return '/pages trashed page:' . $page;
 		}
 
 		return '/pages list page:' . $page;

@@ -22,6 +22,7 @@ class TelePress_Bootstrap {
 	public function boot() {
 		load_plugin_textdomain( 'telepress', false, dirname( plugin_basename( TELEPRESS_FILE ) ) . '/languages' );
 		$this->maybe_upgrade_schema();
+		$this->ensure_settings_defaults();
 		$this->settings_page->register();
 
 		add_filter( 'cron_schedules', array( $this, 'register_cron_schedules' ) );
@@ -101,5 +102,29 @@ class TelePress_Bootstrap {
 		TelePress_Jobs_Repository::create_table();
 		TelePress_Processed_Updates_Repository::create_table();
 		update_option( 'telepress_schema_version', self::SCHEMA_VERSION, false );
+	}
+
+	private function ensure_settings_defaults() {
+		$settings = get_option( 'telepress_settings', array() );
+
+		if ( ! is_array( $settings ) ) {
+			$settings = array();
+		}
+
+		$updated = false;
+
+		if ( empty( $settings['webhook_secret'] ) ) {
+			$settings['webhook_secret'] = wp_generate_password( 32, false, false );
+			$updated                    = true;
+		}
+
+		if ( empty( $settings['worker_secret'] ) ) {
+			$settings['worker_secret'] = wp_generate_password( 32, false, false );
+			$updated                   = true;
+		}
+
+		if ( $updated ) {
+			update_option( 'telepress_settings', $settings, false );
+		}
 	}
 }

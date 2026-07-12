@@ -338,8 +338,14 @@ class TelePress_Users_Service {
 	}
 
 	private function query_users_page( $args, $page, $limit ) {
-		$page  = max( 1, absint( $page ) );
-		$limit = max( 1, absint( $limit ) );
+		$page      = max( 1, absint( $page ) );
+		$limit     = max( 1, absint( $limit ) );
+		$cache_key = 'telepress_users_' . md5( wp_json_encode( array( $args, $page, $limit ) ) );
+		$cached    = get_transient( $cache_key );
+
+		if ( is_array( $cached ) ) {
+			return $cached;
+		}
 
 		$query = new WP_User_Query(
 			array_merge(
@@ -354,13 +360,17 @@ class TelePress_Users_Service {
 
 		$total_items = (int) $query->get_total();
 
-		return array(
+		$result = array(
 			'items'       => $query->get_results(),
 			'page'        => $page,
 			'per_page'    => $limit,
 			'total_items' => $total_items,
 			'total_pages' => max( 1, (int) ceil( $total_items / $limit ) ),
 		);
+
+		set_transient( $cache_key, $result, 30 );
+
+		return $result;
 	}
 
 	public function block_disabled_user( $user ) {

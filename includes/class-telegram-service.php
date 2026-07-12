@@ -98,21 +98,6 @@ class TelePress_Telegram_Service {
 			return false;
 		}
 
-		$slow_commands = array(
-			'/site',
-			'/dashboard',
-			'/comments',
-			'/posts',
-			'/media',
-			'/users',
-			'/categories',
-			'/tags',
-		);
-
-		if ( ! in_array( $command['name'], $slow_commands, true ) ) {
-			return false;
-		}
-
 		$destructive_actions = array(
 			'approve',
 			'spam',
@@ -137,7 +122,19 @@ class TelePress_Telegram_Service {
 			return false;
 		}
 
-		return true;
+		if ( '/posts' === $command['name'] && 'search' === $first_arg ) {
+			return true;
+		}
+
+		if ( '/media' === $command['name'] && 'search' === $first_arg ) {
+			return true;
+		}
+
+		if ( '/pages' === $command['name'] && 'search' === $first_arg ) {
+			return true;
+		}
+
+		return false;
 	}
 
 	private function send_processing_placeholder( $update, $command ) {
@@ -196,11 +193,21 @@ class TelePress_Telegram_Service {
 	}
 
 	private function schedule_job_processing() {
+		$worker_result = $this->trigger_async_worker();
+
+		$this->update_diagnostics(
+			array(
+				'last_worker_trigger_at'     => time(),
+				'last_worker_trigger_status' => is_wp_error( $worker_result ) ? 'failed' : 'success',
+				'last_worker_trigger_error'  => is_wp_error( $worker_result ) ? $worker_result->get_error_message() : '',
+			)
+		);
+
 		if ( ! wp_next_scheduled( 'telepress_process_jobs' ) ) {
-			wp_schedule_single_event( time() + 1, 'telepress_process_jobs' );
+			wp_schedule_single_event( time() + MINUTE_IN_SECONDS, 'telepress_process_jobs' );
 		}
 
-		if ( function_exists( 'spawn_cron' ) ) {
+		if ( is_wp_error( $worker_result ) && function_exists( 'spawn_cron' ) ) {
 			spawn_cron();
 		}
 	}
@@ -676,6 +683,55 @@ class TelePress_Telegram_Service {
 		}
 
 		$this->client->send_chat_action( (string) $identity['chat_id'], 'typing' );
+	}
+
+	private function trigger_async_worker( $limit = 5 ) {
+		$settings = get_option( 'telepress_settings', array() );
+		$secret   = isset( $settings['worker_secret'] ) ? (string) $settings['worker_secret'] : '';
+
+		if ( '' === $secret ) {
+			return new WP_Error( 'telepress_missing_worker_secret', __( 'TelePress worker secret is not configured.', 'telepress' ) );
+		}
+
+		$response = wp_remote_post(
+			rest_url( TelePress_REST_Webhook_Controller::REST_NAMESPACE . TelePress_REST_Webhook_Controller::WORKER_ROUTE ),
+			array(
+				'timeout'  => 1,
+				'blocking' => false,
+				'headers'  => array(
+					'X-TelePress-Worker-Secret' => $secret,
+				),
+				'body'     => array(
+					'limit' => max( 1, absint( $limit ) ),
+				),
+			)
+		);
+
+		if ( is_wp_error( $response ) ) {
+			TelePress_Audit_Log_Repository::log(
+				array(
+					'action_name'     => 'worker_trigger_failed',
+					'resource_type'   => 'worker',
+					'was_successful'  => 0,
+					'failure_reason'  => $response->get_error_message(),
+				)
+			);
+
+			return $response;
+		}
+
+		TelePress_Audit_Log_Repository::log(
+			array(
+				'action_name'    => 'worker_triggered',
+				'resource_type'  => 'worker',
+				'after_state'    => array(
+					'limit' => max( 1, absint( $limit ) ),
+				),
+				'was_successful' => 1,
+			)
+		);
+
+		return true;
 	}
 
 	private function log_command_event( $action_name, $identity, $update, $context = array() ) {

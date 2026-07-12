@@ -62,9 +62,11 @@ class TelePress_Settings_Page {
 	}
 
 	public function sanitize_settings( $input ) {
+		$existing                          = get_option( 'telepress_settings', array() );
 		$output                            = array();
 		$output['bot_token']              = isset( $input['bot_token'] ) ? sanitize_text_field( $input['bot_token'] ) : '';
 		$output['webhook_secret']         = isset( $input['webhook_secret'] ) ? sanitize_text_field( $input['webhook_secret'] ) : '';
+		$output['worker_secret']          = ! empty( $existing['worker_secret'] ) ? sanitize_text_field( (string) $existing['worker_secret'] ) : wp_generate_password( 32, false, false );
 		$output['transport_mode']         = isset( $input['transport_mode'] ) && 'polling' === $input['transport_mode'] ? 'polling' : 'webhook';
 		$output['allowed_chat_ids']       = isset( $input['allowed_chat_ids'] ) ? sanitize_textarea_field( $input['allowed_chat_ids'] ) : '';
 		$output['stale_update_window']    = isset( $input['stale_update_window'] ) ? max( 30, absint( $input['stale_update_window'] ) ) : TelePress_Telegram_Service::DEFAULT_STALE_WINDOW;
@@ -81,6 +83,7 @@ class TelePress_Settings_Page {
 	public function render_page() {
 		$settings                 = $this->get_settings();
 		$webhook_url              = rest_url( TelePress_REST_Webhook_Controller::REST_NAMESPACE . TelePress_REST_Webhook_Controller::ROUTE );
+		$worker_url               = rest_url( TelePress_REST_Webhook_Controller::REST_NAMESPACE . TelePress_REST_Webhook_Controller::WORKER_ROUTE );
 		$webhook_status           = get_option( 'telepress_webhook_status', array() );
 		$diagnostics              = get_option( TelePress_Telegram_Service::DIAGNOSTICS_OPTION, array() );
 		$command_diagnostics      = get_option( TelePress_Telegram_Service::COMMAND_DIAGNOSTICS_OPTION, array() );
@@ -170,6 +173,11 @@ class TelePress_Settings_Page {
 										<span><?php esc_html_e( 'Webhook Secret', 'telepress' ); ?></span>
 										<input type="text" name="telepress_settings[webhook_secret]" value="<?php echo esc_attr( $settings['webhook_secret'] ); ?>" class="regular-text code" />
 										<small><?php esc_html_e( 'TelePress validates Telegram using the X-Telegram-Bot-Api-Secret-Token header.', 'telepress' ); ?></small>
+									</label>
+									<label class="telepress-field telepress-field-full">
+										<span><?php esc_html_e( 'Async Worker Endpoint', 'telepress' ); ?></span>
+										<input type="text" readonly value="<?php echo esc_attr( $worker_url ); ?>" class="regular-text code" />
+										<small><?php esc_html_e( 'TelePress uses this private REST endpoint internally for background job processing with a generated worker secret.', 'telepress' ); ?></small>
 									</label>
 									<label class="telepress-field">
 										<span><?php esc_html_e( 'Transport Mode', 'telepress' ); ?></span>
@@ -743,6 +751,7 @@ class TelePress_Settings_Page {
 		$defaults = array(
 			'bot_token'             => '',
 			'webhook_secret'        => '',
+			'worker_secret'         => '',
 			'transport_mode'        => 'webhook',
 			'stale_update_window'   => TelePress_Telegram_Service::DEFAULT_STALE_WINDOW,
 			'allowed_chat_ids'      => '',

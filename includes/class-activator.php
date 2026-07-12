@@ -13,6 +13,7 @@ class TelePress_Activator {
 		$defaults = array(
 			'bot_token'             => '',
 			'webhook_secret'        => wp_generate_password( 32, false, false ),
+			'worker_secret'         => wp_generate_password( 32, false, false ),
 			'transport_mode'        => 'webhook',
 			'allowed_chat_ids'      => '',
 			'default_notifications' => array( 'new_comment', 'failed_login', 'plugin_updates', 'theme_updates', 'core_updates' ),

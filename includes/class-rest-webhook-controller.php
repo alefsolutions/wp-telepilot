@@ -7,6 +7,8 @@ if ( ! defined( 'ABSPATH' ) ) {
 class TelePress_REST_Webhook_Controller {
 	const REST_NAMESPACE = 'telepress/v1';
 	const ROUTE          = '/webhook';
+	const WORKER_ROUTE   = '/process-jobs';
+	const WORKER_HEADER  = 'x-telepress-worker-secret';
 
 	public function register_routes() {
 		register_rest_route(
@@ -15,6 +17,16 @@ class TelePress_REST_Webhook_Controller {
 			array(
 				'methods'             => WP_REST_Server::CREATABLE,
 				'callback'            => array( $this, 'handle_webhook' ),
+				'permission_callback' => '__return_true',
+			)
+		);
+
+		register_rest_route(
+			self::REST_NAMESPACE,
+			self::WORKER_ROUTE,
+			array(
+				'methods'             => WP_REST_Server::CREATABLE,
+				'callback'            => array( $this, 'handle_process_jobs' ),
 				'permission_callback' => '__return_true',
 			)
 		);
@@ -97,6 +109,74 @@ class TelePress_REST_Webhook_Controller {
 		);
 
 		return new WP_REST_Response( $result, 200 );
+	}
+
+	public function handle_process_jobs( WP_REST_Request $request ) {
+		$settings = get_option( 'telepress_settings', array() );
+		$secret   = isset( $settings['worker_secret'] ) ? (string) $settings['worker_secret'] : '';
+		$header   = (string) $request->get_header( self::WORKER_HEADER );
+
+		if ( '' === $secret || ! hash_equals( $secret, $header ) ) {
+			$this->update_diagnostics(
+				array(
+					'last_worker_auth_at'     => time(),
+					'last_worker_auth_status' => 'failed',
+					'last_worker_auth_error'  => 'Worker secret mismatch.',
+				)
+			);
+
+			TelePress_Audit_Log_Repository::log(
+				array(
+					'action_name'     => 'worker_auth_failed',
+					'resource_type'   => 'worker',
+					'was_successful'  => 0,
+					'failure_reason'  => 'Worker secret mismatch.',
+				)
+			);
+
+			return new WP_REST_Response(
+				array(
+					'ok'      => false,
+					'message' => __( 'Invalid worker secret.', 'telepress' ),
+				),
+				403
+			);
+		}
+
+		$limit = max( 1, min( 10, (int) $request->get_param( 'limit' ) ) );
+
+		$this->update_diagnostics(
+			array(
+				'last_worker_auth_at'     => time(),
+				'last_worker_auth_status' => 'success',
+				'last_worker_auth_error'  => '',
+				'last_worker_request_at'  => time(),
+			)
+		);
+
+		$telegram = new TelePress_Telegram_Service();
+		$jobs     = $telegram->process_jobs( $limit );
+		$count    = is_array( $jobs ) ? count( $jobs ) : 0;
+
+		TelePress_Audit_Log_Repository::log(
+			array(
+				'action_name'    => 'worker_processed_jobs',
+				'resource_type'  => 'worker',
+				'after_state'    => array(
+					'processed_jobs' => $count,
+					'limit'          => $limit,
+				),
+				'was_successful' => 1,
+			)
+		);
+
+		return new WP_REST_Response(
+			array(
+				'ok'             => true,
+				'processed_jobs' => $count,
+			),
+			200
+		);
 	}
 
 	private function get_webhook_secret_header( WP_REST_Request $request ) {

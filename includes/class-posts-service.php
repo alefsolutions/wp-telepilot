@@ -232,29 +232,41 @@ class TelePress_Posts_Service {
 	}
 
 	private function query_posts_page( $args, $page, $limit ) {
-		$page  = max( 1, absint( $page ) );
-		$limit = max( 1, absint( $limit ) );
+		$page      = max( 1, absint( $page ) );
+		$limit     = max( 1, absint( $limit ) );
+		$cache_key = 'telepress_posts_' . md5( wp_json_encode( array( $args, $page, $limit ) ) );
+		$cached    = get_transient( $cache_key );
+
+		if ( is_array( $cached ) ) {
+			return $cached;
+		}
 
 		$query = new WP_Query(
 			array_merge(
 				$args,
 				array(
-					'posts_per_page'   => $limit,
-					'paged'            => $page,
-					'orderby'          => 'modified',
-					'order'            => 'DESC',
-					'suppress_filters' => false,
+					'posts_per_page'         => $limit,
+					'paged'                  => $page,
+					'orderby'                => 'modified',
+					'order'                  => 'DESC',
+					'suppress_filters'       => false,
+					'update_post_meta_cache' => false,
+					'update_post_term_cache' => false,
 				)
 			)
 		);
 
-		return array(
+		$result = array(
 			'items'       => $query->posts,
 			'page'        => $page,
 			'per_page'    => $limit,
 			'total_items' => (int) $query->found_posts,
 			'total_pages' => max( 1, (int) $query->max_num_pages ),
 		);
+
+		set_transient( $cache_key, $result, 30 );
+
+		return $result;
 	}
 
 	public function publish( $post_id ) {

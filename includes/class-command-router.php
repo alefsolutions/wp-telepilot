@@ -706,25 +706,149 @@ class TelePress_Command_Router {
 			return $permission_result;
 		}
 
-		return TelePress_Telegram_Response_Builder::success(
-			__( 'You executed /pages command.', 'telepress' ),
-			array(
-				'command' => '/pages',
-			)
-		);
+		list( $args, $page ) = $this->extract_page_from_args( $command['args'] );
+		$subcommand = ! empty( $args[0] ) ? strtolower( (string) $args[0] ) : 'list';
+
+		if ( 'list' === $subcommand ) {
+			$pages = $this->pages_service->latest_page( $page );
+			return TelePress_Telegram_Response_Builder::success_html(
+				$this->pages_service->render_page_message( $pages, __( 'Recent Pages', 'telepress' ) ),
+				array(
+					'command'      => '/pages',
+					'reply_markup' => $this->pages_service->build_list_keyboard( $pages['items'], 'list', '', $pages['page'], $pages['total_pages'] ),
+				)
+			);
+		}
+
+		if ( 'search' === $subcommand ) {
+			$term = implode( ' ', array_slice( $args, 1 ) );
+			if ( '' === trim( $term ) ) {
+				return TelePress_Telegram_Response_Builder::error( __( 'Usage: `/pages search keyword`', 'telepress' ) );
+			}
+
+			$pages = $this->pages_service->search_page( $term, $page );
+			return TelePress_Telegram_Response_Builder::success_html(
+				$this->pages_service->render_page_message( $pages, sprintf( __( 'Page Search: %s', 'telepress' ), $term ) ),
+				array(
+					'command'      => '/pages',
+					'reply_markup' => $this->pages_service->build_list_keyboard( $pages['items'], 'search', $term, $pages['page'], $pages['total_pages'] ),
+				)
+			);
+		}
+
+		if ( 'trashed' === $subcommand ) {
+			$pages = $this->pages_service->trashed_page( $page );
+			return TelePress_Telegram_Response_Builder::success_html(
+				$this->pages_service->render_page_message( $pages, __( 'Trashed Pages', 'telepress' ) ),
+				array(
+					'command'      => '/pages',
+					'reply_markup' => $this->pages_service->build_list_keyboard( $pages['items'], 'trashed', '', $pages['page'], $pages['total_pages'] ),
+				)
+			);
+		}
+
+		$page_id = ! empty( $args[1] ) ? absint( $args[1] ) : 0;
+		if ( ! $page_id ) {
+			return TelePress_Telegram_Response_Builder::error( __( 'Usage: `/pages list`, `/pages search keyword`, `/pages trashed`, `/pages publish 123`, `/pages draft 123`, `/pages trash 123`, `/pages restore 123`', 'telepress' ) );
+		}
+
+		if ( 'publish' === $subcommand ) {
+			$private_chat_result = $this->require_private_action( $identity );
+			if ( true !== $private_chat_result ) {
+				return $private_chat_result;
+			}
+
+			$permission_result = $this->permission_service->require_capability( $identity, 'publish_pages' );
+			if ( true !== $permission_result ) {
+				return $permission_result;
+			}
+			$permission_result = $this->permission_service->require_capability( $identity, 'edit_page', $page_id );
+			if ( true !== $permission_result ) {
+				return $permission_result;
+			}
+
+			$result = $this->pages_service->publish( $page_id );
+			if ( is_wp_error( $result ) ) {
+				return TelePress_Telegram_Response_Builder::error( $result->get_error_message() );
+			}
+
+			$this->log_content_action( $identity, 'page_state_changed', 'page', $page_id, 'publish', $result );
+			return TelePress_Telegram_Response_Builder::success( sprintf( __( 'Page #%1$d has been %2$s.', 'telepress' ), $page_id, $result['label'] ), array( 'command' => '/pages' ) );
+		}
+
+		if ( 'draft' === $subcommand ) {
+			$private_chat_result = $this->require_private_action( $identity );
+			if ( true !== $private_chat_result ) {
+				return $private_chat_result;
+			}
+
+			$permission_result = $this->permission_service->require_capability( $identity, 'edit_page', $page_id );
+			if ( true !== $permission_result ) {
+				return $permission_result;
+			}
+
+			$result = $this->pages_service->draft( $page_id );
+			if ( is_wp_error( $result ) ) {
+				return TelePress_Telegram_Response_Builder::error( $result->get_error_message() );
+			}
+
+			$this->log_content_action( $identity, 'page_state_changed', 'page', $page_id, 'draft', $result );
+			return TelePress_Telegram_Response_Builder::success( sprintf( __( 'Page #%1$d has been %2$s.', 'telepress' ), $page_id, $result['label'] ), array( 'command' => '/pages' ) );
+		}
+
+		if ( in_array( $subcommand, array( 'trash', 'restore' ), true ) ) {
+			$private_chat_result = $this->require_private_action( $identity );
+			if ( true !== $private_chat_result ) {
+				return $private_chat_result;
+			}
+
+			$permission_result = $this->permission_service->require_capability( $identity, 'edit_page', $page_id );
+			if ( true !== $permission_result ) {
+				return $permission_result;
+			}
+
+			return TelePress_Telegram_Response_Builder::success(
+				sprintf( __( 'Confirm %1$s for page #%2$d', 'telepress' ), $subcommand, $page_id ),
+				array(
+					'command'      => '/pages',
+					'reply_markup' => $this->pages_service->build_action_confirmation_keyboard( $page_id, $subcommand, $identity['telegram_user_id'] ),
+				)
+			);
+		}
+
+		return TelePress_Telegram_Response_Builder::error( __( 'Supported pages commands: `/pages list`, `/pages search keyword`, `/pages trashed`, `/pages publish 123`, `/pages draft 123`, `/pages trash 123`, `/pages restore 123`', 'telepress' ) );
 	}
 
 	private function handle_page_callback( $command, $identity ) {
-		$permission_result = $this->permission_service->require_capability( $identity, 'edit_pages' );
+		$private_chat_result = $this->require_private_action( $identity );
+		if ( true !== $private_chat_result ) {
+			return $private_chat_result;
+		}
+
+		$page_action = isset( $command['args'][0] ) ? (string) $command['args'][0] : '';
+		$page_id     = isset( $command['args'][1] ) ? absint( $command['args'][1] ) : 0;
+		$token       = isset( $command['args'][2] ) ? (string) $command['args'][2] : '';
+
+		$permission_result = $this->permission_service->require_capability( $identity, 'edit_page', $page_id );
 		if ( true !== $permission_result ) {
 			return $permission_result;
 		}
 
+		$payload = $this->confirmation_service->consume_token( $token );
+		if ( empty( $payload ) || (string) $payload['telegram_user_id'] !== (string) $identity['telegram_user_id'] || (int) $payload['page_id'] !== $page_id || (string) $payload['action'] !== $page_action ) {
+			return TelePress_Telegram_Response_Builder::error( __( 'That page action is invalid or expired.', 'telepress' ) );
+		}
+
+		$result = 'restore' === $page_action ? $this->pages_service->restore( $page_id ) : $this->pages_service->trash( $page_id );
+		if ( is_wp_error( $result ) ) {
+			return TelePress_Telegram_Response_Builder::error( $result->get_error_message() );
+		}
+
+		$this->log_content_action( $identity, 'page_state_changed', 'page', $page_id, $page_action, $result );
+
 		return TelePress_Telegram_Response_Builder::success(
-			__( 'You executed /pages command.', 'telepress' ),
-			array(
-				'command' => '/pages',
-			)
+			sprintf( __( 'Page #%1$d has been %2$s.', 'telepress' ), $page_id, $result['label'] ),
+			array( 'command' => '/pages' )
 		);
 	}
 

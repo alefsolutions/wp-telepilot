@@ -16,6 +16,12 @@ class TelePress_Taxonomies_Service {
 		$page     = max( 1, absint( $page ) );
 		$limit    = max( 1, absint( $limit ) );
 		$search   = sanitize_text_field( $search );
+		$cache_key = 'telepress_terms_' . md5( wp_json_encode( array( $taxonomy, $page, $limit, $search ) ) );
+		$cached    = get_transient( $cache_key );
+
+		if ( is_array( $cached ) ) {
+			return $cached;
+		}
 
 		$query_args = array(
 			'taxonomy'   => $taxonomy,
@@ -50,7 +56,7 @@ class TelePress_Taxonomies_Service {
 
 		$total_pages = max( 1, (int) ceil( (int) $total_items / $limit ) );
 
-		return array(
+		$result = array(
 			'items'       => $items,
 			'page'        => min( $page, $total_pages ),
 			'per_page'    => $limit,
@@ -59,6 +65,10 @@ class TelePress_Taxonomies_Service {
 			'search'      => $search,
 			'taxonomy'    => $taxonomy,
 		);
+
+		set_transient( $cache_key, $result, 30 );
+
+		return $result;
 	}
 
 	public function render_terms_message( $result, $heading ) {

@@ -1,5 +1,11 @@
 # WP Telepilot
 
+[![Release](https://img.shields.io/github/v/release/alefsolutions/wp-telepilot?display_name=tag&color=0ea5d3)](https://github.com/alefsolutions/wp-telepilot/releases)
+[![Release Workflow](https://img.shields.io/github/actions/workflow/status/alefsolutions/wp-telepilot/release-plugin.yml?branch=main&label=release&color=0ea5d3)](https://github.com/alefsolutions/wp-telepilot/actions/workflows/release-plugin.yml)
+[![WordPress](https://img.shields.io/badge/WordPress-6.6%2B-1f2933)](https://wordpress.org)
+[![PHP](https://img.shields.io/badge/PHP-8.0%2B-1f2933)](https://www.php.net)
+[![License](https://img.shields.io/github/license/alefsolutions/wp-telepilot?color=0ea5d3)](LICENSE)
+
 ![WP Telepilot Header](assets/images/readme-header.png)
 
 WP Telepilot is a Telegram-first WordPress operations plugin. It lets authorized WordPress users link their Telegram account, inspect site state, and carry out short, structured operational tasks from chat without recreating all of `wp-admin` inside Telegram.

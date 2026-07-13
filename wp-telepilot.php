@@ -37,6 +37,7 @@ require_once TELEPILOT_PATH . 'includes/class-posts-service.php';
 require_once TELEPILOT_PATH . 'includes/class-pages-service.php';
 require_once TELEPILOT_PATH . 'includes/class-media-service.php';
 require_once TELEPILOT_PATH . 'includes/class-users-service.php';
+require_once TELEPILOT_PATH . 'includes/class-plugins-service.php';
 require_once TELEPILOT_PATH . 'includes/class-taxonomies-service.php';
 require_once TELEPILOT_PATH . 'includes/class-notification-service.php';
 require_once TELEPILOT_PATH . 'includes/class-command-router.php';

@@ -22,6 +22,7 @@ WP Telepilot is a Telegram-first WordPress operations plugin. It lets authorized
   - comments
   - media
   - users
+  - plugins
   - categories
   - tags
 - Supports search and pagination for the main content and user modules.
@@ -42,7 +43,7 @@ WP Telepilot is a Telegram-first WordPress operations plugin. It lets authorized
 ## Command reference
 
 - Full command documentation is available in [COMMANDS.md](COMMANDS.md).
-- The reference is grouped by scope such as Core, Comments, Posts, Pages, Media, Users, Categories, and Tags.
+- The reference is grouped by scope such as Core, Comments, Posts, Pages, Media, Users, Plugins, Categories, and Tags.
 - Each command entry includes syntax, an example, and expected behavior.
 
 ## Admin settings

@@ -17,6 +17,7 @@ class Telepilot_Telegram_Service {
 	private $command_router;
 	private $media_service;
 	private $users_service;
+	private $plugins_service;
 	private $confirmation_service;
 
 	public function __construct() {
@@ -27,6 +28,7 @@ class Telepilot_Telegram_Service {
 		$this->confirmation_service = new Telepilot_Confirmation_Service();
 		$this->media_service      = new Telepilot_Media_Service( $this->confirmation_service, $this->client );
 		$this->users_service      = new Telepilot_Users_Service( $this->confirmation_service );
+		$this->plugins_service    = new Telepilot_Plugins_Service( $this->confirmation_service );
 		$this->command_router     = new Telepilot_Command_Router(
 			new Telepilot_User_Linking_Service(),
 			$this->permission_service,
@@ -36,6 +38,7 @@ class Telepilot_Telegram_Service {
 			new Telepilot_Pages_Service( $this->confirmation_service ),
 			$this->media_service,
 			$this->users_service,
+			$this->plugins_service,
 			new Telepilot_Taxonomies_Service( $this->confirmation_service ),
 			$this->confirmation_service
 		);
@@ -104,6 +107,8 @@ class Telepilot_Telegram_Service {
 			'trash',
 			'delete',
 			'publish',
+			'activate',
+			'deactivate',
 			'create',
 			'update',
 			'edit',
@@ -132,6 +137,10 @@ class Telepilot_Telegram_Service {
 		}
 
 		if ( '/pages' === $command['name'] && 'search' === $first_arg ) {
+			return true;
+		}
+
+		if ( '/plugins' === $command['name'] && in_array( $first_arg, array( 'search', 'updates' ), true ) ) {
 			return true;
 		}
 
@@ -182,6 +191,7 @@ class Telepilot_Telegram_Service {
 			'/pages'      => __( '<b>Working on it...</b>' . "\n" . 'Loading pages now.', 'telepilot' ),
 			'/media'      => __( '<b>Working on it...</b>' . "\n" . 'Fetching media items now.', 'telepilot' ),
 			'/users'      => __( '<b>Working on it...</b>' . "\n" . 'Loading users now.', 'telepilot' ),
+			'/plugins'    => __( '<b>Working on it...</b>' . "\n" . 'Checking installed plugins now.', 'telepilot' ),
 			'/categories' => __( '<b>Working on it...</b>' . "\n" . 'Loading categories now.', 'telepilot' ),
 			'/tags'       => __( '<b>Working on it...</b>' . "\n" . 'Loading tags now.', 'telepilot' ),
 		);

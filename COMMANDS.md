@@ -354,6 +354,78 @@ Each command below includes:
 - Example: `/users list page:2`
 - Behavior: opens a specific result page. The same pattern also works for `/users search`.
 
+## Plugins commands
+
+### `/plugins help`
+
+- Scope: plugins
+- Syntax: `/plugins help`
+- Example: `/plugins help`
+- Behavior: shows the plugins command cheat sheet.
+
+### `/plugins list`
+
+- Scope: plugins
+- Syntax: `/plugins list`
+- Example: `/plugins list`
+- Behavior: lists installed plugins with pagination, current status, version information, and action buttons.
+
+### `/plugins search KEYWORD`
+
+- Scope: plugins
+- Syntax: `/plugins search KEYWORD`
+- Example: `/plugins search seo`
+- Behavior: searches installed plugins by identifier, name, file, or author with paginated results.
+
+### `/plugins updates`
+
+- Scope: plugins
+- Syntax: `/plugins updates`
+- Example: `/plugins updates`
+- Behavior: lists installed plugins that currently have updates available.
+
+### `/plugins details IDENTIFIER`
+
+- Scope: plugins
+- Syntax: `/plugins details IDENTIFIER`
+- Example: `/plugins details akismet`
+- Behavior: shows plugin file, version, active state, author, and update availability.
+
+### `/plugins activate IDENTIFIER`
+
+- Scope: plugins
+- Syntax: `/plugins activate IDENTIFIER`
+- Example: `/plugins activate akismet`
+- Behavior: activates an installed plugin after confirmation.
+
+### `/plugins deactivate IDENTIFIER`
+
+- Scope: plugins
+- Syntax: `/plugins deactivate IDENTIFIER`
+- Example: `/plugins deactivate akismet`
+- Behavior: deactivates an installed plugin after confirmation.
+
+### `/plugins update IDENTIFIER`
+
+- Scope: plugins
+- Syntax: `/plugins update IDENTIFIER`
+- Example: `/plugins update akismet`
+- Behavior: updates an installed plugin after confirmation.
+
+### `/plugins delete IDENTIFIER`
+
+- Scope: plugins
+- Syntax: `/plugins delete IDENTIFIER`
+- Example: `/plugins delete akismet`
+- Behavior: deletes an installed plugin after confirmation. The plugin must be inactive first.
+
+### Plugins pagination
+
+- Scope: plugins
+- Syntax: `/plugins list page:N`
+- Example: `/plugins list page:2`
+- Behavior: opens a specific result page. The same pattern also works for `/plugins search` and `/plugins updates`.
+
 ## Categories commands
 
 ### `/categories list`

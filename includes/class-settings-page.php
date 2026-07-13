@@ -848,6 +848,10 @@ class Telepilot_Settings_Page {
 				'description' => __( 'Manage WordPress users', 'telepilot' ),
 			),
 			array(
+				'command'     => 'plugins',
+				'description' => __( 'Manage installed plugins', 'telepilot' ),
+			),
+			array(
 				'command'     => 'categories',
 				'description' => __( 'List and manage post categories', 'telepilot' ),
 			),

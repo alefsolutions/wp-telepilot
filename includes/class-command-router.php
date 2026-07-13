@@ -215,16 +215,19 @@ class TelePress_Command_Router {
 				$commands[] = TelePress_Telegram_Response_Builder::code( '/comments pending' );
 			}
 			if ( $this->permission_service->user_can( $identity['wp_user'], 'edit_posts' ) ) {
-				$commands[] = TelePress_Telegram_Response_Builder::code( '/posts latest' );
+				$commands[] = TelePress_Telegram_Response_Builder::code( '/posts list' );
 				$commands[] = TelePress_Telegram_Response_Builder::code( '/posts search keyword' );
+				$commands[] = TelePress_Telegram_Response_Builder::code( '/posts help' ) . ' ' . __( 'Show posts examples', 'telepress' );
 			}
 			if ( $this->permission_service->user_can( $identity['wp_user'], 'edit_pages' ) ) {
 				$commands[] = TelePress_Telegram_Response_Builder::code( '/pages list' );
 				$commands[] = TelePress_Telegram_Response_Builder::code( '/pages search keyword' );
+				$commands[] = TelePress_Telegram_Response_Builder::code( '/pages help' ) . ' ' . __( 'Show pages examples', 'telepress' );
 			}
 			if ( $this->permission_service->user_can( $identity['wp_user'], 'upload_files' ) ) {
-				$commands[] = TelePress_Telegram_Response_Builder::code( '/media recent' );
+				$commands[] = TelePress_Telegram_Response_Builder::code( '/media list' );
 				$commands[] = TelePress_Telegram_Response_Builder::code( '/media search keyword' );
+				$commands[] = TelePress_Telegram_Response_Builder::code( '/media help' ) . ' ' . __( 'Show media examples', 'telepress' );
 			}
 
 			$future_commands = array();
@@ -561,9 +564,19 @@ class TelePress_Command_Router {
 		}
 
 		list( $args, $page ) = $this->extract_page_from_args( $command['args'] );
-		$subcommand = ! empty( $args[0] ) ? strtolower( (string) $args[0] ) : 'latest';
+		$subcommand = ! empty( $args[0] ) ? strtolower( (string) $args[0] ) : 'list';
 
-		if ( 'latest' === $subcommand ) {
+		if ( 'help' === $subcommand ) {
+			return TelePress_Telegram_Response_Builder::success_html(
+				$this->posts_service->render_help_message(),
+				array(
+					'command'      => '/posts',
+					'reply_markup' => $this->build_home_keyboard( $identity ),
+				)
+			);
+		}
+
+		if ( in_array( $subcommand, array( 'list', 'latest' ), true ) ) {
 			$result = $this->posts_service->latest_page( $page );
 			return TelePress_Telegram_Response_Builder::success_html(
 				$this->posts_service->render_page_message( $result, __( 'Latest Posts', 'telepress' ) ),
@@ -664,7 +677,12 @@ class TelePress_Command_Router {
 			);
 		}
 
-		return TelePress_Telegram_Response_Builder::error( __( 'Supported posts commands: `/posts latest`, `/posts drafts`, `/posts search keyword`, `/posts publish 123`, `/posts unpublish 123`, `/posts stats`', 'telepress' ) );
+		return TelePress_Telegram_Response_Builder::error_html(
+			$this->posts_service->render_help_message(),
+			array(
+				'command' => '/posts',
+			)
+		);
 	}
 
 	private function handle_post_callback( $command, $identity ) {
@@ -736,6 +754,16 @@ class TelePress_Command_Router {
 			);
 		}
 
+		if ( 'help' === $subcommand ) {
+			return TelePress_Telegram_Response_Builder::success_html(
+				$this->pages_service->render_help_message(),
+				array(
+					'command'      => '/pages',
+					'reply_markup' => $this->build_home_keyboard( $identity ),
+				)
+			);
+		}
+
 		if ( 'trashed' === $subcommand ) {
 			$pages = $this->pages_service->trashed_page( $page );
 			return TelePress_Telegram_Response_Builder::success_html(
@@ -749,7 +777,12 @@ class TelePress_Command_Router {
 
 		$page_id = ! empty( $args[1] ) ? absint( $args[1] ) : 0;
 		if ( ! $page_id ) {
-			return TelePress_Telegram_Response_Builder::error( __( 'Usage: `/pages list`, `/pages search keyword`, `/pages trashed`, `/pages publish 123`, `/pages draft 123`, `/pages trash 123`, `/pages restore 123`', 'telepress' ) );
+			return TelePress_Telegram_Response_Builder::error_html(
+				$this->pages_service->render_help_message(),
+				array(
+					'command' => '/pages',
+				)
+			);
 		}
 
 		if ( 'publish' === $subcommand ) {
@@ -816,7 +849,12 @@ class TelePress_Command_Router {
 			);
 		}
 
-		return TelePress_Telegram_Response_Builder::error( __( 'Supported pages commands: `/pages list`, `/pages search keyword`, `/pages trashed`, `/pages publish 123`, `/pages draft 123`, `/pages trash 123`, `/pages restore 123`', 'telepress' ) );
+		return TelePress_Telegram_Response_Builder::error_html(
+			$this->pages_service->render_help_message(),
+			array(
+				'command' => '/pages',
+			)
+		);
 	}
 
 	private function handle_page_callback( $command, $identity ) {
@@ -874,15 +912,25 @@ class TelePress_Command_Router {
 		}
 
 		list( $args, $page ) = $this->extract_page_from_args( $command['args'] );
-		$subcommand = ! empty( $args[0] ) ? strtolower( (string) $args[0] ) : 'recent';
+		$subcommand = ! empty( $args[0] ) ? strtolower( (string) $args[0] ) : 'list';
 
-		if ( 'recent' === $subcommand ) {
+		if ( 'help' === $subcommand ) {
+			return TelePress_Telegram_Response_Builder::success_html(
+				$this->media_service->render_help_message(),
+				array(
+					'command'      => '/media',
+					'reply_markup' => $this->build_home_keyboard( $identity ),
+				)
+			);
+		}
+
+		if ( in_array( $subcommand, array( 'list', 'recent' ), true ) ) {
 			$items = $this->media_service->recent_page( $page );
 			return TelePress_Telegram_Response_Builder::success_html(
 				$this->media_service->render_page_message( $items, __( 'Recent Media', 'telepress' ) ),
 				array(
 					'command'      => '/media',
-					'reply_markup' => $this->media_service->build_list_keyboard( $items['items'], 'recent', '', $items['page'], $items['total_pages'] ),
+					'reply_markup' => $this->media_service->build_list_keyboard( $items['items'], 'list', '', $items['page'], $items['total_pages'] ),
 				)
 			);
 		}
@@ -890,7 +938,12 @@ class TelePress_Command_Router {
 		if ( 'search' === $subcommand ) {
 			$term = implode( ' ', array_slice( $args, 1 ) );
 			if ( '' === trim( $term ) ) {
-				return TelePress_Telegram_Response_Builder::error( __( 'Usage: `/media search keyword`', 'telepress' ) );
+				return TelePress_Telegram_Response_Builder::error_html(
+					$this->media_service->render_help_message(),
+					array(
+						'command' => '/media',
+					)
+				);
 			}
 
 			$items = $this->media_service->search_page( $term, $page );
@@ -924,7 +977,12 @@ class TelePress_Command_Router {
 			);
 		}
 
-		return TelePress_Telegram_Response_Builder::error( __( 'Supported media commands: `/media recent`, `/media search keyword`, `/media delete 123`, or send a photo/document to upload it.', 'telepress' ) );
+		return TelePress_Telegram_Response_Builder::error_html(
+			$this->media_service->render_help_message(),
+			array(
+				'command' => '/media',
+			)
+		);
 	}
 
 	private function handle_media_callback( $command, $identity ) {
@@ -1480,7 +1538,7 @@ class TelePress_Command_Router {
 				$rows[] = array(
 					array(
 						'text'          => __( 'Posts', 'telepress' ),
-						'callback_data' => '/posts latest',
+						'callback_data' => '/posts list',
 					),
 					array(
 						'text'          => __( 'Pages', 'telepress' ),
@@ -1497,7 +1555,7 @@ class TelePress_Command_Router {
 					),
 					array(
 						'text'          => __( 'Media', 'telepress' ),
-						'callback_data' => '/media recent',
+						'callback_data' => '/media list',
 					),
 				);
 			}

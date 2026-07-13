@@ -95,10 +95,32 @@ class TelePress_Pages_Service {
 				TelePress_Telegram_Response_Builder::escape( get_the_title( $page ) ),
 				TelePress_Telegram_Response_Builder::escape( $page->post_status )
 			);
+
+			$access_link = $this->describe_access_link( $page );
+			if ( '' !== $access_link ) {
+				$lines[] = '  ' . $access_link;
+			}
 		}
 
 		$lines[] = '';
 		$lines[] = TelePress_Telegram_Response_Builder::italic( __( 'Tip: use the buttons below, or run /pages search keyword to narrow the list.', 'telepress' ) );
+
+		return implode( "\n", $lines );
+	}
+
+	public function render_help_message() {
+		$lines   = array();
+		$lines[] = TelePress_Telegram_Response_Builder::bold( __( 'Pages Commands', 'telepress' ) );
+		$lines[] = '';
+		$lines[] = TelePress_Telegram_Response_Builder::code( '/pages list' ) . ' ' . __( 'Show recent pages', 'telepress' );
+		$lines[] = TelePress_Telegram_Response_Builder::code( '/pages search about' ) . ' ' . __( 'Search pages', 'telepress' );
+		$lines[] = TelePress_Telegram_Response_Builder::code( '/pages trashed' ) . ' ' . __( 'Show trashed pages', 'telepress' );
+		$lines[] = TelePress_Telegram_Response_Builder::code( '/pages publish 123' ) . ' ' . __( 'Publish a page', 'telepress' );
+		$lines[] = TelePress_Telegram_Response_Builder::code( '/pages draft 123' ) . ' ' . __( 'Move a page to draft', 'telepress' );
+		$lines[] = TelePress_Telegram_Response_Builder::code( '/pages trash 123' ) . ' ' . __( 'Trash a page', 'telepress' );
+		$lines[] = TelePress_Telegram_Response_Builder::code( '/pages restore 123' ) . ' ' . __( 'Restore a trashed page', 'telepress' );
+		$lines[] = '';
+		$lines[] = TelePress_Telegram_Response_Builder::italic( __( 'Published pages can be previewed directly from Telegram. Drafts are linked to wp-admin because browser preview for drafts normally requires WordPress authentication.', 'telepress' ) );
 
 		return implode( "\n", $lines );
 	}
@@ -123,6 +145,8 @@ class TelePress_Pages_Service {
 			return new WP_Error( 'telepress_page_trash_failed', __( 'WordPress could not trash that page.', 'telepress' ) );
 		}
 
+		$this->bump_cache_version();
+
 		return array(
 			'post'          => get_post( $page_id ),
 			'before_status' => $before_status,
@@ -142,6 +166,8 @@ class TelePress_Pages_Service {
 		if ( false === $result || null === $result ) {
 			return new WP_Error( 'telepress_page_restore_failed', __( 'WordPress could not restore that page.', 'telepress' ) );
 		}
+
+		$this->bump_cache_version();
 
 		return array(
 			'post'          => get_post( $page_id ),
@@ -184,6 +210,18 @@ class TelePress_Pages_Service {
 			}
 
 			$row = array();
+
+			if ( 'publish' === $page_item->post_status ) {
+				$row[] = array(
+					'text' => sprintf( __( 'Preview #%d', 'telepress' ), $page_item->ID ),
+					'url'  => $this->get_preview_url( $page_item ),
+				);
+			} else {
+				$row[] = array(
+					'text' => sprintf( __( 'Edit #%d', 'telepress' ), $page_item->ID ),
+					'url'  => $this->get_admin_edit_url( $page_item->ID ),
+				);
+			}
 
 			if ( 'trash' === $page_item->post_status ) {
 				$row[] = array(
@@ -263,6 +301,31 @@ class TelePress_Pages_Service {
 		return '/pages list page:' . $page;
 	}
 
+	private function describe_access_link( $page ) {
+		if ( ! $page instanceof WP_Post ) {
+			return '';
+		}
+
+		if ( 'publish' === $page->post_status ) {
+			$url = $this->get_preview_url( $page );
+			if ( '' !== $url ) {
+				return __( 'Preview:', 'telepress' ) . ' ' . TelePress_Telegram_Response_Builder::link( __( 'Open in browser', 'telepress' ), $url );
+			}
+		}
+
+		return __( 'Edit:', 'telepress' ) . ' ' . TelePress_Telegram_Response_Builder::link( __( 'Open in wp-admin', 'telepress' ), $this->get_admin_edit_url( $page->ID ) );
+	}
+
+	private function get_preview_url( $page ) {
+		$url = get_permalink( $page );
+
+		return $url ? (string) $url : '';
+	}
+
+	private function get_admin_edit_url( $page_id ) {
+		return admin_url( 'post.php?post=' . (int) $page_id . '&action=edit' );
+	}
+
 	private function update_status( $page_id, $status, $label ) {
 		$page = get_post( $page_id );
 		if ( ! $page || 'page' !== $page->post_type ) {
@@ -282,6 +345,8 @@ class TelePress_Pages_Service {
 			return $result;
 		}
 
+		$this->bump_cache_version();
+
 		return array(
 			'post'          => get_post( $page_id ),
 			'before_status' => $before_status,
@@ -293,7 +358,7 @@ class TelePress_Pages_Service {
 	private function query_pages_page( $args, $page, $limit ) {
 		$page      = max( 1, absint( $page ) );
 		$limit     = max( 1, absint( $limit ) );
-		$cache_key = 'telepress_pages_' . md5( wp_json_encode( array( $args, $page, $limit ) ) );
+		$cache_key = 'telepress_pages_' . $this->get_cache_version() . '_' . md5( wp_json_encode( array( $args, $page, $limit ) ) );
 		$cached    = get_transient( $cache_key );
 
 		if ( is_array( $cached ) ) {
@@ -326,6 +391,14 @@ class TelePress_Pages_Service {
 		set_transient( $cache_key, $result, 30 );
 
 		return $result;
+	}
+
+	private function bump_cache_version() {
+		update_option( 'telepress_pages_cache_version', $this->get_cache_version() + 1, false );
+	}
+
+	private function get_cache_version() {
+		return max( 1, (int) get_option( 'telepress_pages_cache_version', 1 ) );
 	}
 
 	private function navigation_rows() {

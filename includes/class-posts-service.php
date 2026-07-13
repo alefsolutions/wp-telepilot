@@ -162,6 +162,20 @@ class TelePress_Posts_Service {
 		);
 	}
 
+	public function render_help_message() {
+		$lines   = array();
+		$lines[] = TelePress_Telegram_Response_Builder::bold( __( 'Posts Commands', 'telepress' ) );
+		$lines[] = '';
+		$lines[] = TelePress_Telegram_Response_Builder::code( '/posts list' ) . ' ' . __( 'Show recent posts', 'telepress' );
+		$lines[] = TelePress_Telegram_Response_Builder::code( '/posts drafts' ) . ' ' . __( 'Show draft posts', 'telepress' );
+		$lines[] = TelePress_Telegram_Response_Builder::code( '/posts search keyword' ) . ' ' . __( 'Search posts', 'telepress' );
+		$lines[] = TelePress_Telegram_Response_Builder::code( '/posts stats' ) . ' ' . __( 'Show post counts', 'telepress' );
+		$lines[] = TelePress_Telegram_Response_Builder::code( '/posts publish 123' ) . ' ' . __( 'Publish a post', 'telepress' );
+		$lines[] = TelePress_Telegram_Response_Builder::code( '/posts unpublish 123' ) . ' ' . __( 'Move a post back to draft', 'telepress' );
+
+		return implode( "\n", $lines );
+	}
+
 	public function build_list_keyboard( $posts, $subcommand = 'latest', $search_term = '', $page = 1, $total_pages = 1 ) {
 		$rows = array();
 

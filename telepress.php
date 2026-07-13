@@ -3,7 +3,7 @@
  * Plugin Name: TelePress
  * Plugin URI: https://alefdigitalsolutions.com
  * Description: Manage key WordPress operations from Telegram with secure remote workflows and audit logging.
- * Version: 0.2.1
+ * Version: 0.2.2
  * Author: Alef Digital Solutions
  * Requires at least: 6.6
  * Requires PHP: 8.0
@@ -14,7 +14,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'TELEPRESS_VERSION', '0.2.1' );
+define( 'TELEPRESS_VERSION', '0.2.2' );
 define( 'TELEPRESS_FILE', __FILE__ );
 define( 'TELEPRESS_PATH', plugin_dir_path( __FILE__ ) );
 define( 'TELEPRESS_URL', plugin_dir_url( __FILE__ ) );

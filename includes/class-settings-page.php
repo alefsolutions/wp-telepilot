@@ -777,14 +777,7 @@ class TelePress_Settings_Page {
 	}
 
 	private function notification_options() {
-		return array(
-			'new_post_published' => __( 'New post published', 'telepress' ),
-			'new_comment'        => __( 'New comment', 'telepress' ),
-			'failed_login'       => __( 'Failed login', 'telepress' ),
-			'plugin_updates'     => __( 'Plugin updates', 'telepress' ),
-			'theme_updates'      => __( 'Theme updates', 'telepress' ),
-			'core_updates'       => __( 'Core updates', 'telepress' ),
-		);
+		return TelePress_Notification_Service::option_labels();
 	}
 
 	private function telegram_commands() {

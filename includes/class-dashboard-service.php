@@ -86,7 +86,7 @@ class TelePress_Dashboard_Service {
 			$rows[] = array(
 				array(
 					'text'          => __( 'Posts', 'telepress' ),
-					'callback_data' => '/posts latest',
+					'callback_data' => '/posts list',
 				),
 				array(
 					'text'          => __( 'Pages', 'telepress' ),
@@ -103,7 +103,7 @@ class TelePress_Dashboard_Service {
 				),
 				array(
 					'text'          => __( 'Media', 'telepress' ),
-					'callback_data' => '/media recent',
+					'callback_data' => '/media list',
 				),
 			);
 		}

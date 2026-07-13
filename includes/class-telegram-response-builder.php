@@ -125,4 +125,8 @@ class TelePress_Telegram_Response_Builder {
 	public static function code( $text ) {
 		return '<code>' . self::escape( $text ) . '</code>';
 	}
+
+	public static function link( $text, $url ) {
+		return '<a href="' . esc_url( (string) $url ) . '">' . self::escape( $text ) . '</a>';
+	}
 }

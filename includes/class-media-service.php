@@ -94,15 +94,32 @@ class TelePress_Media_Service {
 
 		foreach ( $result['items'] as $item ) {
 			$lines[] = sprintf(
-				__( "- #%1$d %2$s\n  Preview: %3$s", 'telepress' ),
+				__( '- #%1$d %2$s', 'telepress' ),
 				$item->ID,
-				TelePress_Telegram_Response_Builder::escape( get_the_title( $item ) ),
-				TelePress_Telegram_Response_Builder::escape( wp_get_attachment_url( $item->ID ) )
+				TelePress_Telegram_Response_Builder::escape( get_the_title( $item ) )
 			);
+
+			$preview_url = wp_get_attachment_url( $item->ID );
+			if ( $preview_url ) {
+				$lines[] = '  ' . __( 'Preview:', 'telepress' ) . ' ' . TelePress_Telegram_Response_Builder::link( __( 'Open file', 'telepress' ), $preview_url );
+			}
 		}
 
 		$lines[] = '';
 		$lines[] = TelePress_Telegram_Response_Builder::italic( __( 'Tip: send a photo or document in this private chat to upload it straight into WordPress.', 'telepress' ) );
+
+		return implode( "\n", $lines );
+	}
+
+	public function render_help_message() {
+		$lines   = array();
+		$lines[] = TelePress_Telegram_Response_Builder::bold( __( 'Media Commands', 'telepress' ) );
+		$lines[] = '';
+		$lines[] = TelePress_Telegram_Response_Builder::code( '/media list' ) . ' ' . __( 'Show recent media items', 'telepress' );
+		$lines[] = TelePress_Telegram_Response_Builder::code( '/media search logo' ) . ' ' . __( 'Search media by title', 'telepress' );
+		$lines[] = TelePress_Telegram_Response_Builder::code( '/media delete 123' ) . ' ' . __( 'Delete a media item after confirmation', 'telepress' );
+		$lines[] = '';
+		$lines[] = TelePress_Telegram_Response_Builder::italic( __( 'Tip: send a photo or document directly to the bot in a private chat to upload it to WordPress.', 'telepress' ) );
 
 		return implode( "\n", $lines );
 	}
@@ -122,6 +139,8 @@ class TelePress_Media_Service {
 		if ( ! $result ) {
 			return new WP_Error( 'telepress_media_delete_failed', __( 'WordPress could not delete that media item.', 'telepress' ) );
 		}
+
+		$this->bump_cache_version();
 
 		return array(
 			'before_state' => $before_state,
@@ -162,6 +181,10 @@ class TelePress_Media_Service {
 			}
 
 			$rows[] = array(
+				array(
+					'text' => sprintf( __( 'Open #%d', 'telepress' ), $item->ID ),
+					'url'  => wp_get_attachment_url( $item->ID ),
+				),
 				array(
 					'text'          => sprintf( __( 'Delete #%d', 'telepress' ), $item->ID ),
 					'callback_data' => '/media delete ' . (int) $item->ID,
@@ -257,6 +280,8 @@ class TelePress_Media_Service {
 			return $attachment_id;
 		}
 
+		$this->bump_cache_version();
+
 		return array(
 			'attachment_id' => $attachment_id,
 			'title'         => get_the_title( $attachment_id ),
@@ -290,7 +315,7 @@ class TelePress_Media_Service {
 	private function query_media_page( $args, $page, $limit ) {
 		$page      = max( 1, absint( $page ) );
 		$limit     = max( 1, absint( $limit ) );
-		$cache_key = 'telepress_media_' . md5( wp_json_encode( array( $args, $page, $limit ) ) );
+		$cache_key = 'telepress_media_' . $this->get_cache_version() . '_' . md5( wp_json_encode( array( $args, $page, $limit ) ) );
 		$cached    = get_transient( $cache_key );
 
 		if ( is_array( $cached ) ) {
@@ -323,6 +348,14 @@ class TelePress_Media_Service {
 		set_transient( $cache_key, $result, 30 );
 
 		return $result;
+	}
+
+	private function bump_cache_version() {
+		update_option( 'telepress_media_cache_version', $this->get_cache_version() + 1, false );
+	}
+
+	private function get_cache_version() {
+		return max( 1, (int) get_option( 'telepress_media_cache_version', 1 ) );
 	}
 
 	private function navigation_rows() {

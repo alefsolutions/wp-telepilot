@@ -30,9 +30,21 @@ class TelePress_Bootstrap {
 		add_action( 'telepress_daily_maintenance', array( $this, 'run_daily_maintenance' ) );
 		add_action( 'telepress_poll_updates', array( $this, 'poll_updates' ) );
 		add_action( 'telepress_process_jobs', array( $this, 'process_jobs' ) );
-		add_action( 'comment_post', array( $this->notification_service, 'handle_new_comment' ), 10, 2 );
+		add_action( 'comment_post', array( $this->notification_service, 'handle_new_comment' ), 10, 3 );
+		add_action( 'wp_set_comment_status', array( $this->notification_service, 'handle_comment_status_change' ), 10, 2 );
 		add_action( 'transition_post_status', array( $this->notification_service, 'handle_post_transition' ), 10, 3 );
 		add_action( 'wp_login_failed', array( $this->notification_service, 'handle_failed_login' ) );
+		add_action( 'user_register', array( $this->notification_service, 'handle_user_registered' ), 10, 2 );
+		add_action( 'profile_update', array( $this->notification_service, 'handle_user_profile_updated' ), 10, 3 );
+		add_action( 'delete_user', array( $this->notification_service, 'handle_user_deleted' ), 10, 3 );
+		add_action( 'set_user_role', array( $this->notification_service, 'handle_user_role_changed' ), 10, 3 );
+		add_action( 'retrieve_password_key', array( $this->notification_service, 'handle_password_reset_requested' ), 10, 2 );
+		add_action( 'after_password_reset', array( $this->notification_service, 'handle_password_reset_completed' ), 10, 2 );
+		add_action( 'activated_plugin', array( $this->notification_service, 'handle_plugin_activated' ), 10, 2 );
+		add_action( 'deactivated_plugin', array( $this->notification_service, 'handle_plugin_deactivated' ), 10, 2 );
+		add_action( 'switch_theme', array( $this->notification_service, 'handle_theme_switched' ), 10, 3 );
+		add_action( 'upgrader_process_complete', array( $this->notification_service, 'handle_upgrader_process_complete' ), 10, 2 );
+		add_action( 'automatic_updates_complete', array( $this->notification_service, 'handle_automatic_updates_complete' ), 10, 1 );
 		add_filter( 'wp_authenticate_user', array( $this->users_service, 'block_disabled_user' ), 20, 1 );
 
 		if ( ! wp_next_scheduled( 'telepress_daily_maintenance' ) ) {

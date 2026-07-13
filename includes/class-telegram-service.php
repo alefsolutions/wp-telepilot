@@ -813,12 +813,14 @@ class TelePress_Telegram_Service {
 			)
 		);
 
-		return TelePress_Telegram_Response_Builder::success(
+		return TelePress_Telegram_Response_Builder::success_html(
+			TelePress_Telegram_Response_Builder::bold( __( 'Media Uploaded', 'telepress' ) ) .
+			"\n\n" .
 			sprintf(
-				__( "Media uploaded\nID: %1$d\nTitle: %2$s\nURL: %3$s", 'telepress' ),
+				__( "ID: %1$d\nTitle: %2$s\nPreview: %3$s", 'telepress' ),
 				$result['attachment_id'],
-				$result['title'],
-				$result['url']
+				TelePress_Telegram_Response_Builder::escape( $result['title'] ),
+				TelePress_Telegram_Response_Builder::link( __( 'Open file', 'telepress' ), $result['url'] )
 			),
 			array(
 				'command' => '/media',

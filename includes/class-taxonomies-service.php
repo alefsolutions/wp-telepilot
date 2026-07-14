@@ -5,18 +5,20 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 class Telepilot_Taxonomies_Service {
+	const PER_PAGE = 5;
+
 	private $confirmation_service;
 
 	public function __construct( Telepilot_Confirmation_Service $confirmation_service ) {
 		$this->confirmation_service = $confirmation_service;
 	}
 
-	public function list_terms( $taxonomy, $page = 1, $limit = 5, $search = '' ) {
+	public function list_terms( $taxonomy, $page = 1, $limit = self::PER_PAGE, $search = '' ) {
 		$taxonomy = $this->normalize_taxonomy( $taxonomy );
 		$page     = max( 1, absint( $page ) );
 		$limit    = max( 1, absint( $limit ) );
 		$search   = sanitize_text_field( $search );
-		$cache_key = 'telepilot_terms_' . md5( wp_json_encode( array( $taxonomy, $page, $limit, $search ) ) );
+		$cache_key = 'telepilot_terms_' . $this->get_cache_version() . '_' . md5( wp_json_encode( array( $taxonomy, $page, $limit, $search ) ) );
 		$cached    = get_transient( $cache_key );
 
 		if ( is_array( $cached ) ) {
@@ -107,6 +109,78 @@ class Telepilot_Taxonomies_Service {
 		return implode( "\n", $lines );
 	}
 
+	public function render_help_message( $resource ) {
+		$resource = $this->normalize_resource( $resource );
+		$singular = $this->resource_singular( $resource );
+		$lines    = array();
+
+		$lines[] = Telepilot_Telegram_Response_Builder::bold( sprintf( __( '%s Commands', 'telepilot' ), ucfirst( $resource ) ) );
+		$lines[] = '';
+		$lines[] = Telepilot_Telegram_Response_Builder::code( '/' . $resource . ' list' ) . ' ' . sprintf( __( 'Show %s', 'telepilot' ), $resource );
+		$lines[] = Telepilot_Telegram_Response_Builder::code( '/' . $resource . ' search keyword' ) . ' ' . sprintf( __( 'Search %s', 'telepilot' ), $resource );
+		$lines[] = Telepilot_Telegram_Response_Builder::code( '/' . $resource . ' details 12' ) . ' ' . sprintf( __( 'Show %s details', 'telepilot' ), $singular );
+		$lines[] = Telepilot_Telegram_Response_Builder::code( '/' . $resource . ' create Name' ) . ' ' . sprintf( __( 'Create a new %s', 'telepilot' ), $singular );
+		$lines[] = Telepilot_Telegram_Response_Builder::code( '/' . $resource . ' rename 12 New Name' ) . ' ' . sprintf( __( 'Rename a %s', 'telepilot' ), $singular );
+		$lines[] = Telepilot_Telegram_Response_Builder::code( '/' . $resource . ' slug 12 new-slug' ) . ' ' . sprintf( __( 'Update a %s slug', 'telepilot' ), $singular );
+		$lines[] = Telepilot_Telegram_Response_Builder::code( '/' . $resource . ' description 12 New description' ) . ' ' . sprintf( __( 'Update a %s description', 'telepilot' ), $singular );
+
+		if ( 'categories' === $resource ) {
+			$lines[] = Telepilot_Telegram_Response_Builder::code( '/categories parent 12 3' ) . ' ' . __( 'Assign a parent category, or use `none` to clear it', 'telepilot' );
+		}
+
+		$lines[] = Telepilot_Telegram_Response_Builder::code( '/' . $resource . ' delete 12' ) . ' ' . sprintf( __( 'Delete a %s after confirmation', 'telepilot' ), $singular );
+		$lines[] = '';
+		$lines[] = Telepilot_Telegram_Response_Builder::italic( __( 'Tip: use the bracketed term ID from list results when updating or deleting.', 'telepilot' ) );
+
+		return implode( "\n", $lines );
+	}
+
+	public function render_term_details_message( $term, $resource ) {
+		if ( ! ( $term instanceof WP_Term ) ) {
+			return Telepilot_Telegram_Response_Builder::bold( __( 'Term Details', 'telepilot' ) ) . "\n\n" . __( 'Term not found.', 'telepilot' );
+		}
+
+		$resource = $this->normalize_resource( $resource );
+		$lines    = array(
+			Telepilot_Telegram_Response_Builder::bold( sprintf( __( '%s Details', 'telepilot' ), ucfirst( $this->resource_singular( $resource ) ) ) ),
+			'',
+			sprintf( __( 'Name: %s', 'telepilot' ), Telepilot_Telegram_Response_Builder::escape( $term->name ) ),
+			sprintf( __( 'ID: [%d]', 'telepilot' ), $term->term_id ),
+			sprintf( __( 'Slug: %s', 'telepilot' ), Telepilot_Telegram_Response_Builder::escape( $term->slug ) ),
+			sprintf( __( 'Count: %d', 'telepilot' ), (int) $term->count ),
+		);
+
+		if ( '' !== (string) $term->description ) {
+			$lines[] = sprintf( __( 'Description: %s', 'telepilot' ), Telepilot_Telegram_Response_Builder::escape( $term->description ) );
+		}
+
+		if ( 'categories' === $resource ) {
+			$parent_label = __( 'None', 'telepilot' );
+
+			if ( ! empty( $term->parent ) ) {
+				$parent = get_term( (int) $term->parent, 'category' );
+				if ( $parent && ! is_wp_error( $parent ) ) {
+					$parent_label = sprintf( '[%1$d] %2$s', $parent->term_id, $parent->name );
+				}
+			}
+
+			$lines[] = sprintf( __( 'Parent: %s', 'telepilot' ), Telepilot_Telegram_Response_Builder::escape( $parent_label ) );
+		}
+
+		return implode( "\n", $lines );
+	}
+
+	public function get_term_details( $taxonomy, $term_id ) {
+		$taxonomy = $this->normalize_taxonomy( $taxonomy );
+		$term     = get_term( absint( $term_id ), $taxonomy );
+
+		if ( ! $term || is_wp_error( $term ) ) {
+			return new WP_Error( 'telepilot_term_not_found', __( 'Term not found.', 'telepilot' ) );
+		}
+
+		return $term;
+	}
+
 	public function create_term( $taxonomy, $name ) {
 		$taxonomy = $this->normalize_taxonomy( $taxonomy );
 		$name     = sanitize_text_field( $name );
@@ -120,6 +194,8 @@ class Telepilot_Taxonomies_Service {
 		if ( is_wp_error( $result ) ) {
 			return $result;
 		}
+
+		$this->bump_cache_version();
 
 		return get_term( $result['term_id'], $taxonomy );
 	}
@@ -145,7 +221,63 @@ class Telepilot_Taxonomies_Service {
 			return $result;
 		}
 
+		$this->bump_cache_version();
+
 		return get_term( $term_id, $taxonomy );
+	}
+
+	public function update_slug( $taxonomy, $term_id, $slug ) {
+		$slug = sanitize_title( $slug );
+		if ( '' === $slug ) {
+			return new WP_Error( 'telepilot_term_slug_invalid', __( 'A valid slug is required.', 'telepilot' ) );
+		}
+
+		return $this->update_term(
+			$taxonomy,
+			$term_id,
+			array(
+				'slug' => $slug,
+			)
+		);
+	}
+
+	public function update_description( $taxonomy, $term_id, $description ) {
+		return $this->update_term(
+			$taxonomy,
+			$term_id,
+			array(
+				'description' => sanitize_textarea_field( $description ),
+			)
+		);
+	}
+
+	public function update_parent( $term_id, $parent_id ) {
+		$taxonomy = 'category';
+		$term_id  = absint( $term_id );
+
+		if ( ! $term_id ) {
+			return new WP_Error( 'telepilot_term_not_found', __( 'Term not found.', 'telepilot' ) );
+		}
+
+		$parent_id = absint( $parent_id );
+		if ( $parent_id && $parent_id === $term_id ) {
+			return new WP_Error( 'telepilot_term_parent_invalid', __( 'A category cannot be its own parent.', 'telepilot' ) );
+		}
+
+		if ( $parent_id ) {
+			$parent = get_term( $parent_id, $taxonomy );
+			if ( ! $parent || is_wp_error( $parent ) ) {
+				return new WP_Error( 'telepilot_term_parent_missing', __( 'Parent category not found.', 'telepilot' ) );
+			}
+		}
+
+		return $this->update_term(
+			$taxonomy,
+			$term_id,
+			array(
+				'parent' => $parent_id,
+			)
+		);
 	}
 
 	public function delete_term( $taxonomy, $term_id ) {
@@ -162,6 +294,8 @@ class Telepilot_Taxonomies_Service {
 			return is_wp_error( $deleted ) ? $deleted : new WP_Error( 'telepilot_term_delete_failed', __( 'WordPress could not delete that term.', 'telepilot' ) );
 		}
 
+		$this->bump_cache_version();
+
 		return $term;
 	}
 
@@ -171,6 +305,10 @@ class Telepilot_Taxonomies_Service {
 
 		foreach ( $result['items'] as $term ) {
 			$rows[] = array(
+				array(
+					'text'          => sprintf( __( 'Details [%d]', 'telepilot' ), $term->term_id ),
+					'callback_data' => '/' . $resource . ' details ' . (int) $term->term_id,
+				),
 				array(
 					'text'          => sprintf( __( 'Delete [%d]', 'telepilot' ), $term->term_id ),
 					'callback_data' => '/' . $resource . ' delete ' . (int) $term->term_id,
@@ -245,8 +383,40 @@ class Telepilot_Taxonomies_Service {
 		return 'tags' === $resource ? 'tags' : 'categories';
 	}
 
+	private function resource_singular( $resource ) {
+		return 'tags' === $resource ? 'tag' : 'category';
+	}
+
 	private function normalize_taxonomy( $taxonomy ) {
 		return 'post_tag' === $taxonomy || 'tags' === $taxonomy ? 'post_tag' : 'category';
+	}
+
+	private function update_term( $taxonomy, $term_id, $args ) {
+		$taxonomy = $this->normalize_taxonomy( $taxonomy );
+		$term_id  = absint( $term_id );
+		$term     = get_term( $term_id, $taxonomy );
+
+		if ( ! $term || is_wp_error( $term ) ) {
+			return new WP_Error( 'telepilot_term_not_found', __( 'Term not found.', 'telepilot' ) );
+		}
+
+		$result = wp_update_term( $term_id, $taxonomy, $args );
+
+		if ( is_wp_error( $result ) ) {
+			return $result;
+		}
+
+		$this->bump_cache_version();
+
+		return get_term( $term_id, $taxonomy );
+	}
+
+	private function bump_cache_version() {
+		update_option( 'telepilot_terms_cache_version', $this->get_cache_version() + 1, false );
+	}
+
+	private function get_cache_version() {
+		return max( 1, (int) get_option( 'telepilot_terms_cache_version', 1 ) );
 	}
 
 	private function navigation_rows() {

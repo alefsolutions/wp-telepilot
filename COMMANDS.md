@@ -552,6 +552,13 @@ Each command below includes:
 - Example: `/plugins updates`
 - Behavior: lists installed plugins that currently have updates available.
 
+### `/plugins refresh`
+
+- Scope: plugins
+- Syntax: `/plugins refresh`
+- Example: `/plugins refresh`
+- Behavior: refreshes WordPress plugin update metadata so list and updates results are current.
+
 ### `/plugins details IDENTIFIER`
 
 - Scope: plugins
@@ -596,6 +603,13 @@ Each command below includes:
 
 ## Categories commands
 
+### `/categories help`
+
+- Scope: categories
+- Syntax: `/categories help`
+- Example: `/categories help`
+- Behavior: shows the category command cheat sheet.
+
 ### `/categories list`
 
 - Scope: categories
@@ -609,6 +623,13 @@ Each command below includes:
 - Syntax: `/categories search KEYWORD`
 - Example: `/categories search news`
 - Behavior: searches categories by name with paginated results.
+
+### `/categories details TERM_ID`
+
+- Scope: categories
+- Syntax: `/categories details TERM_ID`
+- Example: `/categories details 12`
+- Behavior: shows category details including slug, description, count, and parent.
 
 ### `/categories create NAME`
 
@@ -624,6 +645,27 @@ Each command below includes:
 - Example: `/categories rename 12 Editorial Updates`
 - Behavior: renames an existing category immediately.
 
+### `/categories slug TERM_ID NEW-SLUG`
+
+- Scope: categories
+- Syntax: `/categories slug TERM_ID NEW-SLUG`
+- Example: `/categories slug 12 editorial-updates`
+- Behavior: updates a category slug immediately.
+
+### `/categories description TERM_ID NEW DESCRIPTION`
+
+- Scope: categories
+- Syntax: `/categories description TERM_ID NEW DESCRIPTION`
+- Example: `/categories description 12 Editorial planning and updates`
+- Behavior: updates a category description immediately.
+
+### `/categories parent TERM_ID PARENT_ID|none`
+
+- Scope: categories
+- Syntax: `/categories parent TERM_ID PARENT_ID|none`
+- Example: `/categories parent 12 3`
+- Behavior: assigns or clears a category parent immediately.
+
 ### `/categories delete TERM_ID`
 
 - Scope: categories
@@ -632,6 +674,13 @@ Each command below includes:
 - Behavior: deletes a category after confirmation.
 
 ## Tags commands
+
+### `/tags help`
+
+- Scope: tags
+- Syntax: `/tags help`
+- Example: `/tags help`
+- Behavior: shows the tag command cheat sheet.
 
 ### `/tags list`
 
@@ -647,6 +696,13 @@ Each command below includes:
 - Example: `/tags search launch`
 - Behavior: searches tags by name with paginated results.
 
+### `/tags details TERM_ID`
+
+- Scope: tags
+- Syntax: `/tags details TERM_ID`
+- Example: `/tags details 8`
+- Behavior: shows tag details including slug, description, and count.
+
 ### `/tags create NAME`
 
 - Scope: tags
@@ -660,6 +716,20 @@ Each command below includes:
 - Syntax: `/tags rename TERM_ID NEW NAME`
 - Example: `/tags rename 8 Campaign Launch`
 - Behavior: renames an existing tag immediately.
+
+### `/tags slug TERM_ID NEW-SLUG`
+
+- Scope: tags
+- Syntax: `/tags slug TERM_ID NEW-SLUG`
+- Example: `/tags slug 8 campaign-launch`
+- Behavior: updates a tag slug immediately.
+
+### `/tags description TERM_ID NEW DESCRIPTION`
+
+- Scope: tags
+- Syntax: `/tags description TERM_ID NEW DESCRIPTION`
+- Example: `/tags description 8 Launch campaign taxonomy`
+- Behavior: updates a tag description immediately.
 
 ### `/tags delete TERM_ID`
 

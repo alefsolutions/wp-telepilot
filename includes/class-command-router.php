@@ -2315,6 +2315,32 @@ class Telepilot_Command_Router {
 			);
 		}
 
+		if ( 'refresh' === $subcommand ) {
+			$private_chat_result = $this->require_private_action( $identity );
+			if ( true !== $private_chat_result ) {
+				return $private_chat_result;
+			}
+
+			$permission_result = $this->permission_service->require_capability( $identity, 'update_plugins' );
+			if ( true !== $permission_result ) {
+				return $permission_result;
+			}
+
+			$result = $this->plugins_service->refresh_updates();
+			if ( is_wp_error( $result ) ) {
+				return Telepilot_Telegram_Response_Builder::error( $result->get_error_message() );
+			}
+
+			$this->log_plugin_action( $identity, 'refresh', $result );
+
+			return Telepilot_Telegram_Response_Builder::success(
+				__( 'Plugin update information has been refreshed.', 'telepilot' ),
+				array(
+					'command' => '/plugins',
+				)
+			);
+		}
+
 		if ( 'search' === $subcommand ) {
 			$term = implode( ' ', array_slice( $args, 1 ) );
 			if ( '' === trim( $term ) ) {
@@ -2542,6 +2568,16 @@ class Telepilot_Command_Router {
 		list( $args, $page ) = $this->extract_page_from_args( $command['args'] );
 		$subcommand = ! empty( $args[0] ) ? strtolower( (string) $args[0] ) : 'list';
 
+		if ( 'help' === $subcommand ) {
+			return Telepilot_Telegram_Response_Builder::success_html(
+				$this->taxonomies_service->render_help_message( $resource ),
+				array(
+					'command'      => '/' . $resource,
+					'reply_markup' => $this->safe_home_keyboard( $identity ),
+				)
+			);
+		}
+
 		if ( 'list' === $subcommand ) {
 			$result = $this->taxonomies_service->list_terms( $taxonomy, $page );
 			if ( is_wp_error( $result ) ) {
@@ -2587,6 +2623,36 @@ class Telepilot_Command_Router {
 			);
 		}
 
+		$term_id = ! empty( $args[1] ) ? absint( $args[1] ) : 0;
+
+		if ( 'details' === $subcommand && $term_id ) {
+			$term = $this->taxonomies_service->get_term_details( $taxonomy, $term_id );
+			if ( is_wp_error( $term ) ) {
+				return Telepilot_Telegram_Response_Builder::error( $term->get_error_message() );
+			}
+
+			return Telepilot_Telegram_Response_Builder::success_html(
+				$this->taxonomies_service->render_term_details_message( $term, $resource ),
+				array(
+					'command'      => '/' . $resource,
+					'reply_markup' => $this->safe_reply_markup(
+						function() use ( $resource, $term ) {
+							return $this->taxonomies_service->build_terms_keyboard(
+								$resource,
+								array(
+									'items'       => array( $term ),
+									'page'        => 1,
+									'total_pages' => 1,
+									'search'      => '',
+								)
+							);
+						},
+						'term_details'
+					),
+				)
+			);
+		}
+
 		if ( 'create' === $subcommand ) {
 			$private_chat_result = $this->require_private_action( $identity );
 			if ( true !== $private_chat_result ) {
@@ -2603,13 +2669,25 @@ class Telepilot_Command_Router {
 				return Telepilot_Telegram_Response_Builder::error( $term->get_error_message() );
 			}
 
+			$this->log_term_action(
+				$identity,
+				'term_created',
+				$taxonomy,
+				$term->term_id,
+				array(),
+				array(
+					'name'        => $term->name,
+					'slug'        => $term->slug,
+					'description' => $term->description,
+					'parent'      => isset( $term->parent ) ? (int) $term->parent : 0,
+				)
+			);
+
 			return Telepilot_Telegram_Response_Builder::success(
 				sprintf( __( '%1$s #%2$d `%3$s` has been created.', 'telepilot' ), ucfirst( rtrim( $resource, 's' ) ), $term->term_id, $term->name ),
 				array( 'command' => '/' . $resource )
 			);
 		}
-
-		$term_id = ! empty( $args[1] ) ? absint( $args[1] ) : 0;
 
 		if ( 'rename' === $subcommand && $term_id ) {
 			$private_chat_result = $this->require_private_action( $identity );
@@ -2622,13 +2700,124 @@ class Telepilot_Command_Router {
 				return Telepilot_Telegram_Response_Builder::error( sprintf( __( 'Usage: `/%1$s rename 12 New Name`', 'telepilot' ), $resource ) );
 			}
 
+			$before_term = $this->taxonomies_service->get_term_details( $taxonomy, $term_id );
 			$term = $this->taxonomies_service->rename_term( $taxonomy, $term_id, $name );
 			if ( is_wp_error( $term ) ) {
 				return Telepilot_Telegram_Response_Builder::error( $term->get_error_message() );
 			}
 
+			$this->log_term_action(
+				$identity,
+				'term_updated',
+				$taxonomy,
+				$term->term_id,
+				$this->build_term_state( $before_term ),
+				$this->build_term_state( $term, 'rename' )
+			);
+
 			return Telepilot_Telegram_Response_Builder::success(
 				sprintf( __( '%1$s #%2$d has been renamed to `%3$s`.', 'telepilot' ), ucfirst( rtrim( $resource, 's' ) ), $term->term_id, $term->name ),
+				array( 'command' => '/' . $resource )
+			);
+		}
+
+		if ( 'slug' === $subcommand && $term_id ) {
+			$private_chat_result = $this->require_private_action( $identity );
+			if ( true !== $private_chat_result ) {
+				return $private_chat_result;
+			}
+
+			$slug = implode( ' ', array_slice( $args, 2 ) );
+			if ( '' === trim( $slug ) ) {
+				return Telepilot_Telegram_Response_Builder::error( sprintf( __( 'Usage: `/%1$s slug 12 new-slug`', 'telepilot' ), $resource ) );
+			}
+
+			$before_term = $this->taxonomies_service->get_term_details( $taxonomy, $term_id );
+			$term        = $this->taxonomies_service->update_slug( $taxonomy, $term_id, $slug );
+			if ( is_wp_error( $term ) ) {
+				return Telepilot_Telegram_Response_Builder::error( $term->get_error_message() );
+			}
+
+			$this->log_term_action(
+				$identity,
+				'term_updated',
+				$taxonomy,
+				$term->term_id,
+				$this->build_term_state( $before_term ),
+				$this->build_term_state( $term, 'slug' )
+			);
+
+			return Telepilot_Telegram_Response_Builder::success(
+				sprintf( __( '%1$s #%2$d slug has been updated.', 'telepilot' ), ucfirst( rtrim( $resource, 's' ) ), $term->term_id ),
+				array( 'command' => '/' . $resource )
+			);
+		}
+
+		if ( 'description' === $subcommand && $term_id ) {
+			$private_chat_result = $this->require_private_action( $identity );
+			if ( true !== $private_chat_result ) {
+				return $private_chat_result;
+			}
+
+			$description = implode( ' ', array_slice( $args, 2 ) );
+			if ( '' === trim( $description ) ) {
+				return Telepilot_Telegram_Response_Builder::error( sprintf( __( 'Usage: `/%1$s description 12 New description`', 'telepilot' ), $resource ) );
+			}
+
+			$before_term = $this->taxonomies_service->get_term_details( $taxonomy, $term_id );
+			$term        = $this->taxonomies_service->update_description( $taxonomy, $term_id, $description );
+			if ( is_wp_error( $term ) ) {
+				return Telepilot_Telegram_Response_Builder::error( $term->get_error_message() );
+			}
+
+			$this->log_term_action(
+				$identity,
+				'term_updated',
+				$taxonomy,
+				$term->term_id,
+				$this->build_term_state( $before_term ),
+				$this->build_term_state( $term, 'description' )
+			);
+
+			return Telepilot_Telegram_Response_Builder::success(
+				sprintf( __( '%1$s #%2$d description has been updated.', 'telepilot' ), ucfirst( rtrim( $resource, 's' ) ), $term->term_id ),
+				array( 'command' => '/' . $resource )
+			);
+		}
+
+		if ( 'parent' === $subcommand && $term_id ) {
+			$private_chat_result = $this->require_private_action( $identity );
+			if ( true !== $private_chat_result ) {
+				return $private_chat_result;
+			}
+
+			if ( 'categories' !== $resource ) {
+				return Telepilot_Telegram_Response_Builder::error( __( 'Parent assignment is only available for categories.', 'telepilot' ) );
+			}
+
+			$raw_parent = isset( $args[2] ) ? (string) $args[2] : '';
+			if ( '' === trim( $raw_parent ) ) {
+				return Telepilot_Telegram_Response_Builder::error( __( 'Usage: `/categories parent 12 3` or `/categories parent 12 none`', 'telepilot' ) );
+			}
+
+			$parent_id   = 'none' === strtolower( $raw_parent ) ? 0 : absint( $raw_parent );
+			$before_term = $this->taxonomies_service->get_term_details( $taxonomy, $term_id );
+			$term        = $this->taxonomies_service->update_parent( $term_id, $parent_id );
+			if ( is_wp_error( $term ) ) {
+				return Telepilot_Telegram_Response_Builder::error( $term->get_error_message() );
+			}
+
+			$this->log_term_action(
+				$identity,
+				'term_updated',
+				$taxonomy,
+				$term->term_id,
+				$this->build_term_state( $before_term ),
+				$this->build_term_state( $term, 'parent' )
+			);
+
+			return Telepilot_Telegram_Response_Builder::success(
+				sprintf( __( 'Category #%1$d parent has been updated.', 'telepilot' ), $term->term_id ),
 				array( 'command' => '/' . $resource )
 			);
 		}
@@ -2653,7 +2842,12 @@ class Telepilot_Command_Router {
 			);
 		}
 
-		return Telepilot_Telegram_Response_Builder::error( sprintf( __( 'Supported %1$s commands: `/%1$s list`, `/%1$s search keyword`, `/%1$s create Name`, `/%1$s rename 12 New Name`, `/%1$s delete 12`', 'telepilot' ), $resource ) );
+		return Telepilot_Telegram_Response_Builder::error_html(
+			$this->taxonomies_service->render_help_message( $resource ),
+			array(
+				'command' => '/' . $resource,
+			)
+		);
 	}
 
 	private function handle_term_callback( $command, $identity ) {
@@ -2682,12 +2876,58 @@ class Telepilot_Command_Router {
 			return Telepilot_Telegram_Response_Builder::error( $term->get_error_message() );
 		}
 
+		$this->log_term_action(
+			$identity,
+			'term_deleted',
+			$taxonomy,
+			$term_id,
+			$this->build_term_state( $term ),
+			array(
+				'action' => 'delete',
+			)
+		);
+
 		$resource = 'post_tag' === $taxonomy ? 'tags' : 'categories';
 
 		return Telepilot_Telegram_Response_Builder::success(
 			sprintf( __( 'Term #%1$d `%2$s` has been deleted.', 'telepilot' ), $term_id, $term->name ),
 			array( 'command' => '/' . $resource )
 		);
+	}
+
+	private function log_term_action( $identity, $action_name, $taxonomy, $term_id, $before_state, $after_state ) {
+		Telepilot_Audit_Log_Repository::log(
+			array(
+				'wp_user_id'       => $identity['wp_user']->ID,
+				'telegram_user_id' => $identity['telegram_user_id'],
+				'chat_id'          => $identity['chat_id'],
+				'action_name'      => $action_name,
+				'resource_type'    => $taxonomy,
+				'resource_id'      => (string) $term_id,
+				'before_state'     => $before_state,
+				'after_state'      => $after_state,
+			)
+		);
+	}
+
+	private function build_term_state( $term, $action = '' ) {
+		if ( ! ( $term instanceof WP_Term ) ) {
+			return '' !== $action ? array( 'action' => $action ) : array();
+		}
+
+		$state = array(
+			'name'        => (string) $term->name,
+			'slug'        => (string) $term->slug,
+			'description' => (string) $term->description,
+			'parent'      => isset( $term->parent ) ? (int) $term->parent : 0,
+			'count'       => isset( $term->count ) ? (int) $term->count : 0,
+		);
+
+		if ( '' !== $action ) {
+			$state['action'] = $action;
+		}
+
+		return $state;
 	}
 
 	private function extract_page_from_args( $args ) {

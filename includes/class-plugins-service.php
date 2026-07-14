@@ -96,6 +96,7 @@ class Telepilot_Plugins_Service {
 		$lines[] = Telepilot_Telegram_Response_Builder::code( '/plugins list' ) . ' ' . __( 'Show installed plugins', 'telepilot' );
 		$lines[] = Telepilot_Telegram_Response_Builder::code( '/plugins search seo' ) . ' ' . __( 'Search installed plugins', 'telepilot' );
 		$lines[] = Telepilot_Telegram_Response_Builder::code( '/plugins updates' ) . ' ' . __( 'Show plugins with available updates', 'telepilot' );
+		$lines[] = Telepilot_Telegram_Response_Builder::code( '/plugins refresh' ) . ' ' . __( 'Refresh plugin update information', 'telepilot' );
 		$lines[] = Telepilot_Telegram_Response_Builder::code( '/plugins details akismet' ) . ' ' . __( 'Show plugin details', 'telepilot' );
 		$lines[] = Telepilot_Telegram_Response_Builder::code( '/plugins activate akismet' ) . ' ' . __( 'Activate a plugin after confirmation', 'telepilot' );
 		$lines[] = Telepilot_Telegram_Response_Builder::code( '/plugins deactivate akismet' ) . ' ' . __( 'Deactivate a plugin after confirmation', 'telepilot' );
@@ -105,6 +106,23 @@ class Telepilot_Plugins_Service {
 		$lines[] = Telepilot_Telegram_Response_Builder::italic( __( 'Tip: use the plugin identifier shown in brackets, such as [akismet], when running plugin commands.', 'telepilot' ) );
 
 		return implode( "\n", $lines );
+	}
+
+	public function refresh_updates() {
+		if ( ! function_exists( 'wp_update_plugins' ) ) {
+			require_once ABSPATH . 'wp-includes/update.php';
+		}
+
+		wp_update_plugins();
+		wp_clean_plugins_cache( false );
+		$this->bump_cache_version();
+
+		return array(
+			'label'       => __( 'plugin metadata refreshed', 'telepilot' ),
+			'after_state' => array(
+				'refreshed_at' => time(),
+			),
+		);
 	}
 
 	public function build_list_keyboard( $plugins, $subcommand = 'list', $search_term = '', $page = 1, $total_pages = 1 ) {
@@ -220,6 +238,8 @@ class Telepilot_Plugins_Service {
 			return $result;
 		}
 
+		$this->bump_cache_version();
+
 		return $this->build_action_result( $plugin_file, __( 'activated', 'telepilot' ) );
 	}
 
@@ -242,6 +262,7 @@ class Telepilot_Plugins_Service {
 
 		$before = $this->get_plugin_record( $plugin_file );
 		deactivate_plugins( $plugin_file, false, false );
+		$this->bump_cache_version();
 
 		return array(
 			'plugin'       => $this->get_plugin_record( $plugin_file ),
@@ -279,6 +300,8 @@ class Telepilot_Plugins_Service {
 		if ( true !== $result ) {
 			return new WP_Error( 'telepilot_plugin_delete_failed', __( 'WordPress could not delete that plugin.', 'telepilot' ) );
 		}
+
+		$this->bump_cache_version();
 
 		return array(
 			'plugin'       => $before,
@@ -324,6 +347,7 @@ class Telepilot_Plugins_Service {
 
 		wp_clean_plugins_cache( false );
 		wp_update_plugins();
+		$this->bump_cache_version();
 
 		return array(
 			'plugin'       => $this->get_plugin_record( $plugin_file ),
@@ -368,7 +392,7 @@ class Telepilot_Plugins_Service {
 		$page      = max( 1, absint( $page ) );
 		$limit     = max( 1, absint( $limit ) );
 		$term      = sanitize_text_field( $term );
-		$cache_key = 'telepilot_plugins_' . md5( wp_json_encode( array( $term, $mode, $page, $limit ) ) );
+		$cache_key = 'telepilot_plugins_' . $this->get_cache_version() . '_' . md5( wp_json_encode( array( $term, $mode, $page, $limit ) ) );
 		$cached    = get_transient( $cache_key );
 
 		if ( is_array( $cached ) ) {
@@ -510,6 +534,14 @@ class Telepilot_Plugins_Service {
 			'after_state'  => $plugin,
 			'label'        => $label,
 		);
+	}
+
+	private function bump_cache_version() {
+		update_option( 'telepilot_plugins_cache_version', $this->get_cache_version() + 1, false );
+	}
+
+	private function get_cache_version() {
+		return max( 1, (int) get_option( 'telepilot_plugins_cache_version', 1 ) );
 	}
 
 	private function guard_self_action( $plugin_file, $action ) {

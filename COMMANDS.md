@@ -55,6 +55,55 @@ Each command below includes:
 - Example: `/settings`
 - Behavior: shows a settings summary including the admin settings URL, transport mode, and linking status.
 
+### `/settings help`
+
+- Scope: configuration
+- Syntax: `/settings help`
+- Example: `/settings help`
+- Behavior: shows the safe settings command cheat sheet.
+
+### `/settings title TITLE`
+
+- Scope: configuration
+- Syntax: `/settings title TITLE`
+- Example: `/settings title My Site`
+- Behavior: updates the WordPress site title.
+
+### `/settings tagline TAGLINE`
+
+- Scope: configuration
+- Syntax: `/settings tagline TAGLINE`
+- Example: `/settings tagline Telegram-first operations`
+- Behavior: updates the WordPress site tagline.
+
+### `/settings admin-email EMAIL`
+
+- Scope: configuration
+- Syntax: `/settings admin-email EMAIL`
+- Example: `/settings admin-email admin@example.com`
+- Behavior: updates the WordPress admin email.
+
+### `/settings timezone TIMEZONE`
+
+- Scope: configuration
+- Syntax: `/settings timezone TIMEZONE`
+- Example: `/settings timezone Pacific/Port_Moresby`
+- Behavior: updates the WordPress timezone string.
+
+### `/settings date-format FORMAT`
+
+- Scope: configuration
+- Syntax: `/settings date-format FORMAT`
+- Example: `/settings date-format F j, Y`
+- Behavior: updates the WordPress date format.
+
+### `/settings time-format FORMAT`
+
+- Scope: configuration
+- Syntax: `/settings time-format FORMAT`
+- Example: `/settings time-format g:i a`
+- Behavior: updates the WordPress time format.
+
 ### `/chatid`
 
 - Scope: identity
@@ -77,6 +126,36 @@ Each command below includes:
 - Syntax: `/unlink`
 - Example: `/unlink`
 - Behavior: removes the Telegram link from the currently linked WordPress user.
+
+## Notifications commands
+
+### `/notifications list`
+
+- Scope: notifications
+- Syntax: `/notifications list`
+- Example: `/notifications list`
+- Behavior: lists Telegram notification types and their enabled or disabled state.
+
+### `/notifications enable KEY`
+
+- Scope: notifications
+- Syntax: `/notifications enable KEY`
+- Example: `/notifications enable new_comment`
+- Behavior: enables the selected Telegram notification type.
+
+### `/notifications disable KEY`
+
+- Scope: notifications
+- Syntax: `/notifications disable KEY`
+- Example: `/notifications disable plugin_updates`
+- Behavior: disables the selected Telegram notification type.
+
+### `/notifications toggle KEY`
+
+- Scope: notifications
+- Syntax: `/notifications toggle KEY`
+- Example: `/notifications toggle failed_login`
+- Behavior: toggles the selected Telegram notification type between enabled and disabled.
 
 ## Comments commands
 

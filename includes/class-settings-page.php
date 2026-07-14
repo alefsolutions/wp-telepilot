@@ -851,6 +851,10 @@ class Telepilot_Settings_Page {
 				'description' => __( 'Open WP Telepilot settings information', 'telepilot' ),
 			),
 			array(
+				'command'     => 'notifications',
+				'description' => __( 'Review and toggle Telegram notification types', 'telepilot' ),
+			),
+			array(
 				'command'     => 'chatid',
 				'description' => __( 'Show the current Telegram chat ID', 'telepilot' ),
 			),

@@ -29,6 +29,7 @@ WP Telepilot is a Telegram-first WordPress operations plugin. It lets authorized
 - Adds a secure browser editing bridge for long-form post content when Telegram chat is not the right editing surface.
 - Supports structured post, page, media, and user management actions including draft creation, metadata updates, role changes, password reset flows, and controlled deletes.
 - Supports richer taxonomy and plugin operations including term detail/edit flows and plugin update refresh from Telegram.
+- Supports Telegram-side notification controls and safe site-setting updates for core fields like title, tagline, admin email, timezone, and date/time format.
 - Supports fuller comment workflows including status queues, search, detail views, reply posting, and safer destructive moderation flows.
 - Formats Telegram responses for readability with clearer headings, spacing, inline tips, and code-style command examples.
 - Uses confirmations for destructive actions and writes activity to the WP Telepilot audit log.

@@ -44,6 +44,8 @@ class Telepilot_Telegram_Service {
 			$this->users_service,
 			$this->plugins_service,
 			new Telepilot_Taxonomies_Service( $this->confirmation_service ),
+			new Telepilot_Notifications_Command_Service(),
+			new Telepilot_Site_Settings_Command_Service(),
 			$this->confirmation_service
 		);
 	}
@@ -147,6 +149,7 @@ class Telepilot_Telegram_Service {
 			'/media'     => array( 'default', 'list', 'recent', 'search' ),
 			'/users'     => array( 'default', 'list', 'search' ),
 			'/plugins'   => array( 'default', 'list', 'search', 'updates' ),
+			'/notifications' => array( 'default', 'list' ),
 			'/categories' => array( 'default', 'list', 'search' ),
 			'/tags'      => array( 'default', 'list', 'search' ),
 		);
@@ -199,6 +202,7 @@ class Telepilot_Telegram_Service {
 			'/media'      => __( '<b>Working on it...</b>' . "\n" . 'Fetching media items now.', 'telepilot' ),
 			'/users'      => __( '<b>Working on it...</b>' . "\n" . 'Loading users now.', 'telepilot' ),
 			'/plugins'    => __( '<b>Working on it...</b>' . "\n" . 'Checking installed plugins now.', 'telepilot' ),
+			'/notifications' => __( '<b>Working on it...</b>' . "\n" . 'Loading notification controls now.', 'telepilot' ),
 			'/categories' => __( '<b>Working on it...</b>' . "\n" . 'Loading categories now.', 'telepilot' ),
 			'/tags'       => __( '<b>Working on it...</b>' . "\n" . 'Loading tags now.', 'telepilot' ),
 		);

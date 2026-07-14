@@ -16,9 +16,11 @@ class Telepilot_Command_Router {
 	private $users_service;
 	private $plugins_service;
 	private $taxonomies_service;
+	private $notifications_command_service;
+	private $site_settings_command_service;
 	private $confirmation_service;
 
-	public function __construct( Telepilot_User_Linking_Service $linking_service, Telepilot_Permission_Service $permission_service, Telepilot_Dashboard_Service $dashboard_service, Telepilot_Comments_Service $comments_service, Telepilot_Posts_Service $posts_service, Telepilot_Post_Editor_Service $post_editor_service, Telepilot_Pages_Service $pages_service, Telepilot_Media_Service $media_service, Telepilot_Users_Service $users_service, Telepilot_Plugins_Service $plugins_service, Telepilot_Taxonomies_Service $taxonomies_service, Telepilot_Confirmation_Service $confirmation_service ) {
+	public function __construct( Telepilot_User_Linking_Service $linking_service, Telepilot_Permission_Service $permission_service, Telepilot_Dashboard_Service $dashboard_service, Telepilot_Comments_Service $comments_service, Telepilot_Posts_Service $posts_service, Telepilot_Post_Editor_Service $post_editor_service, Telepilot_Pages_Service $pages_service, Telepilot_Media_Service $media_service, Telepilot_Users_Service $users_service, Telepilot_Plugins_Service $plugins_service, Telepilot_Taxonomies_Service $taxonomies_service, Telepilot_Notifications_Command_Service $notifications_command_service, Telepilot_Site_Settings_Command_Service $site_settings_command_service, Telepilot_Confirmation_Service $confirmation_service ) {
 		$this->linking_service    = $linking_service;
 		$this->permission_service = $permission_service;
 		$this->dashboard_service  = $dashboard_service;
@@ -30,6 +32,8 @@ class Telepilot_Command_Router {
 		$this->users_service      = $users_service;
 		$this->plugins_service    = $plugins_service;
 		$this->taxonomies_service = $taxonomies_service;
+		$this->notifications_command_service = $notifications_command_service;
+		$this->site_settings_command_service = $site_settings_command_service;
 		$this->confirmation_service = $confirmation_service;
 	}
 
@@ -56,7 +60,10 @@ class Telepilot_Command_Router {
 				return $this->handle_menu( $identity );
 
 			case '/settings':
-				return $this->handle_settings( $identity );
+				return $this->handle_settings( $command, $identity );
+
+			case '/notifications':
+				return $this->handle_notifications( $command, $identity );
 
 			case '/link':
 				return $this->handle_link( $command, $update );
@@ -221,6 +228,9 @@ class Telepilot_Command_Router {
 		if ( ! empty( $identity['wp_user'] ) && $identity['wp_user'] instanceof WP_User ) {
 			$commands[] = Telepilot_Telegram_Response_Builder::code( '/unlink' ) . ' ' . __( 'Unlink Telegram', 'telepilot' );
 			$commands[] = Telepilot_Telegram_Response_Builder::code( '/settings' ) . ' ' . __( 'WP Telepilot settings info', 'telepilot' );
+			if ( $this->permission_service->user_can( $identity['wp_user'], 'manage_options' ) ) {
+				$commands[] = Telepilot_Telegram_Response_Builder::code( '/notifications list' ) . ' ' . __( 'Review and toggle Telegram alerts', 'telepilot' );
+			}
 			if ( $this->permission_service->user_can( $identity['wp_user'], 'moderate_comments' ) ) {
 				$commands[] = Telepilot_Telegram_Response_Builder::code( '/comments pending' );
 			}
@@ -300,29 +310,173 @@ class Telepilot_Command_Router {
 		);
 	}
 
-	private function handle_settings( $identity ) {
+	private function handle_settings( $command, $identity ) {
 		$permission_result = $this->permission_service->require_capability( $identity, 'manage_options' );
 
 		if ( true !== $permission_result ) {
 			return $permission_result;
 		}
 
-		$settings = get_option( 'telepilot_settings', array() );
-		$url      = admin_url( 'admin.php?page=telepilot' );
+		$args       = isset( $command['args'] ) ? $command['args'] : array();
+		$subcommand = ! empty( $args[0] ) ? strtolower( (string) $args[0] ) : 'summary';
 
-		return Telepilot_Telegram_Response_Builder::success_html(
+		if ( in_array( $subcommand, array( 'summary', 'list' ), true ) ) {
+			$subcommand = 'summary';
+		}
+
+		if ( 'help' === $subcommand ) {
+			return Telepilot_Telegram_Response_Builder::success_html(
+				$this->site_settings_command_service->render_help_message(),
+				array(
+					'command'      => '/settings',
+					'reply_markup' => $this->site_settings_command_service->build_keyboard(),
+				)
+			);
+		}
+
+		if ( 'summary' === $subcommand ) {
+			return Telepilot_Telegram_Response_Builder::success_html(
+				$this->site_settings_command_service->render_summary_message( $this->site_settings_command_service->get_summary() ),
+				array(
+					'command'      => '/settings',
+					'reply_markup' => $this->site_settings_command_service->build_keyboard(),
+				)
+			);
+		}
+
+		$private_chat_result = $this->require_private_action( $identity );
+		if ( true !== $private_chat_result ) {
+			return $private_chat_result;
+		}
+
+		$value = implode( ' ', array_slice( $args, 1 ) );
+		if ( '' === trim( $value ) ) {
+			return Telepilot_Telegram_Response_Builder::error_html(
+				$this->site_settings_command_service->render_help_message(),
+				array(
+					'command' => '/settings',
+				)
+			);
+		}
+
+		$result = $this->site_settings_command_service->update_core_setting( $subcommand, $value );
+		if ( is_wp_error( $result ) ) {
+			return Telepilot_Telegram_Response_Builder::error( $result->get_error_message() );
+		}
+
+		Telepilot_Audit_Log_Repository::log(
+			array(
+				'wp_user_id'       => $identity['wp_user']->ID,
+				'telegram_user_id' => $identity['telegram_user_id'],
+				'chat_id'          => $identity['chat_id'],
+				'action_name'      => 'site_setting_updated',
+				'resource_type'    => 'site_setting',
+				'resource_id'      => (string) $result['field'],
+				'before_state'     => $result['before_state'],
+				'after_state'      => $result['after_state'],
+			)
+		);
+
+		return Telepilot_Telegram_Response_Builder::success(
+			sprintf( __( 'Setting `%1$s` has been %2$s.', 'telepilot' ), $subcommand, $result['label'] ),
+			array(
+				'command' => '/settings',
+			)
+		);
+	}
+
+	private function handle_notifications( $command, $identity ) {
+		$permission_result = $this->permission_service->require_capability( $identity, 'manage_options' );
+
+		if ( true !== $permission_result ) {
+			return $permission_result;
+		}
+
+		list( $args, $page ) = $this->extract_page_from_args( $command['args'] );
+		$subcommand = ! empty( $args[0] ) ? strtolower( (string) $args[0] ) : 'list';
+
+		if ( 'help' === $subcommand ) {
+			return Telepilot_Telegram_Response_Builder::success_html(
+				$this->notifications_command_service->render_help_message(),
+				array(
+					'command'      => '/notifications',
+					'reply_markup' => $this->notifications_command_service->build_list_keyboard(
+						$this->notifications_command_service->list_page( 1 )
+					),
+				)
+			);
+		}
+
+		if ( in_array( $subcommand, array( 'list', 'status' ), true ) ) {
+			$result = $this->notifications_command_service->list_page( $page );
+
+			return Telepilot_Telegram_Response_Builder::success_html(
+				$this->notifications_command_service->render_page_message( $result ),
+				array(
+					'command'      => '/notifications',
+					'reply_markup' => $this->safe_reply_markup(
+						function() use ( $result ) {
+							return $this->notifications_command_service->build_list_keyboard( $result );
+						},
+						'notifications_list'
+					),
+				)
+			);
+		}
+
+		$private_chat_result = $this->require_private_action( $identity );
+		if ( true !== $private_chat_result ) {
+			return $private_chat_result;
+		}
+
+		$key = isset( $args[1] ) ? (string) $args[1] : '';
+		if ( '' === $key || ! in_array( $subcommand, array( 'enable', 'disable', 'toggle' ), true ) ) {
+			return Telepilot_Telegram_Response_Builder::error_html(
+				$this->notifications_command_service->render_help_message(),
+				array(
+					'command' => '/notifications',
+				)
+			);
+		}
+
+		$enabled = 'enable' === $subcommand ? true : false;
+
+		if ( 'toggle' === $subcommand ) {
+			$page_result = $this->notifications_command_service->list_page( 1, 100 );
+			foreach ( $page_result['items'] as $item ) {
+				if ( $item['key'] === sanitize_key( $key ) ) {
+					$enabled = ! $item['enabled'];
+					break;
+				}
+			}
+		}
+
+		$result = $this->notifications_command_service->update_option_state( $key, $enabled );
+		if ( is_wp_error( $result ) ) {
+			return Telepilot_Telegram_Response_Builder::error( $result->get_error_message() );
+		}
+
+		Telepilot_Audit_Log_Repository::log(
+			array(
+				'wp_user_id'       => $identity['wp_user']->ID,
+				'telegram_user_id' => $identity['telegram_user_id'],
+				'chat_id'          => $identity['chat_id'],
+				'action_name'      => 'notification_setting_updated',
+				'resource_type'    => 'notification_setting',
+				'resource_id'      => (string) $result['key'],
+				'before_state'     => $result['before_state'],
+				'after_state'      => $result['after_state'],
+			)
+		);
+
+		return Telepilot_Telegram_Response_Builder::success(
 			sprintf(
-				__(
-					"<b>WP Telepilot Settings</b>\n\nAdmin: %1$s\nTransport: %2$s\nLinking: %3$s",
-					'telepilot'
-				),
-				Telepilot_Telegram_Response_Builder::link( __( 'Open settings', 'telepilot' ), $url ),
-				Telepilot_Telegram_Response_Builder::escape( ! empty( $settings['transport_mode'] ) ? ucfirst( (string) $settings['transport_mode'] ) : __( 'Webhook', 'telepilot' ) ),
-				Telepilot_Telegram_Response_Builder::escape( ! empty( $settings['linking_enabled'] ) ? __( 'Enabled', 'telepilot' ) : __( 'Disabled', 'telepilot' ) )
+				__( 'Notification `%1$s` has been %2$s.', 'telepilot' ),
+				$result['key'],
+				$result['label_text']
 			),
 			array(
-				'command'      => '/settings',
-				'reply_markup' => $this->safe_home_keyboard( $identity ),
+				'command' => '/notifications',
 			)
 		);
 	}
@@ -3180,6 +3334,19 @@ class Telepilot_Command_Router {
 					array(
 						'text'          => __( 'Plugins', 'telepilot' ),
 						'callback_data' => '/plugins list',
+					),
+				);
+			}
+
+			if ( $this->permission_service->user_can( $identity['wp_user'], 'manage_options' ) ) {
+				$rows[] = array(
+					array(
+						'text'          => __( 'Notifications', 'telepilot' ),
+						'callback_data' => '/notifications list',
+					),
+					array(
+						'text'          => __( 'Settings', 'telepilot' ),
+						'callback_data' => '/settings',
 					),
 				);
 			}

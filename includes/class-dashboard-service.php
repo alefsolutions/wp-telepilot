@@ -131,6 +131,19 @@ class Telepilot_Dashboard_Service {
 			);
 		}
 
+		if ( $wp_user instanceof WP_User && user_can( $wp_user, 'manage_options' ) ) {
+			$rows[] = array(
+				array(
+					'text'          => __( 'Notifications', 'telepilot' ),
+					'callback_data' => '/notifications list',
+				),
+				array(
+					'text'          => __( 'Settings', 'telepilot' ),
+					'callback_data' => '/settings',
+				),
+			);
+		}
+
 		$admin_row = array(
 			array(
 				'text' => __( 'Open wp-admin', 'telepilot' ),

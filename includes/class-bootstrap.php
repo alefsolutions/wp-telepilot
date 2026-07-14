@@ -5,7 +5,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 class Telepilot_Bootstrap {
-	const SCHEMA_VERSION = '0.2.2';
+	const SCHEMA_VERSION = '0.3.0-beta.1';
 
 	private $settings_page;
 	private $rest_controller;

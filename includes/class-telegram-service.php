@@ -145,7 +145,7 @@ class Telepilot_Telegram_Service {
 			'/dashboard' => array( 'default' ),
 			'/comments'  => array( 'default', 'pending' ),
 			'/posts'     => array( 'default', 'list', 'latest', 'drafts', 'search', 'stats' ),
-			'/pages'     => array( 'default', 'list', 'search', 'trashed' ),
+			'/pages'     => array( 'default', 'list', 'latest', 'drafts', 'search', 'trashed' ),
 			'/media'     => array( 'default', 'list', 'recent', 'search' ),
 			'/users'     => array( 'default', 'list', 'search' ),
 			'/plugins'   => array( 'default', 'list', 'search', 'updates' ),
@@ -416,11 +416,13 @@ class Telepilot_Telegram_Service {
 		$chat_id  = ! empty( $identity['chat_id'] ) ? (string) $identity['chat_id'] : '';
 
 		if ( '' !== $chat_id && ! $this->is_chat_allowed( $chat_id ) ) {
-			$result = Telepilot_Telegram_Response_Builder::error(
-				sprintf(
-					/* translators: %s: Telegram chat ID. */
-					__( "This chat is not authorized for the site yet.\n\nYour current chat ID is: %s\n\nAdd it to Allowed Chat IDs in WP Telepilot settings, then send /start again.", 'telepilot' ),
-					$chat_id
+			$result = Telepilot_Telegram_Response_Builder::error_html(
+				Telepilot_Telegram_Response_Builder::join_blocks(
+					array(
+						Telepilot_Telegram_Response_Builder::bold( __( 'Chat Not Authorized', 'telepilot' ) ),
+						sprintf( __( 'Current chat ID: %s', 'telepilot' ), Telepilot_Telegram_Response_Builder::code( $chat_id ) ),
+						__( 'Add this chat ID to Allowed Chat IDs in WP Telepilot settings, then send /start again.', 'telepilot' ),
+					)
 				),
 				array(
 					'command' => '/chatid',
@@ -462,7 +464,15 @@ class Telepilot_Telegram_Service {
 		$this->maybe_send_chat_action( $identity, $command, $update, $options );
 
 		if ( ! empty( $command['name'] ) ) {
-			$this->log_command_event( 'telegram_command_received', $identity, $update, array( 'command' => $command['name'] ) );
+			$this->log_command_event(
+				'telegram_command_received',
+				$identity,
+				$update,
+				array(
+					'command'     => $this->describe_command_for_log( $command ),
+					'raw_command' => ! empty( $command['raw'] ) ? (string) $command['raw'] : '',
+				)
+			);
 		}
 
 		try {
@@ -855,6 +865,14 @@ class Telepilot_Telegram_Service {
 	}
 
 	private function log_command_event( $action_name, $identity, $update, $context = array() ) {
+		if ( ! is_array( $context ) ) {
+			$context = array();
+		}
+
+		if ( ! empty( $identity['telegram_username'] ) ) {
+			$context['telegram_username'] = (string) $identity['telegram_username'];
+		}
+
 		Telepilot_Audit_Log_Repository::log(
 			array(
 				'wp_user_id'       => ! empty( $identity['wp_user'] ) && $identity['wp_user'] instanceof WP_User ? $identity['wp_user']->ID : null,
@@ -877,48 +895,57 @@ class Telepilot_Telegram_Service {
 			return null;
 		}
 
-		$private_chat_result = $this->permission_service->require_private_chat( $identity );
-
-		if ( true !== $private_chat_result ) {
-			return $private_chat_result;
-		}
-
-		$permission_result = $this->permission_service->require_capability( $identity, 'upload_files' );
-		if ( true !== $permission_result ) {
-			return $permission_result;
-		}
-
-		$result = $this->media_service->import_from_update( $update );
-		if ( is_wp_error( $result ) ) {
-			return Telepilot_Telegram_Response_Builder::error( $result->get_error_message() );
-		}
-
-		Telepilot_Audit_Log_Repository::log(
-			array(
-				'wp_user_id'       => $identity['wp_user']->ID,
-				'telegram_user_id' => $identity['telegram_user_id'],
-				'chat_id'          => $identity['chat_id'],
-				'action_name'      => 'media_uploaded',
-				'resource_type'    => 'attachment',
-				'resource_id'      => (string) $result['attachment_id'],
-				'after_state'      => $result,
-			)
-		);
-
-		return Telepilot_Telegram_Response_Builder::success_html(
-			Telepilot_Telegram_Response_Builder::bold( __( 'Media Uploaded', 'telepilot' ) ) .
-			"\n\n" .
-			sprintf(
-				__( "ID: %1$d\nTitle: %2$s\nPreview: %3$s", 'telepilot' ),
-				$result['attachment_id'],
-				Telepilot_Telegram_Response_Builder::escape( $result['title'] ),
-				Telepilot_Telegram_Response_Builder::link( __( 'Open file', 'telepilot' ), $result['url'] )
+		return Telepilot_Telegram_Response_Builder::error_html(
+			Telepilot_Telegram_Response_Builder::join_blocks(
+				array(
+					Telepilot_Telegram_Response_Builder::bold( __( 'Direct Uploads Disabled', 'telepilot' ) ),
+					__( 'Media is read-only in this release, so files sent to the bot are not imported into WordPress.', 'telepilot' ),
+					Telepilot_Telegram_Response_Builder::italic( __( 'Use wp-admin for uploads, then return to Telegram for list, search, details, and open actions.', 'telepilot' ) ),
+				)
 			),
 			array(
 				'command' => '/media',
-				'data'    => $result,
 			)
 		);
+	}
+
+	private function describe_command_for_log( $command ) {
+		if ( empty( $command['raw'] ) ) {
+			return ! empty( $command['name'] ) ? (string) $command['name'] : '';
+		}
+
+		$raw = (string) $command['raw'];
+
+		if ( 0 === strpos( $raw, 'tp:' ) ) {
+			return $this->humanize_callback_command( $raw );
+		}
+
+		return $raw;
+	}
+
+	private function humanize_callback_command( $raw ) {
+		$parts = explode( ':', (string) $raw );
+		$type  = isset( $parts[1] ) ? (string) $parts[1] : '';
+
+		switch ( $type ) {
+			case 'comment':
+				return trim( sprintf( '/comments %1$s %2$s', isset( $parts[2] ) ? $parts[2] : '', isset( $parts[3] ) ? $parts[3] : '' ) );
+			case 'post':
+				return trim( sprintf( '/posts %1$s %2$s', isset( $parts[2] ) ? $parts[2] : '', isset( $parts[3] ) ? $parts[3] : '' ) );
+			case 'page':
+				return trim( sprintf( '/pages %1$s %2$s', isset( $parts[2] ) ? $parts[2] : '', isset( $parts[3] ) ? $parts[3] : '' ) );
+			case 'media':
+				return trim( sprintf( '/media %1$s %2$s', isset( $parts[2] ) ? $parts[2] : '', isset( $parts[3] ) ? $parts[3] : '' ) );
+			case 'user':
+				return trim( sprintf( '/users %1$s %2$s', isset( $parts[2] ) ? $parts[2] : '', isset( $parts[3] ) ? $parts[3] : '' ) );
+			case 'plugin':
+				return '/plugins confirm';
+			case 'term':
+				$resource = isset( $parts[2] ) && 'post_tag' === $parts[2] ? '/tags' : '/categories';
+				return trim( sprintf( '%1$s %2$s %3$s', $resource, isset( $parts[3] ) ? $parts[3] : '', isset( $parts[4] ) ? $parts[4] : '' ) );
+		}
+
+		return $raw;
 	}
 
 	private function get_stale_update_window() {

@@ -23,6 +23,7 @@ class Telepilot_Notifications_Command_Service {
 				'key'     => (string) $key,
 				'label'   => (string) $labels[ $key ],
 				'enabled' => $this->is_enabled( $key ),
+				'list_number' => count( $items ) + 1,
 			);
 		}
 
@@ -40,37 +41,50 @@ class Telepilot_Notifications_Command_Service {
 			return Telepilot_Telegram_Response_Builder::bold( __( 'Notifications', 'telepilot' ) ) . "\n\n" . __( 'No notification options were found.', 'telepilot' );
 		}
 
-		$lines   = array( Telepilot_Telegram_Response_Builder::bold( __( 'Notifications', 'telepilot' ) ) );
-		$lines[] = Telepilot_Telegram_Response_Builder::italic(
+		$blocks   = array( Telepilot_Telegram_Response_Builder::bold( __( 'Notifications', 'telepilot' ) ) );
+		$blocks[] = Telepilot_Telegram_Response_Builder::italic(
 			sprintf( __( 'Page %1$d of %2$d', 'telepilot' ), $result['page'], $result['total_pages'] )
 		);
-		$lines[] = '';
 
 		foreach ( $result['items'] as $item ) {
-			$lines[] = sprintf(
-				__( '[%1$s] %2$s [%3$s]', 'telepilot' ),
-				Telepilot_Telegram_Response_Builder::escape( $item['key'] ),
-				Telepilot_Telegram_Response_Builder::escape( $item['label'] ),
-				Telepilot_Telegram_Response_Builder::escape( $item['enabled'] ? __( 'enabled', 'telepilot' ) : __( 'disabled', 'telepilot' ) )
+			$blocks[] = implode(
+				"\n",
+				array(
+					sprintf(
+						__( '[%1$d] %2$s [%3$s]', 'telepilot' ),
+						isset( $item['list_number'] ) ? (int) $item['list_number'] : 0,
+						Telepilot_Telegram_Response_Builder::escape( $item['label'] ),
+						Telepilot_Telegram_Response_Builder::escape( $item['enabled'] ? __( 'enabled', 'telepilot' ) : __( 'disabled', 'telepilot' ) )
+					),
+					sprintf(
+						__( 'Key: [%s]', 'telepilot' ),
+						Telepilot_Telegram_Response_Builder::escape( $item['key'] )
+					),
+				)
 			);
 		}
 
-		$lines[] = '';
-		$lines[] = Telepilot_Telegram_Response_Builder::italic( __( 'Tip: toggle only the alerts you actually want sent to Telegram.', 'telepilot' ) );
+		$blocks[] = Telepilot_Telegram_Response_Builder::italic( __( 'Tip: toggle only the alerts you actually want sent to Telegram.', 'telepilot' ) );
 
-		return implode( "\n", $lines );
+		return Telepilot_Telegram_Response_Builder::join_blocks( $blocks );
 	}
 
 	public function render_help_message() {
-		$lines   = array();
-		$lines[] = Telepilot_Telegram_Response_Builder::bold( __( 'Notification Commands', 'telepilot' ) );
-		$lines[] = '';
-		$lines[] = Telepilot_Telegram_Response_Builder::code( '/notifications list' ) . ' ' . __( 'Show notification options', 'telepilot' );
-		$lines[] = Telepilot_Telegram_Response_Builder::code( '/notifications enable new_comment' ) . ' ' . __( 'Enable a notification type', 'telepilot' );
-		$lines[] = Telepilot_Telegram_Response_Builder::code( '/notifications disable plugin_updates' ) . ' ' . __( 'Disable a notification type', 'telepilot' );
-		$lines[] = Telepilot_Telegram_Response_Builder::code( '/notifications toggle failed_login' ) . ' ' . __( 'Toggle a notification type', 'telepilot' );
+		$entries = array(
+			Telepilot_Telegram_Response_Builder::code( '/notifications list' ) . ' ' . __( 'Show notification options', 'telepilot' ),
+			Telepilot_Telegram_Response_Builder::code( '/notifications enable new_comment' ) . ' ' . __( 'Enable a notification type', 'telepilot' ),
+			Telepilot_Telegram_Response_Builder::code( '/notifications disable plugin_updates' ) . ' ' . __( 'Disable a notification type', 'telepilot' ),
+			Telepilot_Telegram_Response_Builder::code( '/notifications toggle failed_login' ) . ' ' . __( 'Toggle a notification type', 'telepilot' ),
+		);
 
-		return implode( "\n", $lines );
+		return Telepilot_Telegram_Response_Builder::join_blocks(
+			array_merge(
+				array(
+					Telepilot_Telegram_Response_Builder::bold( __( 'Notification Commands', 'telepilot' ) ),
+				),
+				$entries
+			)
+		);
 	}
 
 	public function update_option_state( $key, $enabled ) {
@@ -115,11 +129,12 @@ class Telepilot_Notifications_Command_Service {
 		$rows = array();
 
 		foreach ( $result['items'] as $item ) {
-			$rows[] = array(
+			$list_number = isset( $item['list_number'] ) ? (int) $item['list_number'] : 0;
+			$rows[]      = array(
 				array(
 					'text'          => sprintf(
-						$item['enabled'] ? __( 'Disable [%s]', 'telepilot' ) : __( 'Enable [%s]', 'telepilot' ),
-						$item['key']
+						$item['enabled'] ? __( 'Disable [%d]', 'telepilot' ) : __( 'Enable [%d]', 'telepilot' ),
+						$list_number
 					),
 					'callback_data' => '/notifications ' . ( $item['enabled'] ? 'disable ' : 'enable ' ) . $item['key'],
 				),

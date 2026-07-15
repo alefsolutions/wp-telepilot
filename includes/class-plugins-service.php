@@ -30,36 +30,40 @@ class Telepilot_Plugins_Service {
 			return Telepilot_Telegram_Response_Builder::bold( $heading ) . "\n\n" . __( 'No plugins matched that request.', 'telepilot' );
 		}
 
-		$lines   = array( Telepilot_Telegram_Response_Builder::bold( $heading ) );
-		$lines[] = Telepilot_Telegram_Response_Builder::italic(
+		$blocks   = array( Telepilot_Telegram_Response_Builder::bold( $heading ) );
+		$blocks[] = Telepilot_Telegram_Response_Builder::italic(
 			sprintf( __( 'Page %1$d of %2$d', 'telepilot' ), $result['page'], $result['total_pages'] )
 		);
-		$lines[] = '';
 
 		foreach ( $result['items'] as $plugin ) {
 			$status = $plugin['is_active'] ? __( 'active', 'telepilot' ) : __( 'inactive', 'telepilot' );
-			$line   = sprintf(
-				__( '[%1$s] %2$s [%3$s] v%4$s', 'telepilot' ),
-				Telepilot_Telegram_Response_Builder::escape( $plugin['identifier'] ),
-				Telepilot_Telegram_Response_Builder::escape( $plugin['name'] ),
-				Telepilot_Telegram_Response_Builder::escape( $status ),
-				Telepilot_Telegram_Response_Builder::escape( $plugin['version'] )
+			$line   = array(
+				sprintf(
+					__( '[%1$d] %2$s [%3$s] v%4$s', 'telepilot' ),
+					isset( $plugin['list_number'] ) ? (int) $plugin['list_number'] : 0,
+					Telepilot_Telegram_Response_Builder::escape( $plugin['name'] ),
+					Telepilot_Telegram_Response_Builder::escape( $status ),
+					Telepilot_Telegram_Response_Builder::escape( $plugin['version'] )
+				),
+				sprintf(
+					__( 'Identifier: [%s]', 'telepilot' ),
+					Telepilot_Telegram_Response_Builder::escape( $plugin['identifier'] )
+				),
 			);
 
 			if ( ! empty( $plugin['update_version'] ) ) {
-				$line .= ' ' . sprintf(
+				$line[] = sprintf(
 					__( '(update %s available)', 'telepilot' ),
 					Telepilot_Telegram_Response_Builder::escape( $plugin['update_version'] )
 				);
 			}
 
-			$lines[] = $line;
+			$blocks[] = implode( "\n", $line );
 		}
 
-		$lines[] = '';
-		$lines[] = Telepilot_Telegram_Response_Builder::italic( __( 'Tip: use /plugins details slug for a deeper look before activating, updating, or deleting.', 'telepilot' ) );
+		$blocks[] = Telepilot_Telegram_Response_Builder::italic( __( 'Tip: use /plugins details slug for a deeper look before activating, updating, or deleting.', 'telepilot' ) );
 
-		return implode( "\n", $lines );
+		return Telepilot_Telegram_Response_Builder::join_blocks( $blocks );
 	}
 
 	public function render_details_message( $plugin ) {
@@ -86,26 +90,29 @@ class Telepilot_Plugins_Service {
 			$lines[] = sprintf( __( 'Update available: %s', 'telepilot' ), Telepilot_Telegram_Response_Builder::escape( $plugin['update_version'] ) );
 		}
 
+		if ( ! empty( $plugin['is_self'] ) ) {
+			$lines[] = __( 'Protected: WP Telepilot does not manage itself through Telegram.', 'telepilot' );
+		}
+
 		return implode( "\n", $lines );
 	}
 
 	public function render_help_message() {
-		$lines   = array();
-		$lines[] = Telepilot_Telegram_Response_Builder::bold( __( 'Plugins Commands', 'telepilot' ) );
-		$lines[] = '';
-		$lines[] = Telepilot_Telegram_Response_Builder::code( '/plugins list' ) . ' ' . __( 'Show installed plugins', 'telepilot' );
-		$lines[] = Telepilot_Telegram_Response_Builder::code( '/plugins search seo' ) . ' ' . __( 'Search installed plugins', 'telepilot' );
-		$lines[] = Telepilot_Telegram_Response_Builder::code( '/plugins updates' ) . ' ' . __( 'Show plugins with available updates', 'telepilot' );
-		$lines[] = Telepilot_Telegram_Response_Builder::code( '/plugins refresh' ) . ' ' . __( 'Refresh plugin update information', 'telepilot' );
-		$lines[] = Telepilot_Telegram_Response_Builder::code( '/plugins details akismet' ) . ' ' . __( 'Show plugin details', 'telepilot' );
-		$lines[] = Telepilot_Telegram_Response_Builder::code( '/plugins activate akismet' ) . ' ' . __( 'Activate a plugin after confirmation', 'telepilot' );
-		$lines[] = Telepilot_Telegram_Response_Builder::code( '/plugins deactivate akismet' ) . ' ' . __( 'Deactivate a plugin after confirmation', 'telepilot' );
-		$lines[] = Telepilot_Telegram_Response_Builder::code( '/plugins update akismet' ) . ' ' . __( 'Update a plugin after confirmation', 'telepilot' );
-		$lines[] = Telepilot_Telegram_Response_Builder::code( '/plugins delete akismet' ) . ' ' . __( 'Delete a plugin after confirmation', 'telepilot' );
-		$lines[] = '';
-		$lines[] = Telepilot_Telegram_Response_Builder::italic( __( 'Tip: use the plugin identifier shown in brackets, such as [akismet], when running plugin commands.', 'telepilot' ) );
-
-		return implode( "\n", $lines );
+		return Telepilot_Telegram_Response_Builder::join_blocks(
+			array(
+				Telepilot_Telegram_Response_Builder::bold( __( 'Plugins Commands', 'telepilot' ) ),
+				Telepilot_Telegram_Response_Builder::code( '/plugins list' ) . ' ' . __( 'Show installed plugins', 'telepilot' ),
+				Telepilot_Telegram_Response_Builder::code( '/plugins search seo' ) . ' ' . __( 'Search installed plugins', 'telepilot' ),
+				Telepilot_Telegram_Response_Builder::code( '/plugins updates' ) . ' ' . __( 'Show plugins with available updates', 'telepilot' ),
+				Telepilot_Telegram_Response_Builder::code( '/plugins refresh' ) . ' ' . __( 'Refresh plugin update information', 'telepilot' ),
+				Telepilot_Telegram_Response_Builder::code( '/plugins details akismet' ) . ' ' . __( 'Show plugin details', 'telepilot' ),
+				Telepilot_Telegram_Response_Builder::code( '/plugins activate akismet' ) . ' ' . __( 'Activate a plugin after confirmation', 'telepilot' ),
+				Telepilot_Telegram_Response_Builder::code( '/plugins deactivate akismet' ) . ' ' . __( 'Deactivate a plugin after confirmation', 'telepilot' ),
+				Telepilot_Telegram_Response_Builder::code( '/plugins update akismet' ) . ' ' . __( 'Update a plugin after confirmation', 'telepilot' ),
+				Telepilot_Telegram_Response_Builder::code( '/plugins delete akismet' ) . ' ' . __( 'Delete a plugin after confirmation', 'telepilot' ),
+				Telepilot_Telegram_Response_Builder::italic( __( 'Tip: use the plugin identifier shown in brackets, such as [akismet], when running plugin commands.', 'telepilot' ) ),
+			)
+		);
 	}
 
 	public function refresh_updates() {
@@ -129,10 +136,11 @@ class Telepilot_Plugins_Service {
 		$rows = array();
 
 		foreach ( $plugins as $plugin ) {
-			$identifier = $plugin['identifier'];
-			$row        = array(
+			$identifier  = $plugin['identifier'];
+			$list_number = isset( $plugin['list_number'] ) ? (int) $plugin['list_number'] : 0;
+			$row         = array(
 				array(
-					'text'          => sprintf( __( 'Details [%s]', 'telepilot' ), $identifier ),
+					'text'          => sprintf( __( 'Details [%d]', 'telepilot' ), $list_number ),
 					'callback_data' => '/plugins details ' . $identifier,
 				),
 			);
@@ -144,23 +152,23 @@ class Telepilot_Plugins_Service {
 
 			if ( ! empty( $plugin['update_version'] ) ) {
 				$row[] = array(
-					'text'          => sprintf( __( 'Update [%s]', 'telepilot' ), $identifier ),
+					'text'          => sprintf( __( 'Update [%d]', 'telepilot' ), $list_number ),
 					'callback_data' => '/plugins update ' . $identifier,
 				);
 			} elseif ( $plugin['is_active'] ) {
 				$row[] = array(
-					'text'          => sprintf( __( 'Deactivate [%s]', 'telepilot' ), $identifier ),
+					'text'          => sprintf( __( 'Deactivate [%d]', 'telepilot' ), $list_number ),
 					'callback_data' => '/plugins deactivate ' . $identifier,
 				);
 			} else {
 				$row[] = array(
-					'text'          => sprintf( __( 'Activate [%s]', 'telepilot' ), $identifier ),
+					'text'          => sprintf( __( 'Activate [%d]', 'telepilot' ), $list_number ),
 					'callback_data' => '/plugins activate ' . $identifier,
 				);
 			}
 
 			$row[] = array(
-				'text'          => sprintf( __( 'Delete [%s]', 'telepilot' ), $identifier ),
+				'text'          => sprintf( __( 'Delete [%d]', 'telepilot' ), $list_number ),
 				'callback_data' => '/plugins delete ' . $identifier,
 			);
 
@@ -192,15 +200,10 @@ class Telepilot_Plugins_Service {
 		);
 
 		return Telepilot_Telegram_Response_Builder::append_rows(
-			Telepilot_Telegram_Response_Builder::keyboard(
-				array(
-					array(
-						array(
-							'text'          => sprintf( __( 'Confirm %1$s [%2$s]', 'telepilot' ), ucfirst( $action ), $label ),
-							'callback_data' => 'tp:plugin:confirm:' . $token,
-						),
-					),
-				)
+			Telepilot_Telegram_Response_Builder::confirmation_keyboard(
+				sprintf( __( 'Confirm %1$s [%2$s]', 'telepilot' ), ucfirst( $action ), $label ),
+				'tp:plugin:confirm:' . $token,
+				'/plugins list'
 			),
 			$this->navigation_rows()
 		);
@@ -452,8 +455,13 @@ class Telepilot_Plugins_Service {
 		$page        = min( $page, $total_pages );
 		$offset      = ( $page - 1 ) * $limit;
 
+		$items  = array_slice( $plugins, $offset, $limit );
+		foreach ( $items as $index => $plugin ) {
+			$items[ $index ]['list_number'] = $index + 1;
+		}
+
 		$result = array(
-			'items'       => array_slice( $plugins, $offset, $limit ),
+			'items'       => $items,
 			'page'        => $page,
 			'per_page'    => $limit,
 			'total_items' => $total_items,

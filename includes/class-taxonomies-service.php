@@ -84,18 +84,17 @@ class Telepilot_Taxonomies_Service {
 			);
 		}
 
-		$lines   = array( Telepilot_Telegram_Response_Builder::bold( $heading ) );
-		$lines[] = Telepilot_Telegram_Response_Builder::italic(
+		$blocks   = array( Telepilot_Telegram_Response_Builder::bold( $heading ) );
+		$blocks[] = Telepilot_Telegram_Response_Builder::italic(
 			sprintf(
 				__( 'Page %1$d of %2$d', 'telepilot' ),
 				$result['page'],
 				$result['total_pages']
 			)
 		);
-		$lines[] = '';
 
 		foreach ( $result['items'] as $term ) {
-			$lines[] = sprintf(
+			$blocks[] = sprintf(
 				__( '[%1$d] %2$s (%3$d)', 'telepilot' ),
 				$term->term_id,
 				Telepilot_Telegram_Response_Builder::escape( $term->name ),
@@ -103,10 +102,9 @@ class Telepilot_Taxonomies_Service {
 			);
 		}
 
-		$lines[] = '';
-		$lines[] = Telepilot_Telegram_Response_Builder::italic( __( 'Tip: use search when your category or tag list grows large.', 'telepilot' ) );
+		$blocks[] = Telepilot_Telegram_Response_Builder::italic( __( 'Tip: use search when your category or tag list grows large.', 'telepilot' ) );
 
-		return implode( "\n", $lines );
+		return Telepilot_Telegram_Response_Builder::join_blocks( $blocks );
 	}
 
 	public function render_help_message( $resource ) {
@@ -115,7 +113,6 @@ class Telepilot_Taxonomies_Service {
 		$lines    = array();
 
 		$lines[] = Telepilot_Telegram_Response_Builder::bold( sprintf( __( '%s Commands', 'telepilot' ), ucfirst( $resource ) ) );
-		$lines[] = '';
 		$lines[] = Telepilot_Telegram_Response_Builder::code( '/' . $resource . ' list' ) . ' ' . sprintf( __( 'Show %s', 'telepilot' ), $resource );
 		$lines[] = Telepilot_Telegram_Response_Builder::code( '/' . $resource . ' search keyword' ) . ' ' . sprintf( __( 'Search %s', 'telepilot' ), $resource );
 		$lines[] = Telepilot_Telegram_Response_Builder::code( '/' . $resource . ' details 12' ) . ' ' . sprintf( __( 'Show %s details', 'telepilot' ), $singular );
@@ -129,10 +126,9 @@ class Telepilot_Taxonomies_Service {
 		}
 
 		$lines[] = Telepilot_Telegram_Response_Builder::code( '/' . $resource . ' delete 12' ) . ' ' . sprintf( __( 'Delete a %s after confirmation', 'telepilot' ), $singular );
-		$lines[] = '';
 		$lines[] = Telepilot_Telegram_Response_Builder::italic( __( 'Tip: use the bracketed term ID from list results when updating or deleting.', 'telepilot' ) );
 
-		return implode( "\n", $lines );
+		return Telepilot_Telegram_Response_Builder::join_blocks( $lines );
 	}
 
 	public function render_term_details_message( $term, $resource ) {
@@ -338,16 +334,13 @@ class Telepilot_Taxonomies_Service {
 			)
 		);
 
+		$cancel_command = 'post_tag' === $taxonomy ? '/tags list' : '/categories list';
+
 		return Telepilot_Telegram_Response_Builder::append_rows(
-			Telepilot_Telegram_Response_Builder::keyboard(
-				array(
-					array(
-						array(
-							'text'          => sprintf( __( 'Confirm delete [%d]', 'telepilot' ), $term_id ),
-							'callback_data' => 'tp:term:' . $taxonomy . ':delete:' . (int) $term_id . ':' . $token,
-						),
-					),
-				)
+			Telepilot_Telegram_Response_Builder::confirmation_keyboard(
+				sprintf( __( 'Confirm delete [%d]', 'telepilot' ), $term_id ),
+				'tp:term:' . $taxonomy . ':delete:' . (int) $term_id . ':' . $token,
+				$cancel_command
 			),
 			$this->navigation_rows()
 		);

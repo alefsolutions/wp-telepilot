@@ -178,6 +178,13 @@ Each command below includes:
 - Example: `/notifications list`
 - Behavior: lists Telegram notification types and their enabled or disabled state.
 
+### `/notifications help`
+
+- Scope: notifications
+- Syntax: `/notifications help`
+- Example: `/notifications help`
+- Behavior: shows the notifications command cheat sheet.
+
 ### `/notifications enable KEY`
 
 - Scope: notifications
@@ -329,6 +336,13 @@ Each command below includes:
 - Example: `/posts list`
 - Behavior: lists recent posts with pagination and action buttons.
 
+### `/posts latest`
+
+- Scope: posts
+- Syntax: `/posts latest`
+- Example: `/posts latest`
+- Behavior: alias for `/posts list`.
+
 ### `/posts drafts`
 
 - Scope: posts
@@ -390,7 +404,7 @@ Each command below includes:
 - Scope: posts
 - Syntax: `/posts schedule POST_ID YYYY-MM-DD HH:MM`
 - Example: `/posts schedule 321 2026-07-20 14:30`
-- Behavior: schedules a post in the site’s local timezone.
+- Behavior: schedules a post in the site's local timezone.
 
 ### `/posts open POST_ID`
 
@@ -406,11 +420,11 @@ Each command below includes:
 - Example: `/posts publish 321`
 - Behavior: publishes the specified post immediately.
 
-### `/posts unpublish POST_ID`
+### `/posts draft POST_ID`
 
 - Scope: posts
-- Syntax: `/posts unpublish POST_ID`
-- Example: `/posts unpublish 321`
+- Syntax: `/posts draft POST_ID`
+- Example: `/posts draft 321`
 - Behavior: moves a published post back to draft after confirmation.
 
 ### `/posts trashed`
@@ -464,6 +478,20 @@ Each command below includes:
 - Example: `/pages list`
 - Behavior: lists recent pages with pagination, action buttons, and preview or admin links where available.
 
+### `/pages latest`
+
+- Scope: pages
+- Syntax: `/pages latest`
+- Example: `/pages latest`
+- Behavior: alias for `/pages list`.
+
+### `/pages drafts`
+
+- Scope: pages
+- Syntax: `/pages drafts`
+- Example: `/pages drafts`
+- Behavior: lists draft pages only with pagination and action buttons.
+
 ### `/pages search KEYWORD`
 
 - Scope: pages
@@ -471,12 +499,12 @@ Each command below includes:
 - Example: `/pages search about`
 - Behavior: searches pages by keyword with paginated results.
 
-### `/pages create TITLE`
+### `/pages details PAGE_ID`
 
 - Scope: pages
-- Syntax: `/pages create TITLE`
-- Example: `/pages create About Us`
-- Behavior: creates a new draft page.
+- Syntax: `/pages details PAGE_ID`
+- Example: `/pages details 45`
+- Behavior: shows page status, slug, modified time, and the best browser access link for that page.
 
 ### `/pages title PAGE_ID NEW_TITLE`
 
@@ -546,7 +574,7 @@ Each command below includes:
 - Scope: pages
 - Syntax: `/pages list page:N`
 - Example: `/pages list page:2`
-- Behavior: opens a specific result page. The same pattern also works for `/pages search` and `/pages trashed`.
+- Behavior: opens a specific result page. The same pattern also works for `/pages drafts`, `/pages search`, and `/pages trashed`.
 
 ## Media commands
 
@@ -564,6 +592,13 @@ Each command below includes:
 - Example: `/media list`
 - Behavior: lists recent media items with pagination and action buttons.
 
+### `/media recent`
+
+- Scope: media
+- Syntax: `/media recent`
+- Example: `/media recent`
+- Behavior: alias for `/media list`.
+
 ### `/media search KEYWORD`
 
 - Scope: media
@@ -578,40 +613,12 @@ Each command below includes:
 - Example: `/media details 88`
 - Behavior: shows attachment metadata, alt text, caption, dimensions, size, and preview link when available.
 
-### `/media rename ATTACHMENT_ID NEW_TITLE`
+### `/media open ATTACHMENT_ID`
 
 - Scope: media
-- Syntax: `/media rename ATTACHMENT_ID NEW_TITLE`
-- Example: `/media rename 88 Homepage hero image`
-- Behavior: updates the attachment title.
-
-### `/media alt ATTACHMENT_ID NEW_ALT_TEXT`
-
-- Scope: media
-- Syntax: `/media alt ATTACHMENT_ID NEW_ALT_TEXT`
-- Example: `/media alt 88 Homepage banner showing team`
-- Behavior: updates the attachment alt text.
-
-### `/media caption ATTACHMENT_ID NEW_CAPTION`
-
-- Scope: media
-- Syntax: `/media caption ATTACHMENT_ID NEW_CAPTION`
-- Example: `/media caption 88 Homepage hero for July campaign`
-- Behavior: updates the attachment caption.
-
-### `/media delete ATTACHMENT_ID`
-
-- Scope: media
-- Syntax: `/media delete ATTACHMENT_ID`
-- Example: `/media delete 88`
-- Behavior: deletes a media item after confirmation.
-
-### Media upload by message
-
-- Scope: media
-- Syntax: send a photo or document to the bot in a private chat
-- Example: upload an image directly in Telegram without typing a slash command
-- Behavior: imports the uploaded Telegram file into the WordPress media library and returns the new attachment details.
+- Syntax: `/media open ATTACHMENT_ID`
+- Example: `/media open 88`
+- Behavior: returns the media details view together with a browser link to open the file directly.
 
 ### Media pagination
 
@@ -642,6 +649,13 @@ Each command below includes:
 - Syntax: `/users search KEYWORD`
 - Example: `/users search jane`
 - Behavior: searches users by username, display name, or email with paginated results.
+
+### `/users details USER_ID`
+
+- Scope: users
+- Syntax: `/users details USER_ID`
+- Example: `/users details 17`
+- Behavior: shows a user summary including email, roles, status, registration time, and Telegram link status.
 
 ### `/users create USERNAME EMAIL ROLE`
 
@@ -685,18 +699,18 @@ Each command below includes:
 - Example: `/users reset-password 17`
 - Behavior: generates a password reset link and returns that link to the Telegram admin after confirmation.
 
-### `/users send-reset USER_ID`
+### `/users email-reset-password USER_ID`
 
 - Scope: users
-- Syntax: `/users send-reset USER_ID`
-- Example: `/users send-reset 17`
+- Syntax: `/users email-reset-password USER_ID`
+- Example: `/users email-reset-password 17`
 - Behavior: sends the official WordPress password reset email to the selected user after confirmation.
 
-### `/users send-welcome USER_ID`
+### `/users welcome-email USER_ID`
 
 - Scope: users
-- Syntax: `/users send-welcome USER_ID`
-- Example: `/users send-welcome 17`
+- Syntax: `/users welcome-email USER_ID`
+- Example: `/users welcome-email 17`
 - Behavior: re-sends the WordPress welcome email to the selected user after confirmation.
 
 ### `/users role USER_ID ROLE`
@@ -704,7 +718,7 @@ Each command below includes:
 - Scope: users
 - Syntax: `/users role USER_ID ROLE`
 - Example: `/users role 17 editor`
-- Behavior: changes the target user’s role after confirmation.
+- Behavior: changes the target user's role after confirmation.
 
 ### `/users delete USER_ID [REASSIGN_USER_ID]`
 
@@ -942,4 +956,5 @@ Each command below includes:
 - Sensitive actions are restricted to private Telegram chats.
 - Some destructive operations use inline confirmation buttons before they execute.
 - Pagination uses the `page:N` suffix pattern on supported list and search commands.
-- Telegram file upload to media works by sending a file directly to the bot in private chat rather than by slash command.
+- Media is read-only in Telegram for this release. Use `wp-admin` for uploads, then return to `/media` commands for review and browser access.
+

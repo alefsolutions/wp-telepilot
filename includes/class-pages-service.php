@@ -48,6 +48,17 @@ class Telepilot_Pages_Service {
 		);
 	}
 
+	public function drafts_page( $page = 1, $limit = self::PER_PAGE ) {
+		return $this->query_pages_page(
+			array(
+				'post_type'   => 'page',
+				'post_status' => array( 'draft' ),
+			),
+			$page,
+			$limit
+		);
+	}
+
 	public function trashed_page( $page = 1, $limit = self::PER_PAGE ) {
 		return $this->query_pages_page(
 			array(
@@ -82,52 +93,86 @@ class Telepilot_Pages_Service {
 			return Telepilot_Telegram_Response_Builder::bold( $heading ) . "\n\n" . __( 'No pages matched that request.', 'telepilot' );
 		}
 
-		$lines   = array( Telepilot_Telegram_Response_Builder::bold( $heading ) );
-		$lines[] = Telepilot_Telegram_Response_Builder::italic(
+		$blocks   = array( Telepilot_Telegram_Response_Builder::bold( $heading ) );
+		$blocks[] = Telepilot_Telegram_Response_Builder::italic(
 			sprintf( __( 'Page %1$d of %2$d', 'telepilot' ), $result['page'], $result['total_pages'] )
 		);
-		$lines[] = '';
 
 		foreach ( $result['items'] as $page ) {
-			$lines[] = sprintf(
-				__( '[%1$d] %2$s [%3$s]', 'telepilot' ),
-				$page->ID,
-				Telepilot_Telegram_Response_Builder::escape( get_the_title( $page ) ),
-				Telepilot_Telegram_Response_Builder::escape( $page->post_status )
+			$block_lines = array(
+				sprintf(
+					__( '[%1$d] %2$s [%3$s]', 'telepilot' ),
+					$page->ID,
+					Telepilot_Telegram_Response_Builder::escape( get_the_title( $page ) ),
+					Telepilot_Telegram_Response_Builder::escape( $page->post_status )
+				),
 			);
 
 			$access_link = $this->describe_access_link( $page );
 			if ( '' !== $access_link ) {
-				$lines[] = '  ' . $access_link;
+				$block_lines[] = $access_link;
 			}
+
+			$blocks[] = implode( "\n", $block_lines );
 		}
 
-		$lines[] = '';
-		$lines[] = Telepilot_Telegram_Response_Builder::italic( __( 'Tip: use the buttons below, or run /pages search keyword to narrow the list.', 'telepilot' ) );
+		$blocks[] = Telepilot_Telegram_Response_Builder::italic( __( 'Tip: use the buttons below, or run /pages search keyword to narrow the list.', 'telepilot' ) );
 
-		return implode( "\n", $lines );
+		return Telepilot_Telegram_Response_Builder::join_blocks( $blocks );
 	}
 
 	public function render_help_message() {
-		$lines   = array();
-		$lines[] = Telepilot_Telegram_Response_Builder::bold( __( 'Pages Commands', 'telepilot' ) );
-		$lines[] = '';
-		$lines[] = Telepilot_Telegram_Response_Builder::code( '/pages list' ) . ' ' . __( 'Show recent pages', 'telepilot' );
-		$lines[] = Telepilot_Telegram_Response_Builder::code( '/pages search about' ) . ' ' . __( 'Search pages', 'telepilot' );
-		$lines[] = Telepilot_Telegram_Response_Builder::code( '/pages create About Us' ) . ' ' . __( 'Create a new draft page', 'telepilot' );
-		$lines[] = Telepilot_Telegram_Response_Builder::code( '/pages title 123 New title' ) . ' ' . __( 'Update a page title', 'telepilot' );
-		$lines[] = Telepilot_Telegram_Response_Builder::code( '/pages slug 123 about-us' ) . ' ' . __( 'Update a page slug', 'telepilot' );
-		$lines[] = Telepilot_Telegram_Response_Builder::code( '/pages status 123 private' ) . ' ' . __( 'Set page status to draft, publish, or private', 'telepilot' );
-		$lines[] = Telepilot_Telegram_Response_Builder::code( '/pages trashed' ) . ' ' . __( 'Show trashed pages', 'telepilot' );
-		$lines[] = Telepilot_Telegram_Response_Builder::code( '/pages publish 123' ) . ' ' . __( 'Publish a page', 'telepilot' );
-		$lines[] = Telepilot_Telegram_Response_Builder::code( '/pages draft 123' ) . ' ' . __( 'Move a page to draft', 'telepilot' );
-		$lines[] = Telepilot_Telegram_Response_Builder::code( '/pages trash 123' ) . ' ' . __( 'Trash a page', 'telepilot' );
-		$lines[] = Telepilot_Telegram_Response_Builder::code( '/pages restore 123' ) . ' ' . __( 'Restore a trashed page', 'telepilot' );
-		$lines[] = Telepilot_Telegram_Response_Builder::code( '/pages delete 123' ) . ' ' . __( 'Permanently delete a page after confirmation', 'telepilot' );
-		$lines[] = '';
-		$lines[] = Telepilot_Telegram_Response_Builder::italic( __( 'Published pages can be previewed directly from Telegram. Drafts are linked to wp-admin because browser preview for drafts normally requires WordPress authentication.', 'telepilot' ) );
+		return Telepilot_Telegram_Response_Builder::join_blocks(
+			array(
+				Telepilot_Telegram_Response_Builder::bold( __( 'Pages Commands', 'telepilot' ) ),
+				Telepilot_Telegram_Response_Builder::code( '/pages list' ) . ' ' . __( 'Show recent pages', 'telepilot' ),
+				Telepilot_Telegram_Response_Builder::code( '/pages latest' ) . ' ' . __( 'Alias for the recent pages list', 'telepilot' ),
+				Telepilot_Telegram_Response_Builder::code( '/pages drafts' ) . ' ' . __( 'Show draft pages only', 'telepilot' ),
+				Telepilot_Telegram_Response_Builder::code( '/pages search about' ) . ' ' . __( 'Search pages', 'telepilot' ),
+				Telepilot_Telegram_Response_Builder::code( '/pages details 123' ) . ' ' . __( 'Show page details and browser access links', 'telepilot' ),
+				Telepilot_Telegram_Response_Builder::code( '/pages title 123 New title' ) . ' ' . __( 'Update a page title', 'telepilot' ),
+				Telepilot_Telegram_Response_Builder::code( '/pages slug 123 about-us' ) . ' ' . __( 'Update a page slug', 'telepilot' ),
+				Telepilot_Telegram_Response_Builder::code( '/pages status 123 private' ) . ' ' . __( 'Set page status to draft, publish, or private', 'telepilot' ),
+				Telepilot_Telegram_Response_Builder::code( '/pages trashed' ) . ' ' . __( 'Show trashed pages', 'telepilot' ),
+				Telepilot_Telegram_Response_Builder::code( '/pages publish 123' ) . ' ' . __( 'Publish a page', 'telepilot' ),
+				Telepilot_Telegram_Response_Builder::code( '/pages draft 123' ) . ' ' . __( 'Move a page to draft', 'telepilot' ),
+				Telepilot_Telegram_Response_Builder::code( '/pages trash 123' ) . ' ' . __( 'Trash a page', 'telepilot' ),
+				Telepilot_Telegram_Response_Builder::code( '/pages restore 123' ) . ' ' . __( 'Restore a trashed page', 'telepilot' ),
+				Telepilot_Telegram_Response_Builder::code( '/pages delete 123' ) . ' ' . __( 'Permanently delete a page after confirmation', 'telepilot' ),
+				Telepilot_Telegram_Response_Builder::italic( __( 'Published pages can be previewed directly from Telegram. Drafts are linked to wp-admin because browser preview for drafts normally requires WordPress authentication.', 'telepilot' ) ),
+			)
+		);
+	}
 
-		return implode( "\n", $lines );
+	public function get_page_details( $page_id ) {
+		$page = get_post( $page_id );
+
+		if ( ! $page || 'page' !== $page->post_type ) {
+			return new WP_Error( 'telepilot_page_not_found', __( 'Page not found.', 'telepilot' ) );
+		}
+
+		return $page;
+	}
+
+	public function render_details_message( $page ) {
+		if ( ! ( $page instanceof WP_Post ) ) {
+			return Telepilot_Telegram_Response_Builder::bold( __( 'Page Details', 'telepilot' ) ) . "\n\n" . __( 'Page not found.', 'telepilot' );
+		}
+
+		$blocks   = array();
+		$blocks[] = Telepilot_Telegram_Response_Builder::bold( __( 'Page Details', 'telepilot' ) );
+		$blocks[] = implode(
+			"\n",
+			array(
+				sprintf( __( 'Page: [%1$d] %2$s', 'telepilot' ), $page->ID, Telepilot_Telegram_Response_Builder::escape( get_the_title( $page ) ) ),
+				sprintf( __( 'Status: %s', 'telepilot' ), Telepilot_Telegram_Response_Builder::escape( $page->post_status ) ),
+				sprintf( __( 'Slug: %s', 'telepilot' ), Telepilot_Telegram_Response_Builder::escape( $page->post_name ) ),
+				sprintf( __( 'Modified: %s', 'telepilot' ), Telepilot_Telegram_Response_Builder::escape( get_the_modified_date( 'Y-m-d H:i:s', $page ) ) ),
+			)
+		);
+		$blocks[] = $this->describe_access_link( $page );
+
+		return Telepilot_Telegram_Response_Builder::join_blocks( $blocks );
 	}
 
 	public function create_page( $title ) {
@@ -279,15 +324,10 @@ class Telepilot_Pages_Service {
 		);
 
 		return Telepilot_Telegram_Response_Builder::append_rows(
-			Telepilot_Telegram_Response_Builder::keyboard(
-				array(
-					array(
-						array(
-							'text'          => sprintf( __( 'Confirm %1$s [%2$d]', 'telepilot' ), ucfirst( $action ), $page_id ),
-							'callback_data' => 'tp:page:' . $action . ':' . (int) $page_id . ':' . $token,
-						),
-					),
-				)
+			Telepilot_Telegram_Response_Builder::confirmation_keyboard(
+				sprintf( __( 'Confirm %1$s [%2$d]', 'telepilot' ), ucfirst( $action ), $page_id ),
+				'tp:page:' . $action . ':' . (int) $page_id . ':' . $token,
+				'/pages list'
 			),
 			$this->navigation_rows()
 		);
@@ -388,6 +428,10 @@ class Telepilot_Pages_Service {
 	private function build_command( $subcommand, $search_term, $page ) {
 		if ( 'search' === $subcommand ) {
 			return trim( '/pages search ' . $search_term . ' page:' . $page );
+		}
+
+		if ( 'drafts' === $subcommand ) {
+			return '/pages drafts page:' . $page;
 		}
 
 		if ( 'trashed' === $subcommand ) {

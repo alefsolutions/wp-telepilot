@@ -52,24 +52,65 @@ class Telepilot_Site_Settings_Command_Service {
 	}
 
 	public function render_help_message() {
-		$lines   = array();
-		$lines[] = Telepilot_Telegram_Response_Builder::bold( __( 'Settings Commands', 'telepilot' ) );
-		$lines[] = '';
-		$lines[] = Telepilot_Telegram_Response_Builder::code( '/settings' ) . ' ' . __( 'Show the current WP Telepilot and safe site settings summary', 'telepilot' );
-		$lines[] = Telepilot_Telegram_Response_Builder::code( '/settings title My Site' ) . ' ' . __( 'Update the site title', 'telepilot' );
-		$lines[] = Telepilot_Telegram_Response_Builder::code( '/settings tagline Telegram-first operations' ) . ' ' . __( 'Update the site tagline', 'telepilot' );
-		$lines[] = Telepilot_Telegram_Response_Builder::code( '/settings admin-email admin@example.com' ) . ' ' . __( 'Update the admin email', 'telepilot' );
-		$lines[] = Telepilot_Telegram_Response_Builder::code( '/settings timezone Pacific/Port_Moresby' ) . ' ' . __( 'Update the timezone string', 'telepilot' );
-		$lines[] = Telepilot_Telegram_Response_Builder::code( '/settings date-format F j, Y' ) . ' ' . __( 'Update the WordPress date format', 'telepilot' );
-		$lines[] = Telepilot_Telegram_Response_Builder::code( '/settings time-format g:i a' ) . ' ' . __( 'Update the WordPress time format', 'telepilot' );
-		$lines[] = Telepilot_Telegram_Response_Builder::code( '/settings retention 45' ) . ' ' . __( 'Update audit log retention days', 'telepilot' );
-		$lines[] = Telepilot_Telegram_Response_Builder::code( '/settings rate-limit 30' ) . ' ' . __( 'Update the per-minute command limit', 'telepilot' );
-		$lines[] = Telepilot_Telegram_Response_Builder::code( '/settings stale-window 180' ) . ' ' . __( 'Update the stale update rejection window', 'telepilot' );
-		$lines[] = Telepilot_Telegram_Response_Builder::code( '/settings linking off' ) . ' ' . __( 'Enable or disable new Telegram account linking', 'telepilot' );
-		$lines[] = Telepilot_Telegram_Response_Builder::code( '/settings uninstall-cleanup on' ) . ' ' . __( 'Choose whether uninstall removes WP Telepilot data', 'telepilot' );
-		$lines[] = Telepilot_Telegram_Response_Builder::code( '/notifications list' ) . ' ' . __( 'Manage Telegram notification types', 'telepilot' );
+		return Telepilot_Telegram_Response_Builder::join_blocks(
+			array(
+				Telepilot_Telegram_Response_Builder::bold( __( 'Settings Commands', 'telepilot' ) ),
+				Telepilot_Telegram_Response_Builder::code( '/settings' ) . ' ' . __( 'Show the current WP Telepilot and safe site settings summary', 'telepilot' ),
+				Telepilot_Telegram_Response_Builder::code( '/settings title My Site' ) . ' ' . __( 'Update the site title', 'telepilot' ),
+				Telepilot_Telegram_Response_Builder::code( '/settings tagline Telegram-first operations' ) . ' ' . __( 'Update the site tagline', 'telepilot' ),
+				Telepilot_Telegram_Response_Builder::code( '/settings admin-email admin@example.com' ) . ' ' . __( 'Update the admin email', 'telepilot' ),
+				Telepilot_Telegram_Response_Builder::code( '/settings timezone Pacific/Port_Moresby' ) . ' ' . __( 'Update the timezone string', 'telepilot' ),
+				Telepilot_Telegram_Response_Builder::code( '/settings timezone help' ) . ' ' . __( 'Show timezone examples and validation tips', 'telepilot' ),
+				Telepilot_Telegram_Response_Builder::code( '/settings date-format F j, Y' ) . ' ' . __( 'Update the WordPress date format', 'telepilot' ),
+				Telepilot_Telegram_Response_Builder::code( '/settings date-format help' ) . ' ' . __( 'Show date format examples', 'telepilot' ),
+				Telepilot_Telegram_Response_Builder::code( '/settings time-format g:i a' ) . ' ' . __( 'Update the WordPress time format', 'telepilot' ),
+				Telepilot_Telegram_Response_Builder::code( '/settings time-format help' ) . ' ' . __( 'Show time format examples', 'telepilot' ),
+				Telepilot_Telegram_Response_Builder::code( '/settings retention 45' ) . ' ' . __( 'Update audit log retention days', 'telepilot' ),
+				Telepilot_Telegram_Response_Builder::code( '/settings rate-limit 30' ) . ' ' . __( 'Update the per-minute command limit', 'telepilot' ),
+				Telepilot_Telegram_Response_Builder::code( '/settings stale-window 180' ) . ' ' . __( 'Update the stale update rejection window', 'telepilot' ),
+				Telepilot_Telegram_Response_Builder::code( '/settings linking off' ) . ' ' . __( 'Enable or disable new Telegram account linking', 'telepilot' ),
+				Telepilot_Telegram_Response_Builder::code( '/settings uninstall-cleanup on' ) . ' ' . __( 'Choose whether uninstall removes WP Telepilot data', 'telepilot' ),
+				Telepilot_Telegram_Response_Builder::code( '/notifications list' ) . ' ' . __( 'Manage Telegram notification types', 'telepilot' ),
+			)
+		);
+	}
 
-		return implode( "\n", $lines );
+	public function render_field_help( $field ) {
+		$field = sanitize_key( (string) $field );
+
+		switch ( $field ) {
+			case 'timezone':
+				return Telepilot_Telegram_Response_Builder::join_blocks(
+					array(
+						Telepilot_Telegram_Response_Builder::bold( __( 'Timezone Help', 'telepilot' ) ),
+						__( 'Use a valid PHP timezone identifier from the WordPress timezone list.', 'telepilot' ),
+						Telepilot_Telegram_Response_Builder::code( '/settings timezone Pacific/Port_Moresby' ),
+						Telepilot_Telegram_Response_Builder::code( '/settings timezone Australia/Sydney' ),
+					)
+				);
+
+			case 'date-format':
+				return Telepilot_Telegram_Response_Builder::join_blocks(
+					array(
+						Telepilot_Telegram_Response_Builder::bold( __( 'Date Format Help', 'telepilot' ) ),
+						__( 'Use a standard WordPress/PHP date format string.', 'telepilot' ),
+						Telepilot_Telegram_Response_Builder::code( '/settings date-format F j, Y' ),
+						Telepilot_Telegram_Response_Builder::code( '/settings date-format Y-m-d' ),
+					)
+				);
+
+			case 'time-format':
+				return Telepilot_Telegram_Response_Builder::join_blocks(
+					array(
+						Telepilot_Telegram_Response_Builder::bold( __( 'Time Format Help', 'telepilot' ) ),
+						__( 'Use a standard WordPress/PHP time format string.', 'telepilot' ),
+						Telepilot_Telegram_Response_Builder::code( '/settings time-format g:i a' ),
+						Telepilot_Telegram_Response_Builder::code( '/settings time-format H:i' ),
+					)
+				);
+		}
+
+		return '';
 	}
 
 	public function build_keyboard() {

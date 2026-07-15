@@ -139,14 +139,13 @@ class Telepilot_Posts_Service {
 			return Telepilot_Telegram_Response_Builder::bold( $heading ) . "\n\n" . __( 'No posts matched that request.', 'telepilot' );
 		}
 
-		$lines   = array( Telepilot_Telegram_Response_Builder::bold( $heading ) );
-		$lines[] = Telepilot_Telegram_Response_Builder::italic(
+		$blocks   = array( Telepilot_Telegram_Response_Builder::bold( $heading ) );
+		$blocks[] = Telepilot_Telegram_Response_Builder::italic(
 			sprintf( __( 'Page %1$d of %2$d', 'telepilot' ), $result['page'], $result['total_pages'] )
 		);
-		$lines[] = '';
 
 		foreach ( $result['items'] as $post ) {
-			$lines[] = sprintf(
+			$blocks[] = sprintf(
 				__( '[%1$d] %2$s [%3$s]', 'telepilot' ),
 				$post->ID,
 				Telepilot_Telegram_Response_Builder::escape( get_the_title( $post ) ),
@@ -154,10 +153,9 @@ class Telepilot_Posts_Service {
 			);
 		}
 
-		$lines[] = '';
-		$lines[] = Telepilot_Telegram_Response_Builder::italic( __( 'Tip: use Open Editor for long-form body changes, or run /posts search keyword for a targeted lookup.', 'telepilot' ) );
+		$blocks[] = Telepilot_Telegram_Response_Builder::italic( __( 'Tip: use Open Editor for long-form body changes, or run /posts search keyword for a targeted lookup.', 'telepilot' ) );
 
-		return implode( "\n", $lines );
+		return Telepilot_Telegram_Response_Builder::join_blocks( $blocks );
 	}
 
 	public function render_stats_message( $stats ) {
@@ -175,28 +173,28 @@ class Telepilot_Posts_Service {
 	}
 
 	public function render_help_message() {
-		$lines   = array();
-		$lines[] = Telepilot_Telegram_Response_Builder::bold( __( 'Posts Commands', 'telepilot' ) );
-		$lines[] = '';
-		$lines[] = Telepilot_Telegram_Response_Builder::code( '/posts list' ) . ' ' . __( 'Show recent posts', 'telepilot' );
-		$lines[] = Telepilot_Telegram_Response_Builder::code( '/posts drafts' ) . ' ' . __( 'Show draft posts', 'telepilot' );
-		$lines[] = Telepilot_Telegram_Response_Builder::code( '/posts search keyword' ) . ' ' . __( 'Search posts', 'telepilot' );
-		$lines[] = Telepilot_Telegram_Response_Builder::code( '/posts stats' ) . ' ' . __( 'Show post counts', 'telepilot' );
-		$lines[] = Telepilot_Telegram_Response_Builder::code( '/posts create My draft title' ) . ' ' . __( 'Create a new draft post', 'telepilot' );
-		$lines[] = Telepilot_Telegram_Response_Builder::code( '/posts title 123 New title' ) . ' ' . __( 'Update a post title', 'telepilot' );
-		$lines[] = Telepilot_Telegram_Response_Builder::code( '/posts excerpt 123 New excerpt' ) . ' ' . __( 'Update a post excerpt', 'telepilot' );
-		$lines[] = Telepilot_Telegram_Response_Builder::code( '/posts categories 123 4,8' ) . ' ' . __( 'Assign category IDs to a post', 'telepilot' );
-		$lines[] = Telepilot_Telegram_Response_Builder::code( '/posts tags 123 5,9' ) . ' ' . __( 'Assign tag IDs to a post', 'telepilot' );
-		$lines[] = Telepilot_Telegram_Response_Builder::code( '/posts schedule 123 2026-07-20 14:30' ) . ' ' . __( 'Schedule a post in site local time', 'telepilot' );
-		$lines[] = Telepilot_Telegram_Response_Builder::code( '/posts open 123' ) . ' ' . __( 'Generate a secure browser editor link for long-form changes', 'telepilot' );
-		$lines[] = Telepilot_Telegram_Response_Builder::code( '/posts publish 123' ) . ' ' . __( 'Publish a post', 'telepilot' );
-		$lines[] = Telepilot_Telegram_Response_Builder::code( '/posts unpublish 123' ) . ' ' . __( 'Move a post back to draft', 'telepilot' );
-		$lines[] = Telepilot_Telegram_Response_Builder::code( '/posts trashed' ) . ' ' . __( 'List trashed posts', 'telepilot' );
-		$lines[] = Telepilot_Telegram_Response_Builder::code( '/posts restore 123' ) . ' ' . __( 'Restore a trashed post', 'telepilot' );
-		$lines[] = Telepilot_Telegram_Response_Builder::code( '/posts trash 123' ) . ' ' . __( 'Move a post to trash', 'telepilot' );
-		$lines[] = Telepilot_Telegram_Response_Builder::code( '/posts delete 123' ) . ' ' . __( 'Permanently delete a post after confirmation', 'telepilot' );
-
-		return implode( "\n", $lines );
+		return Telepilot_Telegram_Response_Builder::join_blocks(
+			array(
+				Telepilot_Telegram_Response_Builder::bold( __( 'Posts Commands', 'telepilot' ) ),
+				Telepilot_Telegram_Response_Builder::code( '/posts list' ) . ' ' . __( 'Show recent posts', 'telepilot' ),
+				Telepilot_Telegram_Response_Builder::code( '/posts drafts' ) . ' ' . __( 'Show draft posts', 'telepilot' ),
+				Telepilot_Telegram_Response_Builder::code( '/posts search keyword' ) . ' ' . __( 'Search posts', 'telepilot' ),
+				Telepilot_Telegram_Response_Builder::code( '/posts stats' ) . ' ' . __( 'Show post counts', 'telepilot' ),
+				Telepilot_Telegram_Response_Builder::code( '/posts create My draft title' ) . ' ' . __( 'Create a new draft post', 'telepilot' ),
+				Telepilot_Telegram_Response_Builder::code( '/posts title 123 New title' ) . ' ' . __( 'Update a post title', 'telepilot' ),
+				Telepilot_Telegram_Response_Builder::code( '/posts excerpt 123 New excerpt' ) . ' ' . __( 'Update a post excerpt', 'telepilot' ),
+				Telepilot_Telegram_Response_Builder::code( '/posts categories 123 4,8' ) . ' ' . __( 'Assign category IDs to a post', 'telepilot' ),
+				Telepilot_Telegram_Response_Builder::code( '/posts tags 123 5,9' ) . ' ' . __( 'Assign tag IDs to a post', 'telepilot' ),
+				Telepilot_Telegram_Response_Builder::code( '/posts schedule 123 2026-07-20 14:30' ) . ' ' . __( 'Schedule a post in site local time', 'telepilot' ),
+				Telepilot_Telegram_Response_Builder::code( '/posts open 123' ) . ' ' . __( 'Generate a secure browser editor link for long-form changes', 'telepilot' ),
+				Telepilot_Telegram_Response_Builder::code( '/posts publish 123' ) . ' ' . __( 'Publish a post', 'telepilot' ),
+				Telepilot_Telegram_Response_Builder::code( '/posts draft 123' ) . ' ' . __( 'Move a published post back to draft', 'telepilot' ),
+				Telepilot_Telegram_Response_Builder::code( '/posts trashed' ) . ' ' . __( 'List trashed posts', 'telepilot' ),
+				Telepilot_Telegram_Response_Builder::code( '/posts restore 123' ) . ' ' . __( 'Restore a trashed post', 'telepilot' ),
+				Telepilot_Telegram_Response_Builder::code( '/posts trash 123' ) . ' ' . __( 'Move a post to trash', 'telepilot' ),
+				Telepilot_Telegram_Response_Builder::code( '/posts delete 123' ) . ' ' . __( 'Permanently delete a post after confirmation', 'telepilot' ),
+			)
+		);
 	}
 
 	public function build_list_keyboard( $posts, $subcommand = 'latest', $search_term = '', $page = 1, $total_pages = 1 ) {
@@ -228,8 +226,8 @@ class Telepilot_Posts_Service {
 						'callback_data' => '/posts open ' . (int) $post->ID,
 					),
 					array(
-						'text'          => sprintf( __( 'Unpublish [%d]', 'telepilot' ), $post->ID ),
-						'callback_data' => '/posts unpublish ' . (int) $post->ID,
+						'text'          => sprintf( __( 'Draft [%d]', 'telepilot' ), $post->ID ),
+						'callback_data' => '/posts draft ' . (int) $post->ID,
 					),
 					array(
 						'text'          => sprintf( __( 'Trash [%d]', 'telepilot' ), $post->ID ),
@@ -546,16 +544,13 @@ class Telepilot_Posts_Service {
 			)
 		);
 
+		$action_label = 'unpublish' === $action ? __( 'Draft', 'telepilot' ) : ucfirst( $action );
+
 		return Telepilot_Telegram_Response_Builder::append_rows(
-			Telepilot_Telegram_Response_Builder::keyboard(
-				array(
-					array(
-						array(
-							'text'          => sprintf( __( 'Confirm %1$s #%2$d', 'telepilot' ), ucfirst( $action ), $post_id ),
-							'callback_data' => 'tp:post:' . $action . ':' . (int) $post_id . ':' . $token,
-						),
-					),
-				)
+			Telepilot_Telegram_Response_Builder::confirmation_keyboard(
+				sprintf( __( 'Confirm %1$s [%2$d]', 'telepilot' ), $action_label, $post_id ),
+				'tp:post:' . $action . ':' . (int) $post_id . ':' . $token,
+				'/posts list'
 			),
 			$this->navigation_rows()
 		);

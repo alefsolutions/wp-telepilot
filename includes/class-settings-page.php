@@ -623,6 +623,7 @@ class Telepilot_Settings_Page {
 											<th><?php esc_html_e( 'Action', 'telepilot' ); ?></th>
 											<th><?php esc_html_e( 'Command', 'telepilot' ); ?></th>
 											<th><?php esc_html_e( 'Chat', 'telepilot' ); ?></th>
+											<th><?php esc_html_e( 'Telegram', 'telepilot' ); ?></th>
 											<th><?php esc_html_e( 'Result', 'telepilot' ); ?></th>
 										</tr>
 									</thead>
@@ -633,6 +634,7 @@ class Telepilot_Settings_Page {
 												<td><?php echo esc_html( $log['action_name'] ); ?></td>
 												<td><?php echo esc_html( $this->extract_log_command( $log ) ); ?></td>
 												<td><?php echo esc_html( $log['chat_id'] ? $log['chat_id'] : '-' ); ?></td>
+												<td><?php echo esc_html( $this->extract_log_telegram_username( $log ) ); ?></td>
 												<td>
 													<span class="telepilot-status-pill <?php echo ! empty( $log['was_successful'] ) ? 'is-good' : 'is-bad'; ?>">
 														<?php echo ! empty( $log['was_successful'] ) ? esc_html__( 'Success', 'telepilot' ) : esc_html__( 'Failed', 'telepilot' ); ?>
@@ -661,10 +663,13 @@ class Telepilot_Settings_Page {
 		$linking_service = new Telepilot_User_Linking_Service();
 		$telegram_id     = get_user_meta( $user->ID, Telepilot_User_Linking_Service::META_TELEGRAM_ID, true );
 		$telegram_chat   = get_user_meta( $user->ID, Telepilot_User_Linking_Service::META_TELEGRAM_CHAT, true );
+		$telegram_name   = get_user_meta( $user->ID, Telepilot_User_Linking_Service::META_TELEGRAM_NAME, true );
 		$link_code       = $linking_service->get_active_link_code( $user->ID );
 		$expires         = (int) get_user_meta( $user->ID, Telepilot_User_Linking_Service::META_LINK_EXPIRES, true );
 		?>
 		<h2><?php esc_html_e( 'WP Telepilot', 'telepilot' ); ?></h2>
+		<p><?php esc_html_e( 'Linking lets this user authenticate with the Telegram bot, open the command hub, and run the WordPress actions allowed by their role.', 'telepilot' ); ?></p>
+		<p><a href="<?php echo esc_url( admin_url( 'admin.php?page=telepilot' ) ); ?>"><?php esc_html_e( 'Open WP Telepilot settings', 'telepilot' ); ?></a></p>
 		<table class="form-table" role="presentation">
 			<tr>
 				<th><label for="telepilot-link-code"><?php esc_html_e( 'Linking Code', 'telepilot' ); ?></label></th>
@@ -685,6 +690,9 @@ class Telepilot_Settings_Page {
 					<p><?php echo $telegram_id ? esc_html( $telegram_id ) : esc_html__( 'Not linked yet.', 'telepilot' ); ?></p>
 					<?php if ( $telegram_chat ) : ?>
 						<p class="description"><?php echo esc_html( sprintf( __( 'Chat ID: %s', 'telepilot' ), $telegram_chat ) ); ?></p>
+					<?php endif; ?>
+					<?php if ( $telegram_name ) : ?>
+						<p class="description"><?php echo esc_html( sprintf( __( 'Telegram username: @%s', 'telepilot' ), $telegram_name ) ); ?></p>
 					<?php endif; ?>
 					<?php if ( $telegram_id ) : ?>
 						<p><button class="button button-secondary" type="submit" name="telepilot_unlink_telegram" value="1"><?php esc_html_e( 'Unlink Telegram', 'telepilot' ); ?></button></p>
@@ -835,8 +843,8 @@ class Telepilot_Settings_Page {
 			array(
 				'type'    => 'success',
 				'message' => 'polling' === $transport_mode
-					? __( 'WP Telepilot settings saved, Telegram slash commands synced, and polling fallback is now active.', 'telepilot' )
-					: __( 'WP Telepilot settings saved, Telegram slash commands synced, and the webhook was registered successfully.', 'telepilot' ),
+					? __( 'Settings saved. Telegram commands synced. Polling fallback is active.', 'telepilot' )
+					: __( 'Settings saved. Telegram commands synced. Webhook is active.', 'telepilot' ),
 			),
 			60
 		);
@@ -990,7 +998,7 @@ class Telepilot_Settings_Page {
 			),
 			array(
 				'command'     => 'media',
-				'description' => __( 'Review or upload media', 'telepilot' ),
+				'description' => __( 'Review media library items', 'telepilot' ),
 			),
 			array(
 				'command'     => 'users',
@@ -1040,14 +1048,14 @@ class Telepilot_Settings_Page {
 
 	private function extract_log_command( $log ) {
 		if ( ! empty( $log['resource_id'] ) && 0 === strpos( (string) $log['resource_id'], '/' ) ) {
-			return (string) $log['resource_id'];
+			return $this->normalize_logged_command( (string) $log['resource_id'] );
 		}
 
 		if ( ! empty( $log['context'] ) ) {
 			$context = json_decode( $log['context'], true );
 
 			if ( is_array( $context ) && ! empty( $context['command'] ) ) {
-				return (string) $context['command'];
+				return $this->normalize_logged_command( (string) $context['command'] );
 			}
 		}
 
@@ -1055,11 +1063,58 @@ class Telepilot_Settings_Page {
 			$after_state = json_decode( $log['after_state'], true );
 
 			if ( is_array( $after_state ) && ! empty( $after_state['command'] ) ) {
-				return (string) $after_state['command'];
+				return $this->normalize_logged_command( (string) $after_state['command'] );
 			}
 		}
 
 		return '-';
+	}
+
+	private function extract_log_telegram_username( $log ) {
+		foreach ( array( 'context', 'after_state', 'before_state' ) as $field ) {
+			if ( empty( $log[ $field ] ) ) {
+				continue;
+			}
+
+			$data = json_decode( $log[ $field ], true );
+			if ( ! is_array( $data ) || empty( $data['telegram_username'] ) ) {
+				continue;
+			}
+
+			return '@' . ltrim( (string) $data['telegram_username'], '@' );
+		}
+
+		return '-';
+	}
+
+	private function normalize_logged_command( $command ) {
+		$command = trim( (string) $command );
+		if ( 0 !== strpos( $command, 'tp:' ) ) {
+			return '' !== $command ? $command : '-';
+		}
+
+		$parts = explode( ':', $command );
+		$type  = isset( $parts[1] ) ? (string) $parts[1] : '';
+
+		switch ( $type ) {
+			case 'comment':
+				return trim( sprintf( '/comments %1$s %2$s', isset( $parts[2] ) ? $parts[2] : '', isset( $parts[3] ) ? $parts[3] : '' ) );
+			case 'post':
+				return trim( sprintf( '/posts %1$s %2$s', isset( $parts[2] ) ? $parts[2] : '', isset( $parts[3] ) ? $parts[3] : '' ) );
+			case 'page':
+				return trim( sprintf( '/pages %1$s %2$s', isset( $parts[2] ) ? $parts[2] : '', isset( $parts[3] ) ? $parts[3] : '' ) );
+			case 'media':
+				return trim( sprintf( '/media %1$s %2$s', isset( $parts[2] ) ? $parts[2] : '', isset( $parts[3] ) ? $parts[3] : '' ) );
+			case 'user':
+				return trim( sprintf( '/users %1$s %2$s', isset( $parts[2] ) ? $parts[2] : '', isset( $parts[3] ) ? $parts[3] : '' ) );
+			case 'plugin':
+				return '/plugins confirm';
+			case 'term':
+				$resource = isset( $parts[2] ) && 'post_tag' === $parts[2] ? '/tags' : '/categories';
+				return trim( sprintf( '%1$s %2$s %3$s', $resource, isset( $parts[3] ) ? $parts[3] : '', isset( $parts[4] ) ? $parts[4] : '' ) );
+		}
+
+		return $command;
 	}
 
 	public function handle_tools_actions() {

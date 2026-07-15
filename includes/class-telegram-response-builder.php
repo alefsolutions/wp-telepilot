@@ -110,6 +110,40 @@ class Telepilot_Telegram_Response_Builder {
 		);
 	}
 
+	public static function confirmation_keyboard( $confirm_text, $confirm_callback, $cancel_callback = '/menu', $cancel_text = '' ) {
+		if ( '' === $cancel_text ) {
+			$cancel_text = __( 'Cancel', 'telepilot' );
+		}
+
+		return self::keyboard(
+			array(
+				array(
+					array(
+						'text'          => (string) $confirm_text,
+						'callback_data' => (string) $confirm_callback,
+					),
+					array(
+						'text'          => (string) $cancel_text,
+						'callback_data' => (string) $cancel_callback,
+					),
+				),
+			)
+		);
+	}
+
+	public static function join_blocks( $blocks ) {
+		$blocks = array_values(
+			array_filter(
+				(array) $blocks,
+				function( $block ) {
+					return null !== $block && '' !== $block;
+				}
+			)
+		);
+
+		return implode( "\n\n", $blocks );
+	}
+
 	public static function escape( $text ) {
 		return esc_html( (string) $text );
 	}

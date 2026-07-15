@@ -43,9 +43,17 @@ class Telepilot_User_Linking_Service {
 		$user = $this->find_user_by_code( $code );
 
 		if ( ! $user ) {
-			return array(
-				'ok'      => false,
-				'message' => __( 'Link code is invalid or expired.', 'telepilot' ),
+			return Telepilot_Telegram_Response_Builder::error_html(
+				Telepilot_Telegram_Response_Builder::join_blocks(
+					array(
+						Telepilot_Telegram_Response_Builder::bold( __( 'Link Code Invalid', 'telepilot' ) ),
+						__( 'That link code is invalid or has already expired.', 'telepilot' ),
+						Telepilot_Telegram_Response_Builder::italic( __( 'Generate a fresh code from your WordPress profile, then try /link CODE again within the hour.', 'telepilot' ) ),
+					)
+				),
+				array(
+					'command' => '/link',
+				)
 			);
 		}
 
@@ -75,13 +83,34 @@ class Telepilot_User_Linking_Service {
 			)
 		);
 
-		return array(
-			'ok'      => true,
-			'message' => sprintf(
-				/* translators: %s: WordPress display name. */
-				__( 'Telegram successfully linked to WordPress user %s.', 'telepilot' ),
-				$user->display_name
+		$display_name = $user->display_name ? $user->display_name : $user->user_login;
+		$roles        = ! empty( $user->roles ) ? implode( ', ', array_map( 'sanitize_text_field', (array) $user->roles ) ) : __( 'no role', 'telepilot' );
+		$lines        = array(
+			Telepilot_Telegram_Response_Builder::bold( __( 'Telegram Linked', 'telepilot' ) ),
+			sprintf(
+				__( 'WordPress user: %s', 'telepilot' ),
+				Telepilot_Telegram_Response_Builder::escape( $display_name )
 			),
+			sprintf(
+				__( 'Role: %s', 'telepilot' ),
+				Telepilot_Telegram_Response_Builder::escape( $roles )
+			),
+		);
+
+		if ( '' !== $username ) {
+			$lines[] = sprintf(
+				__( 'Telegram: @%s', 'telepilot' ),
+				Telepilot_Telegram_Response_Builder::escape( $username )
+			);
+		}
+
+		$lines[] = Telepilot_Telegram_Response_Builder::italic( __( 'Next: use /menu to open your command hub or /help to review available commands.', 'telepilot' ) );
+
+		return Telepilot_Telegram_Response_Builder::success_html(
+			Telepilot_Telegram_Response_Builder::join_blocks( $lines ),
+			array(
+				'command' => '/link',
+			)
 		);
 	}
 

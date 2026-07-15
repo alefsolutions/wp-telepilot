@@ -124,16 +124,7 @@ class Telepilot_Command_Router {
 				return $this->handle_term_callback( $command, $identity );
 
 			default:
-				return Telepilot_Telegram_Response_Builder::success(
-					sprintf(
-						/* translators: %s: command name. */
-						__( 'Command `%s` is recognized, but its handler is not implemented yet.', 'telepilot' ),
-						$command['name']
-					),
-					array(
-						'command' => $command['name'],
-					)
-				);
+				return $this->unknown_command_response( $command['name'], $identity );
 		}
 	}
 
@@ -178,27 +169,38 @@ class Telepilot_Command_Router {
 
 	private function handle_start( $identity ) {
 		$chat_id = ! empty( $identity['chat_id'] ) ? (string) $identity['chat_id'] : __( 'Unavailable', 'telepilot' );
-
-		$message = sprintf(
-			/* translators: %s: Telegram chat ID. */
-			__(
-				"WP Telepilot is connected.\n\nYour current chat ID: %s\n\nNext steps:\n1. Add this chat ID to WP Telepilot Allowed Chat IDs if you are using an allow list.\n2. Generate a one-time link code from your WordPress profile.\n3. Send /link CODE here to connect your Telegram account.\n\nUse /help to view commands.",
-				'telepilot'
-			),
-			$chat_id
+		$blocks  = array(
+			Telepilot_Telegram_Response_Builder::bold( __( 'WP Telepilot', 'telepilot' ) ),
 		);
 
 		if ( ! empty( $identity['wp_user'] ) && $identity['wp_user'] instanceof WP_User ) {
-			$message = sprintf(
-				/* translators: 1: WordPress display name, 2: Telegram chat ID. */
-				__( "WP Telepilot is connected to WordPress user %1$s.\n\nCurrent chat ID: %2$s\n\nUse /menu to open the command hub or /site to view your site overview.", 'telepilot' ),
-				$identity['wp_user']->display_name,
-				$chat_id
+			$roles    = ! empty( $identity['wp_user']->roles ) ? implode( ', ', array_map( 'sanitize_text_field', (array) $identity['wp_user']->roles ) ) : __( 'no role', 'telepilot' );
+			$blocks[] = implode(
+				"\n",
+				array(
+					sprintf( __( 'Linked WordPress user: %s', 'telepilot' ), Telepilot_Telegram_Response_Builder::escape( $identity['wp_user']->display_name ? $identity['wp_user']->display_name : $identity['wp_user']->user_login ) ),
+					sprintf( __( 'Roles: %s', 'telepilot' ), Telepilot_Telegram_Response_Builder::escape( $roles ) ),
+					sprintf( __( 'Current chat ID: %s', 'telepilot' ), Telepilot_Telegram_Response_Builder::code( $chat_id ) ),
+				)
 			);
+			$blocks[] = __( 'Use /menu to open the command hub or /site to view your site overview.', 'telepilot' );
+		} else {
+			$blocks[] = __( 'This bot is ready to connect to your WordPress site.', 'telepilot' );
+			$blocks[] = implode(
+				"\n",
+				array(
+					sprintf( __( 'Current chat ID: %s', 'telepilot' ), Telepilot_Telegram_Response_Builder::code( $chat_id ) ),
+					__( 'Next steps:', 'telepilot' ),
+					__( '1. Add this chat ID to WP Telepilot Allowed Chat IDs if you use an allow list.', 'telepilot' ),
+					__( '2. Generate a one-time link code from your WordPress profile.', 'telepilot' ),
+					sprintf( __( '3. Send %s here to connect your Telegram account.', 'telepilot' ), Telepilot_Telegram_Response_Builder::code( '/link CODE' ) ),
+				)
+			);
+			$blocks[] = Telepilot_Telegram_Response_Builder::italic( __( 'Use /help to review commands once you are linked.', 'telepilot' ) );
 		}
 
 		return Telepilot_Telegram_Response_Builder::success_html(
-			$message,
+			Telepilot_Telegram_Response_Builder::join_blocks( $blocks ),
 			array(
 				'command'      => '/start',
 				'reply_markup' => $this->safe_home_keyboard( $identity ),
@@ -344,6 +346,19 @@ class Telepilot_Command_Router {
 			);
 		}
 
+		if ( ! empty( $args[1] ) && in_array( strtolower( (string) $args[1] ), array( 'help', '?' ), true ) ) {
+			$field_help = $this->site_settings_command_service->render_field_help( $subcommand );
+			if ( '' !== $field_help ) {
+				return Telepilot_Telegram_Response_Builder::success_html(
+					$field_help,
+					array(
+						'command'      => '/settings',
+						'reply_markup' => $this->site_settings_command_service->build_keyboard(),
+					)
+				);
+			}
+		}
+
 		$private_chat_result = $this->require_private_action( $identity );
 		if ( true !== $private_chat_result ) {
 			return $private_chat_result;
@@ -361,6 +376,15 @@ class Telepilot_Command_Router {
 
 		$result = $this->site_settings_command_service->update_core_setting( $subcommand, $value );
 		if ( is_wp_error( $result ) ) {
+			if ( 'telepilot_settings_unsupported_field' === $result->get_error_code() ) {
+				return $this->invalid_subcommand_response(
+					'/settings',
+					$subcommand,
+					$this->site_settings_command_service->render_help_message(),
+					$this->site_settings_command_service->build_keyboard()
+				);
+			}
+
 			return Telepilot_Telegram_Response_Builder::error( $result->get_error_message() );
 		}
 
@@ -431,11 +455,11 @@ class Telepilot_Command_Router {
 
 		$key = isset( $args[1] ) ? (string) $args[1] : '';
 		if ( '' === $key || ! in_array( $subcommand, array( 'enable', 'disable', 'toggle' ), true ) ) {
-			return Telepilot_Telegram_Response_Builder::error_html(
+			return $this->invalid_subcommand_response(
+				'/notifications',
+				$subcommand,
 				$this->notifications_command_service->render_help_message(),
-				array(
-					'command' => '/notifications',
-				)
+				$this->notifications_command_service->build_list_keyboard( $this->notifications_command_service->list_page( 1 ) )
 			);
 		}
 
@@ -484,16 +508,35 @@ class Telepilot_Command_Router {
 	private function handle_chat_id( $identity ) {
 		$chat_id          = ! empty( $identity['chat_id'] ) ? (string) $identity['chat_id'] : __( 'Unavailable', 'telepilot' );
 		$telegram_user_id = ! empty( $identity['telegram_user_id'] ) ? (string) $identity['telegram_user_id'] : __( 'Unavailable', 'telepilot' );
+		$username         = ! empty( $identity['telegram_username'] ) ? (string) $identity['telegram_username'] : '';
+		$linked_status    = ! empty( $identity['wp_user'] ) && $identity['wp_user'] instanceof WP_User
+			? sprintf(
+				__( 'Linked WordPress user: %s', 'telepilot' ),
+				Telepilot_Telegram_Response_Builder::escape( $identity['wp_user']->display_name ? $identity['wp_user']->display_name : $identity['wp_user']->user_login )
+			)
+			: __( 'Linked WordPress user: not linked yet.', 'telepilot' );
+
+		$detail_lines = array(
+			sprintf( __( 'Chat ID: %s', 'telepilot' ), Telepilot_Telegram_Response_Builder::code( $chat_id ) ),
+			sprintf( __( 'Telegram user ID: %s', 'telepilot' ), Telepilot_Telegram_Response_Builder::code( $telegram_user_id ) ),
+		);
+
+		if ( '' !== $username ) {
+			$detail_lines[] = sprintf( __( 'Telegram username: @%s', 'telepilot' ), Telepilot_Telegram_Response_Builder::escape( $username ) );
+		}
 
 		return Telepilot_Telegram_Response_Builder::success_html(
-			sprintf(
-				/* translators: 1: Telegram chat ID, 2: Telegram user ID. */
-				__( "<b>Current Chat Details</b>\n\nChat ID: %1$s\nTelegram user ID: %2$s\n\nAdd the chat ID to Allowed Chat IDs if you want this conversation to be authorized.", 'telepilot' ),
-				Telepilot_Telegram_Response_Builder::escape( $chat_id ),
-				Telepilot_Telegram_Response_Builder::escape( $telegram_user_id )
+			Telepilot_Telegram_Response_Builder::join_blocks(
+				array(
+					Telepilot_Telegram_Response_Builder::bold( __( 'Current Chat Details', 'telepilot' ) ),
+					implode( "\n", $detail_lines ),
+					$linked_status,
+					__( 'Add the chat ID to Allowed Chat IDs if you want this conversation to be authorized.', 'telepilot' ),
+				)
 			),
 			array(
-				'command' => '/chatid',
+				'command'      => '/chatid',
+				'reply_markup' => $this->safe_home_keyboard( $identity ),
 			)
 		);
 	}
@@ -855,6 +898,10 @@ class Telepilot_Command_Router {
 
 		list( $args, $page ) = $this->extract_page_from_args( $command['args'] );
 		$subcommand = ! empty( $args[0] ) ? strtolower( (string) $args[0] ) : 'list';
+
+		if ( 'draft' === $subcommand ) {
+			$subcommand = 'unpublish';
+		}
 
 		if ( 'help' === $subcommand ) {
 			return Telepilot_Telegram_Response_Builder::success_html(
@@ -1219,7 +1266,7 @@ class Telepilot_Command_Router {
 			}
 
 			return Telepilot_Telegram_Response_Builder::success(
-				sprintf( __( 'Confirm unpublish for post [%d]', 'telepilot' ), $post_id ),
+				sprintf( __( 'Confirm draft for post [%d]', 'telepilot' ), $post_id ),
 				array(
 					'command'      => '/posts',
 					'reply_markup' => $this->safe_reply_markup(
@@ -1258,11 +1305,11 @@ class Telepilot_Command_Router {
 			);
 		}
 
-		return Telepilot_Telegram_Response_Builder::error_html(
+		return $this->invalid_subcommand_response(
+			'/posts',
+			$subcommand,
 			$this->posts_service->render_help_message(),
-			array(
-				'command' => '/posts',
-			)
+			$this->safe_home_keyboard( $identity )
 		);
 	}
 
@@ -1331,6 +1378,10 @@ class Telepilot_Command_Router {
 		list( $args, $page ) = $this->extract_page_from_args( $command['args'] );
 		$subcommand = ! empty( $args[0] ) ? strtolower( (string) $args[0] ) : 'list';
 
+		if ( 'latest' === $subcommand ) {
+			$subcommand = 'list';
+		}
+
 		if ( 'list' === $subcommand ) {
 			$pages = $this->pages_service->latest_page( $page );
 			return Telepilot_Telegram_Response_Builder::success_html(
@@ -1378,6 +1429,22 @@ class Telepilot_Command_Router {
 			);
 		}
 
+		if ( 'drafts' === $subcommand ) {
+			$pages = $this->pages_service->drafts_page( $page );
+			return Telepilot_Telegram_Response_Builder::success_html(
+				$this->pages_service->render_page_message( $pages, __( 'Draft Pages', 'telepilot' ) ),
+				array(
+					'command'      => '/pages',
+					'reply_markup' => $this->safe_reply_markup(
+						function() use ( $pages ) {
+							return $this->pages_service->build_list_keyboard( $pages['items'], 'drafts', '', $pages['page'], $pages['total_pages'] );
+						},
+						'pages_drafts'
+					),
+				)
+			);
+		}
+
 		if ( 'trashed' === $subcommand ) {
 			$pages = $this->pages_service->trashed_page( $page );
 			return Telepilot_Telegram_Response_Builder::success_html(
@@ -1394,41 +1461,33 @@ class Telepilot_Command_Router {
 			);
 		}
 
-		if ( 'create' === $subcommand ) {
-			$private_chat_result = $this->require_private_action( $identity );
-			if ( true !== $private_chat_result ) {
-				return $private_chat_result;
+		$page_id = ! empty( $args[1] ) ? absint( $args[1] ) : 0;
+		if ( 'details' === $subcommand && $page_id ) {
+			$page_item = $this->pages_service->get_page_details( $page_id );
+			if ( is_wp_error( $page_item ) ) {
+				return Telepilot_Telegram_Response_Builder::error( $page_item->get_error_message() );
 			}
-
-			$title = implode( ' ', array_slice( $args, 1 ) );
-			if ( '' === trim( $title ) ) {
-				return Telepilot_Telegram_Response_Builder::error( __( 'Usage: `/pages create About Us`', 'telepilot' ) );
-			}
-
-			$result = $this->pages_service->create_page( $title );
-			if ( is_wp_error( $result ) ) {
-				return Telepilot_Telegram_Response_Builder::error( $result->get_error_message() );
-			}
-
-			$this->log_content_action( $identity, 'page_created', 'page', $result['post']->ID, 'create', $result );
 
 			return Telepilot_Telegram_Response_Builder::success_html(
-				Telepilot_Telegram_Response_Builder::bold( __( 'Page Created', 'telepilot' ) ) .
-				"\n\n" .
-				sprintf( __( 'Page: [%1$d] %2$s', 'telepilot' ), $result['post']->ID, Telepilot_Telegram_Response_Builder::escape( get_the_title( $result['post'] ) ) ) .
-				"\n" .
-				sprintf( __( 'Status: %s', 'telepilot' ), Telepilot_Telegram_Response_Builder::escape( $result['post']->post_status ) ),
-				array( 'command' => '/pages' )
+				$this->pages_service->render_details_message( $page_item ),
+				array(
+					'command'      => '/pages',
+					'reply_markup' => $this->safe_reply_markup(
+						function() use ( $page_item ) {
+							return $this->pages_service->build_list_keyboard( array( $page_item ), 'list', '', 1, 1 );
+						},
+						'page_details'
+					),
+				)
 			);
 		}
 
-		$page_id = ! empty( $args[1] ) ? absint( $args[1] ) : 0;
 		if ( ! $page_id ) {
-			return Telepilot_Telegram_Response_Builder::error_html(
+			return $this->invalid_subcommand_response(
+				'/pages',
+				$subcommand,
 				$this->pages_service->render_help_message(),
-				array(
-					'command' => '/pages',
-				)
+				$this->safe_home_keyboard( $identity )
 			);
 		}
 
@@ -1596,11 +1655,11 @@ class Telepilot_Command_Router {
 			);
 		}
 
-		return Telepilot_Telegram_Response_Builder::error_html(
+		return $this->invalid_subcommand_response(
+			'/pages',
+			$subcommand,
 			$this->pages_service->render_help_message(),
-			array(
-				'command' => '/pages',
-			)
+			$this->safe_home_keyboard( $identity )
 		);
 	}
 
@@ -1758,169 +1817,60 @@ class Telepilot_Command_Router {
 				return Telepilot_Telegram_Response_Builder::error( $details->get_error_message() );
 			}
 
-			$message_lines   = array();
-			$message_lines[] = Telepilot_Telegram_Response_Builder::bold( __( 'Media Details', 'telepilot' ) );
-			$message_lines[] = '';
-			$message_lines[] = sprintf( __( 'Item: [%1$d] %2$s', 'telepilot' ), $attachment_id, Telepilot_Telegram_Response_Builder::escape( $details['title'] ? $details['title'] : __( 'Untitled attachment', 'telepilot' ) ) );
-			$message_lines[] = sprintf( __( 'Mime type: %s', 'telepilot' ), Telepilot_Telegram_Response_Builder::escape( $details['mime_type'] ? $details['mime_type'] : __( 'Unknown', 'telepilot' ) ) );
-			if ( ! empty( $details['file_size'] ) ) {
-				$message_lines[] = sprintf( __( 'File size: %s', 'telepilot' ), Telepilot_Telegram_Response_Builder::escape( $details['file_size'] ) );
-			}
-			if ( ! empty( $details['metadata']['width'] ) && ! empty( $details['metadata']['height'] ) ) {
-				$message_lines[] = sprintf( __( 'Dimensions: %1$d x %2$d', 'telepilot' ), (int) $details['metadata']['width'], (int) $details['metadata']['height'] );
-			}
-			if ( '' !== $details['alt_text'] ) {
-				$message_lines[] = sprintf( __( 'Alt text: %s', 'telepilot' ), Telepilot_Telegram_Response_Builder::escape( $details['alt_text'] ) );
-			}
-			if ( '' !== $details['caption'] ) {
-				$message_lines[] = sprintf( __( 'Caption: %s', 'telepilot' ), Telepilot_Telegram_Response_Builder::escape( $details['caption'] ) );
-			}
-			if ( ! empty( $details['url'] ) ) {
-				$message_lines[] = sprintf( __( 'Preview: %s', 'telepilot' ), Telepilot_Telegram_Response_Builder::link( __( 'Open file', 'telepilot' ), $details['url'] ) );
-			}
-
 			return Telepilot_Telegram_Response_Builder::success_html(
-				implode( "\n", $message_lines ),
-				array( 'command' => '/media' )
-			);
-		}
-
-		if ( in_array( $subcommand, array( 'rename', 'alt', 'caption' ), true ) && $attachment_id ) {
-			$private_chat_result = $this->require_private_action( $identity );
-			if ( true !== $private_chat_result ) {
-				return $private_chat_result;
-			}
-
-			$permission_result = $this->permission_service->require_capability( $identity, 'upload_files' );
-			if ( true !== $permission_result ) {
-				return $permission_result;
-			}
-
-			$value = implode( ' ', array_slice( $args, 2 ) );
-			if ( '' === trim( $value ) ) {
-				if ( 'rename' === $subcommand ) {
-					return Telepilot_Telegram_Response_Builder::error( __( 'Usage: `/media rename 123 New title`', 'telepilot' ) );
-				}
-
-				if ( 'alt' === $subcommand ) {
-					return Telepilot_Telegram_Response_Builder::error( __( 'Usage: `/media alt 123 Better alt text`', 'telepilot' ) );
-				}
-
-				return Telepilot_Telegram_Response_Builder::error( __( 'Usage: `/media caption 123 New caption`', 'telepilot' ) );
-			}
-
-			switch ( $subcommand ) {
-				case 'rename':
-					$result = $this->media_service->rename( $attachment_id, $value );
-					$action = 'rename';
-					break;
-				case 'alt':
-					$result = $this->media_service->update_alt_text( $attachment_id, $value );
-					$action = 'alt';
-					break;
-				default:
-					$result = $this->media_service->update_caption( $attachment_id, $value );
-					$action = 'caption';
-					break;
-			}
-
-			if ( is_wp_error( $result ) ) {
-				return Telepilot_Telegram_Response_Builder::error( $result->get_error_message() );
-			}
-
-			Telepilot_Audit_Log_Repository::log(
-				array(
-					'wp_user_id'       => $identity['wp_user']->ID,
-					'telegram_user_id' => $identity['telegram_user_id'],
-					'chat_id'          => $identity['chat_id'],
-					'action_name'      => 'media_updated',
-					'resource_type'    => 'attachment',
-					'resource_id'      => (string) $attachment_id,
-					'before_state'     => isset( $result['before_state'] ) ? $result['before_state'] : array(),
-					'after_state'      => isset( $result['after_state'] ) ? array_merge( $result['after_state'], array( 'action' => $action ) ) : array( 'action' => $action ),
-				)
-			);
-
-			return Telepilot_Telegram_Response_Builder::success(
-				sprintf( __( 'Media #%1$d has been %2$s.', 'telepilot' ), $attachment_id, $result['label'] ),
-				array( 'command' => '/media' )
-			);
-		}
-
-		if ( 'delete' === $subcommand && $attachment_id ) {
-			$private_chat_result = $this->require_private_action( $identity );
-			if ( true !== $private_chat_result ) {
-				return $private_chat_result;
-			}
-
-			$permission_result = $this->permission_service->require_capability( $identity, 'delete_post', $attachment_id );
-			if ( true !== $permission_result ) {
-				return $permission_result;
-			}
-
-			return Telepilot_Telegram_Response_Builder::success(
-				sprintf( __( 'Confirm delete for media [%d]', 'telepilot' ), $attachment_id ),
+				$this->media_service->render_details_message( $details ),
 				array(
 					'command'      => '/media',
 					'reply_markup' => $this->safe_reply_markup(
-						function() use ( $attachment_id, $identity ) {
-							return $this->media_service->build_delete_confirmation_keyboard( $attachment_id, $identity['telegram_user_id'] );
+						function() use ( $details, $attachment_id ) {
+							return $this->media_service->build_item_keyboard( $attachment_id, ! empty( $details['url'] ) ? (string) $details['url'] : '' );
 						},
-						'media_delete_confirm'
+						'media_details'
 					),
 				)
 			);
 		}
 
-		return Telepilot_Telegram_Response_Builder::error_html(
+		if ( 'open' === $subcommand && $attachment_id ) {
+			$details = $this->media_service->get_item_details( $attachment_id );
+			if ( is_wp_error( $details ) ) {
+				return Telepilot_Telegram_Response_Builder::error( $details->get_error_message() );
+			}
+
+			return Telepilot_Telegram_Response_Builder::success_html(
+				$this->media_service->render_details_message( $details ),
+				array(
+					'command'      => '/media',
+					'reply_markup' => $this->safe_reply_markup(
+						function() use ( $details, $attachment_id ) {
+							return $this->media_service->build_item_keyboard( $attachment_id, ! empty( $details['url'] ) ? (string) $details['url'] : '' );
+						},
+						'media_open'
+					),
+				)
+			);
+		}
+
+		return $this->invalid_subcommand_response(
+			'/media',
+			$subcommand,
 			$this->media_service->render_help_message(),
-			array(
-				'command' => '/media',
-			)
+			$this->safe_home_keyboard( $identity )
 		);
 	}
 
 	private function handle_media_callback( $command, $identity ) {
-		$private_chat_result = $this->require_private_action( $identity );
-		if ( true !== $private_chat_result ) {
-			return $private_chat_result;
-		}
-
-		$action        = isset( $command['args'][0] ) ? (string) $command['args'][0] : '';
-		$attachment_id = isset( $command['args'][1] ) ? absint( $command['args'][1] ) : 0;
-		$token         = isset( $command['args'][2] ) ? (string) $command['args'][2] : '';
-
-		$permission_result = $this->permission_service->require_capability( $identity, 'delete_post', $attachment_id );
-		if ( true !== $permission_result ) {
-			return $permission_result;
-		}
-
-		$payload = $this->confirmation_service->consume_token( $token );
-		if ( empty( $payload ) || (string) $payload['telegram_user_id'] !== (string) $identity['telegram_user_id'] || (int) $payload['attachment_id'] !== $attachment_id || 'delete' !== $action || (string) $payload['action'] !== $action ) {
-			return Telepilot_Telegram_Response_Builder::error( __( 'That media action is invalid or expired.', 'telepilot' ) );
-		}
-
-		$result = $this->media_service->delete( $attachment_id );
-		if ( is_wp_error( $result ) ) {
-			return Telepilot_Telegram_Response_Builder::error( $result->get_error_message() );
-		}
-
-		Telepilot_Audit_Log_Repository::log(
+		return Telepilot_Telegram_Response_Builder::error_html(
+			Telepilot_Telegram_Response_Builder::join_blocks(
+				array(
+					Telepilot_Telegram_Response_Builder::bold( __( 'Media Is Read-Only', 'telepilot' ) ),
+					__( 'Media write actions are disabled in this release.', 'telepilot' ),
+					Telepilot_Telegram_Response_Builder::italic( __( 'Use wp-admin for uploads, deletes, or metadata changes.', 'telepilot' ) ),
+				)
+			),
 			array(
-				'wp_user_id'       => $identity['wp_user']->ID,
-				'telegram_user_id' => $identity['telegram_user_id'],
-				'chat_id'          => $identity['chat_id'],
-				'action_name'      => 'media_deleted',
-				'resource_type'    => 'attachment',
-				'resource_id'      => (string) $attachment_id,
-				'before_state'     => $result['before_state'],
-				'after_state'      => array( 'action' => 'delete' ),
+				'command' => '/media',
 			)
-		);
-
-		return Telepilot_Telegram_Response_Builder::success(
-			sprintf( __( 'Media #%1$d has been %2$s.', 'telepilot' ), $attachment_id, $result['label'] ),
-			array( 'command' => '/media' )
 		);
 	}
 
@@ -1937,6 +1887,14 @@ class Telepilot_Command_Router {
 
 		list( $args, $page ) = $this->extract_page_from_args( $command['args'] );
 		$subcommand = ! empty( $args[0] ) ? strtolower( (string) $args[0] ) : 'list';
+
+		if ( 'email-reset-password' === $subcommand ) {
+			$subcommand = 'send-reset';
+		}
+
+		if ( 'welcome-email' === $subcommand ) {
+			$subcommand = 'send-welcome';
+		}
 
 		if ( 'list' === $subcommand ) {
 			$users = $this->users_service->recent_page( $page );
@@ -1985,6 +1943,31 @@ class Telepilot_Command_Router {
 				array(
 					'command'      => '/users',
 					'reply_markup' => $this->safe_home_keyboard( $identity ),
+				)
+			);
+		}
+
+		if ( 'details' === $subcommand ) {
+			$user_id = ! empty( $args[1] ) ? absint( $args[1] ) : 0;
+			if ( ! $user_id ) {
+				return Telepilot_Telegram_Response_Builder::error( __( 'Usage: `/users details 123`', 'telepilot' ) );
+			}
+
+			$user = $this->users_service->get_user_details( $user_id );
+			if ( is_wp_error( $user ) ) {
+				return Telepilot_Telegram_Response_Builder::error( $user->get_error_message() );
+			}
+
+			return Telepilot_Telegram_Response_Builder::success_html(
+				$this->users_service->render_details_message( $user ),
+				array(
+					'command'      => '/users',
+					'reply_markup' => $this->safe_reply_markup(
+						function() use ( $user ) {
+							return $this->users_service->build_list_keyboard( array( $user ), 'list', '', 1, 1 );
+						},
+						'user_details'
+					),
 				)
 			);
 		}
@@ -2243,11 +2226,11 @@ class Telepilot_Command_Router {
 			);
 		}
 
-		return Telepilot_Telegram_Response_Builder::error_html(
+		return $this->invalid_subcommand_response(
+			'/users',
+			$subcommand,
 			$this->users_service->render_help_message(),
-			array(
-				'command' => '/users',
-			)
+			$this->safe_home_keyboard( $identity )
 		);
 	}
 
@@ -2652,11 +2635,11 @@ class Telepilot_Command_Router {
 		}
 
 		if ( ! in_array( $subcommand, array( 'activate', 'deactivate', 'update', 'delete' ), true ) || '' === $identifier ) {
-			return Telepilot_Telegram_Response_Builder::error_html(
+			return $this->invalid_subcommand_response(
+				'/plugins',
+				$subcommand,
 				$this->plugins_service->render_help_message(),
-				array(
-					'command' => '/plugins',
-				)
+				$this->safe_home_keyboard( $identity )
 			);
 		}
 
@@ -2686,8 +2669,19 @@ class Telepilot_Command_Router {
 			}
 		}
 
-		return Telepilot_Telegram_Response_Builder::success(
-			sprintf( __( 'Confirm %1$s for plugin [%2$s]', 'telepilot' ), $subcommand, $identifier ),
+		$message = sprintf( __( 'Confirm %1$s for plugin [%2$s]', 'telepilot' ), $subcommand, $identifier );
+		if ( 'delete' === $subcommand ) {
+			$message = Telepilot_Telegram_Response_Builder::join_blocks(
+				array(
+					Telepilot_Telegram_Response_Builder::bold( __( 'Delete Plugin?', 'telepilot' ) ),
+					sprintf( __( 'Plugin: [%s]', 'telepilot' ), Telepilot_Telegram_Response_Builder::escape( $identifier ) ),
+					__( 'Deleting a plugin removes its files from WordPress. Make sure it is not needed before you continue.', 'telepilot' ),
+				)
+			);
+		}
+
+		return Telepilot_Telegram_Response_Builder::success_html(
+			$message,
 			array(
 				'command'      => '/plugins',
 				'reply_markup' => $this->safe_reply_markup(
@@ -3101,11 +3095,11 @@ class Telepilot_Command_Router {
 			);
 		}
 
-		return Telepilot_Telegram_Response_Builder::error_html(
+		return $this->invalid_subcommand_response(
+			'/' . $resource,
+			$subcommand,
 			$this->taxonomies_service->render_help_message( $resource ),
-			array(
-				'command' => '/' . $resource,
-			)
+			$this->safe_home_keyboard( $identity )
 		);
 	}
 
@@ -3149,7 +3143,11 @@ class Telepilot_Command_Router {
 		$resource = 'post_tag' === $taxonomy ? 'tags' : 'categories';
 
 		return Telepilot_Telegram_Response_Builder::success(
-			sprintf( __( 'Term #%1$d `%2$s` has been deleted.', 'telepilot' ), $term_id, $term->name ),
+			sprintf(
+				'post_tag' === $taxonomy ? __( 'Tag #%1$d `%2$s` has been deleted.', 'telepilot' ) : __( 'Category #%1$d `%2$s` has been deleted.', 'telepilot' ),
+				$term_id,
+				$term->name
+			),
 			array( 'command' => '/' . $resource )
 		);
 	}
@@ -3235,6 +3233,45 @@ class Telepilot_Command_Router {
 		} catch ( Exception $exception ) {
 			return null;
 		}
+	}
+
+	private function invalid_subcommand_response( $command_name, $subcommand, $help_message, $reply_markup = array() ) {
+		$command_string = trim( $command_name . ' ' . $subcommand );
+
+		return Telepilot_Telegram_Response_Builder::error_html(
+			Telepilot_Telegram_Response_Builder::join_blocks(
+				array(
+					Telepilot_Telegram_Response_Builder::bold( __( 'Command Not Recognized', 'telepilot' ) ),
+					sprintf(
+						__( 'I could not match %s.', 'telepilot' ),
+						Telepilot_Telegram_Response_Builder::code( $command_string )
+					),
+					$help_message,
+				)
+			),
+			array(
+				'command'      => $command_name,
+				'reply_markup' => is_array( $reply_markup ) ? $reply_markup : array(),
+			)
+		);
+	}
+
+	private function unknown_command_response( $command_name, $identity ) {
+		$command_label = '' !== (string) $command_name ? Telepilot_Telegram_Response_Builder::code( (string) $command_name ) : __( 'that command', 'telepilot' );
+
+		return Telepilot_Telegram_Response_Builder::error_html(
+			Telepilot_Telegram_Response_Builder::join_blocks(
+				array(
+					Telepilot_Telegram_Response_Builder::bold( __( 'Command Not Recognized', 'telepilot' ) ),
+					sprintf( __( 'I could not match %s.', 'telepilot' ), $command_label ),
+					__( 'Use /menu or /help to see what this bot can do.', 'telepilot' ),
+				)
+			),
+			array(
+				'command'      => (string) $command_name,
+				'reply_markup' => $this->safe_home_keyboard( $identity ),
+			)
+		);
 	}
 
 	private function require_private_action( $identity ) {

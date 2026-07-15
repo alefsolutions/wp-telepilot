@@ -36,9 +36,9 @@ Use this checklist before release candidates, version bumps, or production rollo
 ## Content and moderation
 
 - Confirm `/comments pending`, `/comments details ID`, `/comments approve ID`, and a destructive moderation flow all work.
-- Confirm `/posts list`, `/posts search TERM`, `/posts create TITLE`, and `/posts open ID` all work.
-- Confirm `/pages list`, `/pages search TERM`, and page preview links render as expected.
-- Confirm `/media list`, `/media search TERM`, and Telegram-originated media upload flows work.
+- Confirm `/posts list`, `/posts search TERM`, `/posts create TITLE`, `/posts draft ID`, and `/posts open ID` all work.
+- Confirm `/pages list`, `/pages drafts`, `/pages details ID`, and page preview links render as expected.
+- Confirm `/media list`, `/media search TERM`, `/media details ID`, and `/media open ID` all work.
 
 ## Administration
 

@@ -86,11 +86,10 @@ class Telepilot_Media_Service {
 			return Telepilot_Telegram_Response_Builder::bold( $heading ) . "\n\n" . __( 'No media items matched that request.', 'telepilot' );
 		}
 
-		$lines   = array( Telepilot_Telegram_Response_Builder::bold( $heading ) );
-		$lines[] = Telepilot_Telegram_Response_Builder::italic(
+		$blocks   = array( Telepilot_Telegram_Response_Builder::bold( $heading ) );
+		$blocks[] = Telepilot_Telegram_Response_Builder::italic(
 			sprintf( __( 'Page %1$d of %2$d', 'telepilot' ), $result['page'], $result['total_pages'] )
 		);
-		$lines[] = '';
 
 		foreach ( $result['items'] as $item ) {
 			$title = get_the_title( $item );
@@ -98,39 +97,38 @@ class Telepilot_Media_Service {
 				$title = sprintf( __( 'Attachment [%d]', 'telepilot' ), $item->ID );
 			}
 
-			$lines[] = sprintf(
-				__( '[%1$d] %2$s', 'telepilot' ),
-				$item->ID,
-				Telepilot_Telegram_Response_Builder::escape( $title )
+			$block_lines = array(
+				sprintf(
+					__( '[%1$d] %2$s', 'telepilot' ),
+					$item->ID,
+					Telepilot_Telegram_Response_Builder::escape( $title )
+				),
 			);
 
 			$preview_url = wp_get_attachment_url( $item->ID );
 			if ( $preview_url ) {
-				$lines[] = '  ' . __( 'Preview:', 'telepilot' ) . ' ' . Telepilot_Telegram_Response_Builder::link( __( 'Open file', 'telepilot' ), $preview_url );
+				$block_lines[] = __( 'Preview:', 'telepilot' ) . ' ' . Telepilot_Telegram_Response_Builder::link( __( 'Open file', 'telepilot' ), $preview_url );
 			}
+
+			$blocks[] = implode( "\n", $block_lines );
 		}
 
-		$lines[] = '';
-		$lines[] = Telepilot_Telegram_Response_Builder::italic( __( 'Tip: send a photo or document in this private chat to upload it straight into WordPress.', 'telepilot' ) );
+		$blocks[] = Telepilot_Telegram_Response_Builder::italic( __( 'Tip: use /media details ID for metadata or /media open ID to jump straight to the file.', 'telepilot' ) );
 
-		return implode( "\n", $lines );
+		return Telepilot_Telegram_Response_Builder::join_blocks( $blocks );
 	}
 
 	public function render_help_message() {
-		$lines   = array();
-		$lines[] = Telepilot_Telegram_Response_Builder::bold( __( 'Media Commands', 'telepilot' ) );
-		$lines[] = '';
-		$lines[] = Telepilot_Telegram_Response_Builder::code( '/media list' ) . ' ' . __( 'Show recent media items', 'telepilot' );
-		$lines[] = Telepilot_Telegram_Response_Builder::code( '/media search logo' ) . ' ' . __( 'Search media by title', 'telepilot' );
-		$lines[] = Telepilot_Telegram_Response_Builder::code( '/media details 123' ) . ' ' . __( 'Show media metadata and preview links', 'telepilot' );
-		$lines[] = Telepilot_Telegram_Response_Builder::code( '/media rename 123 New filename label' ) . ' ' . __( 'Rename a media item title', 'telepilot' );
-		$lines[] = Telepilot_Telegram_Response_Builder::code( '/media alt 123 Better alt text' ) . ' ' . __( 'Update attachment alt text', 'telepilot' );
-		$lines[] = Telepilot_Telegram_Response_Builder::code( '/media caption 123 New caption' ) . ' ' . __( 'Update attachment caption', 'telepilot' );
-		$lines[] = Telepilot_Telegram_Response_Builder::code( '/media delete 123' ) . ' ' . __( 'Delete a media item after confirmation', 'telepilot' );
-		$lines[] = '';
-		$lines[] = Telepilot_Telegram_Response_Builder::italic( __( 'Tip: send a photo or document directly to the bot in a private chat to upload it to WordPress.', 'telepilot' ) );
-
-		return implode( "\n", $lines );
+		return Telepilot_Telegram_Response_Builder::join_blocks(
+			array(
+				Telepilot_Telegram_Response_Builder::bold( __( 'Media Commands', 'telepilot' ) ),
+				Telepilot_Telegram_Response_Builder::code( '/media list' ) . ' ' . __( 'Show recent media items', 'telepilot' ),
+				Telepilot_Telegram_Response_Builder::code( '/media search logo' ) . ' ' . __( 'Search media by title', 'telepilot' ),
+				Telepilot_Telegram_Response_Builder::code( '/media details 123' ) . ' ' . __( 'Show media metadata and preview links', 'telepilot' ),
+				Telepilot_Telegram_Response_Builder::code( '/media open 123' ) . ' ' . __( 'Open the media file in your browser', 'telepilot' ),
+				Telepilot_Telegram_Response_Builder::italic( __( 'Media is read-only in this release. Use WordPress wp-admin for uploads or metadata edits.', 'telepilot' ) ),
+			)
+		);
 	}
 
 	public function get_item_details( $attachment_id ) {
@@ -153,6 +151,47 @@ class Telepilot_Media_Service {
 			'file_size' => $file_size,
 			'metadata'  => is_array( $metadata ) ? $metadata : array(),
 		);
+	}
+
+	public function render_details_message( $details ) {
+		if ( empty( $details['item'] ) || ! $details['item'] instanceof WP_Post ) {
+			return Telepilot_Telegram_Response_Builder::bold( __( 'Media Details', 'telepilot' ) ) . "\n\n" . __( 'Media item not found.', 'telepilot' );
+		}
+
+		$blocks   = array();
+		$blocks[] = Telepilot_Telegram_Response_Builder::bold( __( 'Media Details', 'telepilot' ) );
+
+		$detail_lines   = array();
+		$detail_lines[] = sprintf(
+			__( 'Item: [%1$d] %2$s', 'telepilot' ),
+			(int) $details['item']->ID,
+			Telepilot_Telegram_Response_Builder::escape( $details['title'] ? $details['title'] : __( 'Untitled attachment', 'telepilot' ) )
+		);
+		$detail_lines[] = sprintf( __( 'Mime type: %s', 'telepilot' ), Telepilot_Telegram_Response_Builder::escape( $details['mime_type'] ? $details['mime_type'] : __( 'Unknown', 'telepilot' ) ) );
+
+		if ( ! empty( $details['file_size'] ) ) {
+			$detail_lines[] = sprintf( __( 'File size: %s', 'telepilot' ), Telepilot_Telegram_Response_Builder::escape( $details['file_size'] ) );
+		}
+
+		if ( ! empty( $details['metadata']['width'] ) && ! empty( $details['metadata']['height'] ) ) {
+			$detail_lines[] = sprintf( __( 'Dimensions: %1$d x %2$d', 'telepilot' ), (int) $details['metadata']['width'], (int) $details['metadata']['height'] );
+		}
+
+		if ( '' !== (string) $details['alt_text'] ) {
+			$detail_lines[] = sprintf( __( 'Alt text: %s', 'telepilot' ), Telepilot_Telegram_Response_Builder::escape( $details['alt_text'] ) );
+		}
+
+		if ( '' !== (string) $details['caption'] ) {
+			$detail_lines[] = sprintf( __( 'Caption: %s', 'telepilot' ), Telepilot_Telegram_Response_Builder::escape( $details['caption'] ) );
+		}
+
+		if ( ! empty( $details['url'] ) ) {
+			$detail_lines[] = sprintf( __( 'Preview: %s', 'telepilot' ), Telepilot_Telegram_Response_Builder::link( __( 'Open file', 'telepilot' ), $details['url'] ) );
+		}
+
+		$blocks[] = implode( "\n", $detail_lines );
+
+		return Telepilot_Telegram_Response_Builder::join_blocks( $blocks );
 	}
 
 	public function rename( $attachment_id, $title ) {
@@ -303,20 +342,22 @@ class Telepilot_Media_Service {
 				continue;
 			}
 
-			$rows[] = array(
+			$row = array(
 				array(
 					'text'          => sprintf( __( 'Details [%d]', 'telepilot' ), $item->ID ),
 					'callback_data' => '/media details ' . (int) $item->ID,
 				),
-				array(
-					'text' => sprintf( __( 'Open [%d]', 'telepilot' ), $item->ID ),
-					'url'  => wp_get_attachment_url( $item->ID ),
-				),
-				array(
-					'text'          => sprintf( __( 'Delete [%d]', 'telepilot' ), $item->ID ),
-					'callback_data' => '/media delete ' . (int) $item->ID,
-				),
 			);
+
+			$attachment_url = wp_get_attachment_url( $item->ID );
+			if ( $attachment_url ) {
+				$row[] = array(
+					'text' => sprintf( __( 'Open [%d]', 'telepilot' ), $item->ID ),
+					'url'  => $attachment_url,
+				);
+			}
+
+			$rows[] = $row;
 		}
 
 		$pagination = $this->build_pagination_row( $subcommand, $search_term, $page, $total_pages );
@@ -360,6 +401,27 @@ class Telepilot_Media_Service {
 		}
 
 		return '/media recent page:' . $page;
+	}
+
+	public function build_item_keyboard( $attachment_id, $attachment_url = '' ) {
+		$row = array(
+			array(
+				'text'          => sprintf( __( 'Details [%d]', 'telepilot' ), $attachment_id ),
+				'callback_data' => '/media details ' . (int) $attachment_id,
+			),
+		);
+
+		if ( '' !== (string) $attachment_url ) {
+			$row[] = array(
+				'text' => sprintf( __( 'Open [%d]', 'telepilot' ), $attachment_id ),
+				'url'  => (string) $attachment_url,
+			);
+		}
+
+		return Telepilot_Telegram_Response_Builder::append_rows(
+			Telepilot_Telegram_Response_Builder::keyboard( array( $row ) ),
+			$this->navigation_rows()
+		);
 	}
 
 	public function import_from_update( $update ) {

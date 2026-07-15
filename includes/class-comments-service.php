@@ -38,44 +38,41 @@ class Telepilot_Comments_Service {
 			return Telepilot_Telegram_Response_Builder::bold( $heading ) . "\n\n" . __( 'No comments matched that request.', 'telepilot' );
 		}
 
-		$lines   = array( Telepilot_Telegram_Response_Builder::bold( $heading ) );
-		$lines[] = Telepilot_Telegram_Response_Builder::italic(
+		$blocks   = array( Telepilot_Telegram_Response_Builder::bold( $heading ) );
+		$blocks[] = Telepilot_Telegram_Response_Builder::italic(
 			sprintf( __( 'Page %1$d of %2$d', 'telepilot' ), $result['page'], $result['total_pages'] )
 		);
-		$lines[] = '';
 
 		foreach ( $result['items'] as $comment ) {
-			$lines[] = $this->format_comment_summary_line( $comment );
+			$blocks[] = $this->format_comment_summary_line( $comment );
 		}
 
-		$lines[] = '';
-		$lines[] = Telepilot_Telegram_Response_Builder::italic( __( 'Tip: use details for the full context, and keep destructive moderation actions in private chat.', 'telepilot' ) );
+		$blocks[] = Telepilot_Telegram_Response_Builder::italic( __( 'Tip: use details for the full context, and keep destructive moderation actions in private chat.', 'telepilot' ) );
 
-		return implode( "\n", $lines );
+		return Telepilot_Telegram_Response_Builder::join_blocks( $blocks );
 	}
 
 	public function render_help_message() {
-		$lines   = array();
-		$lines[] = Telepilot_Telegram_Response_Builder::bold( __( 'Comments Commands', 'telepilot' ) );
-		$lines[] = '';
-		$lines[] = Telepilot_Telegram_Response_Builder::code( '/comments pending' ) . ' ' . __( 'Show pending comments', 'telepilot' );
-		$lines[] = Telepilot_Telegram_Response_Builder::code( '/comments approved' ) . ' ' . __( 'Show approved comments', 'telepilot' );
-		$lines[] = Telepilot_Telegram_Response_Builder::code( '/comments spam' ) . ' ' . __( 'Show spam comments', 'telepilot' );
-		$lines[] = Telepilot_Telegram_Response_Builder::code( '/comments trash' ) . ' ' . __( 'Show trashed comments', 'telepilot' );
-		$lines[] = Telepilot_Telegram_Response_Builder::code( '/comments search keyword' ) . ' ' . __( 'Search comments by author, email, URL, or content', 'telepilot' );
-		$lines[] = Telepilot_Telegram_Response_Builder::code( '/comments details 123' ) . ' ' . __( 'Show comment details', 'telepilot' );
-		$lines[] = Telepilot_Telegram_Response_Builder::code( '/comments approve 123' ) . ' ' . __( 'Approve a comment', 'telepilot' );
-		$lines[] = Telepilot_Telegram_Response_Builder::code( '/comments reject 123' ) . ' ' . __( 'Move a comment back to moderation hold', 'telepilot' );
-		$lines[] = Telepilot_Telegram_Response_Builder::code( '/comments spam 123' ) . ' ' . __( 'Mark a comment as spam', 'telepilot' );
-		$lines[] = Telepilot_Telegram_Response_Builder::code( '/comments trash 123' ) . ' ' . __( 'Move a comment to trash', 'telepilot' );
-		$lines[] = Telepilot_Telegram_Response_Builder::code( '/comments restore 123' ) . ' ' . __( 'Restore a trashed comment', 'telepilot' );
-		$lines[] = Telepilot_Telegram_Response_Builder::code( '/comments unspam 123' ) . ' ' . __( 'Remove a comment from spam', 'telepilot' );
-		$lines[] = Telepilot_Telegram_Response_Builder::code( '/comments delete 123' ) . ' ' . __( 'Permanently delete a comment after confirmation', 'telepilot' );
-		$lines[] = Telepilot_Telegram_Response_Builder::code( '/comments reply 123 Thank you for your comment' ) . ' ' . __( 'Post an approved reply to a comment', 'telepilot' );
-		$lines[] = '';
-		$lines[] = Telepilot_Telegram_Response_Builder::italic( __( 'Tip: pagination uses the same `page:N` suffix as other WP Telepilot list commands.', 'telepilot' ) );
-
-		return implode( "\n", $lines );
+		return Telepilot_Telegram_Response_Builder::join_blocks(
+			array(
+				Telepilot_Telegram_Response_Builder::bold( __( 'Comments Commands', 'telepilot' ) ),
+				Telepilot_Telegram_Response_Builder::code( '/comments pending' ) . ' ' . __( 'Show pending comments', 'telepilot' ),
+				Telepilot_Telegram_Response_Builder::code( '/comments approved' ) . ' ' . __( 'Show approved comments', 'telepilot' ),
+				Telepilot_Telegram_Response_Builder::code( '/comments spam' ) . ' ' . __( 'Show spam comments', 'telepilot' ),
+				Telepilot_Telegram_Response_Builder::code( '/comments trash' ) . ' ' . __( 'Show trashed comments', 'telepilot' ),
+				Telepilot_Telegram_Response_Builder::code( '/comments search keyword' ) . ' ' . __( 'Search comments by author, email, URL, or content', 'telepilot' ),
+				Telepilot_Telegram_Response_Builder::code( '/comments details 123' ) . ' ' . __( 'Show comment details', 'telepilot' ),
+				Telepilot_Telegram_Response_Builder::code( '/comments approve 123' ) . ' ' . __( 'Approve a comment', 'telepilot' ),
+				Telepilot_Telegram_Response_Builder::code( '/comments reject 123' ) . ' ' . __( 'Move a comment back to moderation hold', 'telepilot' ),
+				Telepilot_Telegram_Response_Builder::code( '/comments spam 123' ) . ' ' . __( 'Mark a comment as spam', 'telepilot' ),
+				Telepilot_Telegram_Response_Builder::code( '/comments trash 123' ) . ' ' . __( 'Move a comment to trash', 'telepilot' ),
+				Telepilot_Telegram_Response_Builder::code( '/comments restore 123' ) . ' ' . __( 'Restore a trashed comment', 'telepilot' ),
+				Telepilot_Telegram_Response_Builder::code( '/comments unspam 123' ) . ' ' . __( 'Remove a comment from spam', 'telepilot' ),
+				Telepilot_Telegram_Response_Builder::code( '/comments delete 123' ) . ' ' . __( 'Permanently delete a comment after confirmation', 'telepilot' ),
+				Telepilot_Telegram_Response_Builder::code( '/comments reply 123 Thank you for your comment' ) . ' ' . __( 'Post an approved reply to a comment', 'telepilot' ),
+				Telepilot_Telegram_Response_Builder::italic( __( 'Tip: pagination uses the same `page:N` suffix as other WP Telepilot list commands.', 'telepilot' ) ),
+			)
+		);
 	}
 
 	public function render_comment_details_message( $comment ) {
@@ -320,15 +317,10 @@ class Telepilot_Comments_Service {
 		);
 
 		return Telepilot_Telegram_Response_Builder::append_rows(
-			Telepilot_Telegram_Response_Builder::keyboard(
-				array(
-					array(
-						array(
-							'text'          => sprintf( __( 'Confirm %1$s [%2$d]', 'telepilot' ), ucfirst( $action ), $comment_id ),
-							'callback_data' => 'tp:comment:' . $action . ':' . (int) $comment_id . ':' . $token,
-						),
-					),
-				)
+			Telepilot_Telegram_Response_Builder::confirmation_keyboard(
+				sprintf( __( 'Confirm %1$s [%2$d]', 'telepilot' ), ucfirst( $action ), $comment_id ),
+				'tp:comment:' . $action . ':' . (int) $comment_id . ':' . $token,
+				'/comments pending'
 			),
 			$this->navigation_rows()
 		);

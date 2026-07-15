@@ -78,16 +78,15 @@ class Telepilot_Users_Service {
 			return Telepilot_Telegram_Response_Builder::bold( $heading ) . "\n\n" . __( 'No users matched that request.', 'telepilot' );
 		}
 
-		$lines   = array( Telepilot_Telegram_Response_Builder::bold( $heading ) );
-		$lines[] = Telepilot_Telegram_Response_Builder::italic(
+		$blocks   = array( Telepilot_Telegram_Response_Builder::bold( $heading ) );
+		$blocks[] = Telepilot_Telegram_Response_Builder::italic(
 			sprintf( __( 'Page %1$d of %2$d', 'telepilot' ), $result['page'], $result['total_pages'] )
 		);
-		$lines[] = '';
 
 		foreach ( $result['items'] as $user ) {
 			$roles       = implode( ', ', array_map( 'sanitize_text_field', $user->roles ) );
 			$is_disabled = $this->is_disabled( $user->ID ) ? __( 'disabled', 'telepilot' ) : __( 'active', 'telepilot' );
-			$lines[]     = sprintf(
+			$blocks[]    = sprintf(
 				__( '[%1$d] %2$s [%3$s] (%4$s)', 'telepilot' ),
 				$user->ID,
 				Telepilot_Telegram_Response_Builder::escape( $user->user_login ),
@@ -96,32 +95,88 @@ class Telepilot_Users_Service {
 			);
 		}
 
-		$lines[] = '';
-		$lines[] = Telepilot_Telegram_Response_Builder::italic( __( 'Tip: use /users help for examples and /users search keyword to jump to a person quickly.', 'telepilot' ) );
+		$blocks[] = Telepilot_Telegram_Response_Builder::italic( __( 'Tip: use /users help for examples and /users search keyword to jump to a person quickly.', 'telepilot' ) );
 
-		return implode( "\n", $lines );
+		return Telepilot_Telegram_Response_Builder::join_blocks( $blocks );
 	}
 
 	public function render_help_message() {
-		$lines   = array();
-		$lines[] = Telepilot_Telegram_Response_Builder::bold( __( 'Users Commands', 'telepilot' ) );
-		$lines[] = '';
-		$lines[] = Telepilot_Telegram_Response_Builder::code( '/users list' ) . ' ' . __( 'Show recent users', 'telepilot' );
-		$lines[] = Telepilot_Telegram_Response_Builder::code( '/users search jane' ) . ' ' . __( 'Search by username, display name, or email', 'telepilot' );
-		$lines[] = Telepilot_Telegram_Response_Builder::code( '/users create jane jane@example.com editor' ) . ' ' . __( 'Create a new user', 'telepilot' );
-		$lines[] = Telepilot_Telegram_Response_Builder::code( '/users email 123 jane@example.com' ) . ' ' . __( 'Update a user email address', 'telepilot' );
-		$lines[] = Telepilot_Telegram_Response_Builder::code( '/users display-name 123 Jane Doe' ) . ' ' . __( 'Update a display name', 'telepilot' );
-		$lines[] = Telepilot_Telegram_Response_Builder::code( '/users disable 123' ) . ' ' . __( 'Disable a user', 'telepilot' );
-		$lines[] = Telepilot_Telegram_Response_Builder::code( '/users enable 123' ) . ' ' . __( 'Re-enable a user', 'telepilot' );
-		$lines[] = Telepilot_Telegram_Response_Builder::code( '/users reset-password 123' ) . ' ' . __( 'Generate a password reset link', 'telepilot' );
-		$lines[] = Telepilot_Telegram_Response_Builder::code( '/users send-reset 123' ) . ' ' . __( 'Email the official WordPress reset link to the user', 'telepilot' );
-		$lines[] = Telepilot_Telegram_Response_Builder::code( '/users send-welcome 123' ) . ' ' . __( 'Re-send the WordPress welcome email to the user', 'telepilot' );
-		$lines[] = Telepilot_Telegram_Response_Builder::code( '/users role 123 editor' ) . ' ' . __( 'Change a user role', 'telepilot' );
-		$lines[] = Telepilot_Telegram_Response_Builder::code( '/users delete 123 1' ) . ' ' . __( 'Delete a user and optionally reassign their content', 'telepilot' );
-		$lines[] = '';
-		$lines[] = Telepilot_Telegram_Response_Builder::italic( __( 'Tip: user creation and other sensitive actions must be confirmed in a private chat.', 'telepilot' ) );
+		return Telepilot_Telegram_Response_Builder::join_blocks(
+			array(
+				Telepilot_Telegram_Response_Builder::bold( __( 'Users Commands', 'telepilot' ) ),
+				Telepilot_Telegram_Response_Builder::code( '/users list' ) . ' ' . __( 'Show recent users', 'telepilot' ),
+				Telepilot_Telegram_Response_Builder::code( '/users search jane' ) . ' ' . __( 'Search by username, display name, or email', 'telepilot' ),
+				Telepilot_Telegram_Response_Builder::code( '/users details 123' ) . ' ' . __( 'Show a user summary and Telegram link status', 'telepilot' ),
+				Telepilot_Telegram_Response_Builder::code( '/users create jane jane@example.com editor' ) . ' ' . __( 'Create a new user', 'telepilot' ),
+				Telepilot_Telegram_Response_Builder::code( '/users email 123 jane@example.com' ) . ' ' . __( 'Update a user email address', 'telepilot' ),
+				Telepilot_Telegram_Response_Builder::code( '/users display-name 123 Jane Doe' ) . ' ' . __( 'Update a display name', 'telepilot' ),
+				Telepilot_Telegram_Response_Builder::code( '/users disable 123' ) . ' ' . __( 'Disable a user', 'telepilot' ),
+				Telepilot_Telegram_Response_Builder::code( '/users enable 123' ) . ' ' . __( 'Re-enable a user', 'telepilot' ),
+				Telepilot_Telegram_Response_Builder::code( '/users reset-password 123' ) . ' ' . __( 'Generate a password reset link', 'telepilot' ),
+				Telepilot_Telegram_Response_Builder::code( '/users email-reset-password 123' ) . ' ' . __( 'Email the official WordPress reset link to the user', 'telepilot' ),
+				Telepilot_Telegram_Response_Builder::code( '/users welcome-email 123' ) . ' ' . __( 'Re-send the WordPress welcome email to the user', 'telepilot' ),
+				Telepilot_Telegram_Response_Builder::code( '/users role 123 editor' ) . ' ' . __( 'Change a user role', 'telepilot' ),
+				Telepilot_Telegram_Response_Builder::code( '/users delete 123 1' ) . ' ' . __( 'Delete a user and optionally reassign their content', 'telepilot' ),
+				Telepilot_Telegram_Response_Builder::italic( __( 'Tip: user creation and other sensitive actions must be confirmed in a private chat.', 'telepilot' ) ),
+			)
+		);
+	}
 
-		return implode( "\n", $lines );
+	public function get_user_details( $user_id ) {
+		$user = get_user_by( 'id', $user_id );
+
+		if ( ! $user ) {
+			return new WP_Error( 'telepilot_user_not_found', __( 'User not found.', 'telepilot' ) );
+		}
+
+		return $user;
+	}
+
+	public function render_details_message( $user ) {
+		if ( ! ( $user instanceof WP_User ) ) {
+			return Telepilot_Telegram_Response_Builder::bold( __( 'User Details', 'telepilot' ) ) . "\n\n" . __( 'User not found.', 'telepilot' );
+		}
+
+		$roles            = implode( ', ', array_map( 'sanitize_text_field', (array) $user->roles ) );
+		$telegram_user_id = (string) get_user_meta( $user->ID, Telepilot_User_Linking_Service::META_TELEGRAM_ID, true );
+		$telegram_chat_id = (string) get_user_meta( $user->ID, Telepilot_User_Linking_Service::META_TELEGRAM_CHAT, true );
+		$telegram_name    = (string) get_user_meta( $user->ID, Telepilot_User_Linking_Service::META_TELEGRAM_NAME, true );
+		$lines            = array(
+			Telepilot_Telegram_Response_Builder::bold( __( 'User Details', 'telepilot' ) ),
+			implode(
+				"\n",
+				array(
+					sprintf( __( 'User: [%1$d] %2$s', 'telepilot' ), $user->ID, Telepilot_Telegram_Response_Builder::escape( $user->user_login ) ),
+					sprintf( __( 'Display name: %s', 'telepilot' ), Telepilot_Telegram_Response_Builder::escape( $user->display_name ) ),
+					sprintf( __( 'Email: %s', 'telepilot' ), Telepilot_Telegram_Response_Builder::escape( $user->user_email ) ),
+					sprintf( __( 'Roles: %s', 'telepilot' ), Telepilot_Telegram_Response_Builder::escape( $roles ? $roles : __( 'no role', 'telepilot' ) ) ),
+					sprintf( __( 'Status: %s', 'telepilot' ), Telepilot_Telegram_Response_Builder::escape( $this->is_disabled( $user->ID ) ? __( 'disabled', 'telepilot' ) : __( 'active', 'telepilot' ) ) ),
+					sprintf( __( 'Registered: %s', 'telepilot' ), Telepilot_Telegram_Response_Builder::escape( mysql2date( 'Y-m-d H:i:s', $user->user_registered ) ) ),
+				)
+			),
+		);
+
+		if ( '' !== $telegram_user_id ) {
+			$link_lines = array(
+				sprintf( __( 'Telegram user ID: %s', 'telepilot' ), Telepilot_Telegram_Response_Builder::escape( $telegram_user_id ) ),
+				sprintf( __( 'Chat ID: %s', 'telepilot' ), Telepilot_Telegram_Response_Builder::escape( $telegram_chat_id ? $telegram_chat_id : __( 'Unknown', 'telepilot' ) ) ),
+			);
+
+			if ( '' !== $telegram_name ) {
+				$link_lines[] = sprintf( __( 'Telegram username: @%s', 'telepilot' ), Telepilot_Telegram_Response_Builder::escape( $telegram_name ) );
+			}
+
+			$lines[] = implode( "\n", $link_lines );
+		} else {
+			$lines[] = __( 'Telegram: not linked yet.', 'telepilot' );
+		}
+
+		$lines[] = sprintf(
+			__( 'Admin: %s', 'telepilot' ),
+			Telepilot_Telegram_Response_Builder::link( __( 'Open user in wp-admin', 'telepilot' ), admin_url( 'user-edit.php?user_id=' . (int) $user->ID ) )
+		);
+
+		return Telepilot_Telegram_Response_Builder::join_blocks( $lines );
 	}
 
 	public function create_user( $username, $email, $role ) {
@@ -419,15 +474,10 @@ class Telepilot_Users_Service {
 		$token = $this->confirmation_service->create_token( $payload );
 
 		return Telepilot_Telegram_Response_Builder::append_rows(
-			Telepilot_Telegram_Response_Builder::keyboard(
-				array(
-					array(
-						array(
-							'text'          => sprintf( __( 'Confirm %1$s [%2$d]', 'telepilot' ), ucfirst( str_replace( '-', ' ', $action ) ), $user_id ),
-							'callback_data' => 'tp:user:' . $action . ':' . (int) $user_id . ':' . $token,
-						),
-					),
-				)
+			Telepilot_Telegram_Response_Builder::confirmation_keyboard(
+				sprintf( __( 'Confirm %1$s [%2$d]', 'telepilot' ), ucfirst( str_replace( '-', ' ', $action ) ), $user_id ),
+				'tp:user:' . $action . ':' . (int) $user_id . ':' . $token,
+				'/users list'
 			),
 			$this->navigation_rows()
 		);
@@ -441,29 +491,36 @@ class Telepilot_Users_Service {
 				continue;
 			}
 
-			$row = array();
-			$row[] = array(
-				'text'          => sprintf( __( 'Reset [%d]', 'telepilot' ), $user->ID ),
-				'callback_data' => '/users reset-password ' . (int) $user->ID,
-			);
-			$row[] = array(
-				'text'          => sprintf( __( 'Email Reset [%d]', 'telepilot' ), $user->ID ),
-				'callback_data' => '/users send-reset ' . (int) $user->ID,
+			$rows[] = array(
+				array(
+					'text'          => sprintf( __( 'Details [%d]', 'telepilot' ), $user->ID ),
+					'callback_data' => '/users details ' . (int) $user->ID,
+				),
+				array(
+					'text'          => sprintf( __( 'Reset [%d]', 'telepilot' ), $user->ID ),
+					'callback_data' => '/users reset-password ' . (int) $user->ID,
+				),
+				array(
+					'text'          => sprintf( __( 'Email Reset [%d]', 'telepilot' ), $user->ID ),
+					'callback_data' => '/users email-reset-password ' . (int) $user->ID,
+				),
 			);
 
-			if ( $this->is_disabled( $user->ID ) ) {
-				$row[] = array(
-					'text'          => sprintf( __( 'Enable [%d]', 'telepilot' ), $user->ID ),
-					'callback_data' => '/users enable ' . (int) $user->ID,
-				);
-			} else {
-				$row[] = array(
-					'text'          => sprintf( __( 'Disable [%d]', 'telepilot' ), $user->ID ),
-					'callback_data' => '/users disable ' . (int) $user->ID,
-				);
-			}
-
-			$rows[] = $row;
+			$rows[] = array(
+				$this->is_disabled( $user->ID )
+					? array(
+						'text'          => sprintf( __( 'Enable [%d]', 'telepilot' ), $user->ID ),
+						'callback_data' => '/users enable ' . (int) $user->ID,
+					)
+					: array(
+						'text'          => sprintf( __( 'Disable [%d]', 'telepilot' ), $user->ID ),
+						'callback_data' => '/users disable ' . (int) $user->ID,
+					),
+				array(
+					'text'          => sprintf( __( 'Welcome [%d]', 'telepilot' ), $user->ID ),
+					'callback_data' => '/users welcome-email ' . (int) $user->ID,
+				),
+			);
 		}
 
 		$pagination = $this->build_pagination_row( $subcommand, $search_term, $page, $total_pages );

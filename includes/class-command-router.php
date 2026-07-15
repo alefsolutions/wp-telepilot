@@ -302,7 +302,7 @@ class Telepilot_Command_Router {
 			Telepilot_Telegram_Response_Builder::bold( __( 'WP Telepilot Menu', 'telepilot' ) ) .
 			"\n\n" .
 			__(
-				'Choose an area below. Use Telegram for quick review and short actions, then jump into WordPress when you need full editing.',
+				'Choose an area below. Only the sections your linked WordPress account can access are shown here.',
 				'telepilot'
 			),
 			array(
@@ -3326,53 +3326,68 @@ class Telepilot_Command_Router {
 		);
 
 		if ( ! empty( $identity['wp_user'] ) && $identity['wp_user'] instanceof WP_User ) {
+			$content_row = array();
 			if ( $this->permission_service->user_can( $identity['wp_user'], 'edit_posts' ) ) {
-				$rows[] = array(
-					array(
-						'text'          => __( 'Posts', 'telepilot' ),
-						'callback_data' => '/posts list',
-					),
-					array(
-						'text'          => __( 'Pages', 'telepilot' ),
-						'callback_data' => '/pages list',
-					),
+				$content_row[] = array(
+					'text'          => __( 'Posts', 'telepilot' ),
+					'callback_data' => '/posts list',
 				);
 			}
+			if ( $this->permission_service->user_can( $identity['wp_user'], 'edit_pages' ) ) {
+				$content_row[] = array(
+					'text'          => __( 'Pages', 'telepilot' ),
+					'callback_data' => '/pages list',
+				);
+			}
+			if ( ! empty( $content_row ) ) {
+				$rows[] = $content_row;
+			}
 
+			$editorial_row = array();
 			if ( $this->permission_service->user_can( $identity['wp_user'], 'moderate_comments' ) ) {
-				$rows[] = array(
-					array(
-						'text'          => __( 'Comments', 'telepilot' ),
-						'callback_data' => '/comments pending',
-					),
+				$editorial_row[] = array(
+					'text'          => __( 'Comments', 'telepilot' ),
+					'callback_data' => '/comments pending',
 				);
 			}
-
 			if ( $this->permission_service->user_can( $identity['wp_user'], 'upload_files' ) ) {
+				$editorial_row[] = array(
+					'text'          => __( 'Media', 'telepilot' ),
+					'callback_data' => '/media list',
+				);
+			}
+			if ( ! empty( $editorial_row ) ) {
+				$rows[] = $editorial_row;
+			}
+
+			if ( $this->permission_service->user_can( $identity['wp_user'], 'manage_categories' ) ) {
 				$rows[] = array(
 					array(
-						'text'          => __( 'Media', 'telepilot' ),
-						'callback_data' => '/media list',
+						'text'          => __( 'Categories', 'telepilot' ),
+						'callback_data' => '/categories list',
+					),
+					array(
+						'text'          => __( 'Tags', 'telepilot' ),
+						'callback_data' => '/tags list',
 					),
 				);
 			}
 
+			$admin_tools_row = array();
 			if ( $this->permission_service->user_can( $identity['wp_user'], 'list_users' ) ) {
-				$rows[] = array(
-					array(
-						'text'          => __( 'Users', 'telepilot' ),
-						'callback_data' => '/users list',
-					),
+				$admin_tools_row[] = array(
+					'text'          => __( 'Users', 'telepilot' ),
+					'callback_data' => '/users list',
 				);
 			}
-
 			if ( $this->permission_service->user_can( $identity['wp_user'], 'activate_plugins' ) || $this->permission_service->user_can( $identity['wp_user'], 'update_plugins' ) || $this->permission_service->user_can( $identity['wp_user'], 'delete_plugins' ) ) {
-				$rows[] = array(
-					array(
-						'text'          => __( 'Plugins', 'telepilot' ),
-						'callback_data' => '/plugins list',
-					),
+				$admin_tools_row[] = array(
+					'text'          => __( 'Plugins', 'telepilot' ),
+					'callback_data' => '/plugins list',
 				);
+			}
+			if ( ! empty( $admin_tools_row ) ) {
+				$rows[] = $admin_tools_row;
 			}
 
 			if ( $this->permission_service->user_can( $identity['wp_user'], 'manage_options' ) ) {

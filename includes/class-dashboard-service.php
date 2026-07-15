@@ -82,66 +82,83 @@ class Telepilot_Dashboard_Service {
 			),
 		);
 
-		if ( $wp_user instanceof WP_User && user_can( $wp_user, 'edit_posts' ) ) {
-			$rows[] = array(
-				array(
+		if ( $wp_user instanceof WP_User ) {
+			$content_row = array();
+			if ( user_can( $wp_user, 'edit_posts' ) ) {
+				$content_row[] = array(
 					'text'          => __( 'Posts', 'telepilot' ),
 					'callback_data' => '/posts list',
-				),
-				array(
+				);
+			}
+			if ( user_can( $wp_user, 'edit_pages' ) ) {
+				$content_row[] = array(
 					'text'          => __( 'Pages', 'telepilot' ),
 					'callback_data' => '/pages list',
-				),
-			);
-		}
+				);
+			}
+			if ( ! empty( $content_row ) ) {
+				$rows[] = $content_row;
+			}
 
-		if ( $wp_user instanceof WP_User && user_can( $wp_user, 'moderate_comments' ) ) {
-			$rows[] = array(
-				array(
+			$editorial_row = array();
+			if ( user_can( $wp_user, 'moderate_comments' ) ) {
+				$editorial_row[] = array(
 					'text'          => __( 'Comments', 'telepilot' ),
 					'callback_data' => '/comments pending',
-				),
-			);
-		}
-
-		if ( $wp_user instanceof WP_User && user_can( $wp_user, 'upload_files' ) ) {
-			$rows[] = array(
-				array(
+				);
+			}
+			if ( user_can( $wp_user, 'upload_files' ) ) {
+				$editorial_row[] = array(
 					'text'          => __( 'Media', 'telepilot' ),
 					'callback_data' => '/media list',
-				),
-			);
-		}
+				);
+			}
+			if ( ! empty( $editorial_row ) ) {
+				$rows[] = $editorial_row;
+			}
 
-		if ( $wp_user instanceof WP_User && user_can( $wp_user, 'list_users' ) ) {
-			$rows[] = array(
-				array(
+			if ( user_can( $wp_user, 'manage_categories' ) ) {
+				$rows[] = array(
+					array(
+						'text'          => __( 'Categories', 'telepilot' ),
+						'callback_data' => '/categories list',
+					),
+					array(
+						'text'          => __( 'Tags', 'telepilot' ),
+						'callback_data' => '/tags list',
+					),
+				);
+			}
+
+			$admin_tools_row = array();
+			if ( user_can( $wp_user, 'list_users' ) ) {
+				$admin_tools_row[] = array(
 					'text'          => __( 'Users', 'telepilot' ),
 					'callback_data' => '/users list',
-				),
-			);
-		}
-
-		if ( $wp_user instanceof WP_User && ( user_can( $wp_user, 'activate_plugins' ) || user_can( $wp_user, 'update_plugins' ) || user_can( $wp_user, 'delete_plugins' ) ) ) {
-			$rows[] = array(
-				array(
+				);
+			}
+			if ( user_can( $wp_user, 'activate_plugins' ) || user_can( $wp_user, 'update_plugins' ) || user_can( $wp_user, 'delete_plugins' ) ) {
+				$admin_tools_row[] = array(
 					'text'          => __( 'Plugins', 'telepilot' ),
 					'callback_data' => '/plugins list',
-				),
-			);
-		}
+				);
+			}
+			if ( ! empty( $admin_tools_row ) ) {
+				$rows[] = $admin_tools_row;
+			}
 
-		if ( $wp_user instanceof WP_User && user_can( $wp_user, 'manage_options' ) ) {
-			$rows[] = array(
-				array(
-					'text'          => __( 'Notifications', 'telepilot' ),
-					'callback_data' => '/notifications list',
-				),
-				array(
-					'text'          => __( 'Settings', 'telepilot' ),
-					'callback_data' => '/settings',
-				),
-			);
+			if ( user_can( $wp_user, 'manage_options' ) ) {
+				$rows[] = array(
+					array(
+						'text'          => __( 'Notifications', 'telepilot' ),
+						'callback_data' => '/notifications list',
+					),
+					array(
+						'text'          => __( 'Settings', 'telepilot' ),
+						'callback_data' => '/settings',
+					),
+				);
+			}
 		}
 
 		$admin_row = array(

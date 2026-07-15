@@ -25,6 +25,7 @@ WP Telepilot is a Telegram-first WordPress operations plugin. It lets authorized
   - plugins
   - categories
   - tags
+- Shows context-aware Telegram menus and shortcut keyboards based on the linked WordPress user's actual capabilities.
 - Supports search and pagination for the main content and user modules.
 - Adds a secure browser editing bridge for long-form post content when Telegram chat is not the right editing surface.
 - Supports structured post, page, and user management actions including browser-based long-form post editing, role changes, password reset flows, and controlled deletes.
@@ -33,7 +34,7 @@ WP Telepilot is a Telegram-first WordPress operations plugin. It lets authorized
 - Supports Telegram-side notification controls and safe site-setting updates for core fields like title, tagline, admin email, timezone, and date/time format.
 - Supports Phase 7 hardening controls for log retention, stale-update handling, inbound rate limits, linking toggles, and uninstall cleanup behavior.
 - Supports fuller comment workflows including status queues, search, detail views, reply posting, and safer destructive moderation flows.
-- Formats Telegram responses for readability with clearer headings, spacing, inline tips, and code-style command examples.
+- Formats Telegram responses for readability with clearer headings, semantic emojis, spacing, inline tips, and code-style command examples.
 - Uses confirmations for destructive actions and writes activity to the WP Telepilot audit log.
 
 ## Core commands
@@ -94,6 +95,7 @@ From `WordPress Admin -> WP Telepilot`, you can:
 ## Usability highlights
 
 - The bot uses richer formatting so site summaries and lists are easier to scan.
+- Menus and inline shortcuts are role-aware, so users only see the modules their linked WordPress account can actually access.
 - Module-specific help is available where syntax is not obvious.
 - Command discovery is guided through `/menu`, `/help`, `/site`, and inline keyboards instead of relying only on memorized commands.
 

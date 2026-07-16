@@ -115,3 +115,7 @@ From `WordPress Admin -> WP Telepilot`, you can:
 WP Telepilot is designed around one principle:
 
 > Telegram is for awareness, decisions, and short actions. WordPress remains the place for long-form editing, visual design, and complex configuration.
+
+## License
+
+WP Telepilot is licensed under GPLv2 or later, the same license family used by WordPress.

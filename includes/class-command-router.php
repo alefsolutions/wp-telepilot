@@ -137,42 +137,9 @@ class Telepilot_Command_Router {
 	}
 
 	public function parse_command( $update ) {
-		$text = '';
+		$grammar = new Telepilot_Command_Grammar();
 
-		if ( isset( $update['message']['text'] ) ) {
-			$text = trim( wp_strip_all_tags( $update['message']['text'] ) );
-		} elseif ( isset( $update['callback_query']['data'] ) ) {
-			$text = trim( wp_strip_all_tags( $update['callback_query']['data'] ) );
-		}
-
-		if ( '' === $text ) {
-			return array(
-				'raw'  => '',
-				'name' => '',
-				'args' => array(),
-			);
-		}
-
-		if ( 0 === strpos( $text, 'tp:' ) ) {
-			$parts = explode( ':', $text );
-			$name  = isset( $parts[1] ) ? 'tp:' . $parts[1] : '';
-
-			return array(
-				'raw'  => $text,
-				'name' => $name,
-				'args' => array_slice( $parts, 2 ),
-			);
-		}
-
-		$parts = preg_split( '/\s+/', $text );
-		$name  = isset( $parts[0] ) ? strtolower( (string) $parts[0] ) : '';
-		$args  = array_slice( $parts, 1 );
-
-		return array(
-			'raw'  => $text,
-			'name' => $name,
-			'args' => $args,
-		);
+		return $grammar->parse_update( $update );
 	}
 
 	private function handle_start( $identity ) {

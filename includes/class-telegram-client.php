@@ -92,6 +92,31 @@ class Telepilot_Telegram_Client {
 		return $this->request( 'setMyCommands', $payload );
 	}
 
+	public function answer_inline_query( $inline_query_id, $results, $args = array() ) {
+		$payload = array(
+			'inline_query_id' => (string) $inline_query_id,
+			'results'         => wp_json_encode( array_values( (array) $results ) ),
+		);
+
+		if ( isset( $args['cache_time'] ) ) {
+			$payload['cache_time'] = max( 0, (int) $args['cache_time'] );
+		}
+
+		if ( ! empty( $args['is_personal'] ) ) {
+			$payload['is_personal'] = true;
+		}
+
+		if ( array_key_exists( 'next_offset', $args ) ) {
+			$payload['next_offset'] = (string) $args['next_offset'];
+		}
+
+		if ( ! empty( $args['button'] ) && is_array( $args['button'] ) ) {
+			$payload['button'] = wp_json_encode( $args['button'] );
+		}
+
+		return $this->request( 'answerInlineQuery', $payload );
+	}
+
 	public function set_webhook( $url, $secret_token = '' ) {
 		$payload = array(
 			'url' => esc_url_raw( (string) $url ),

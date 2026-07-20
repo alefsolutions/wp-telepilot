@@ -97,8 +97,8 @@ class Telepilot_REST_Webhook_Controller {
 
 		Telepilot_Audit_Log_Repository::log(
 			array(
-				'telegram_user_id' => isset( $payload['message']['from']['id'] ) ? (string) $payload['message']['from']['id'] : null,
-				'chat_id'          => isset( $payload['message']['chat']['id'] ) ? (string) $payload['message']['chat']['id'] : null,
+				'telegram_user_id' => $this->extract_update_telegram_user_id( $payload ),
+				'chat_id'          => $this->extract_update_chat_id( $payload ),
 				'action_name'      => 'webhook_received',
 				'resource_type'    => 'telegram_update',
 				'after_state'      => $result,
@@ -201,7 +201,47 @@ class Telepilot_REST_Webhook_Controller {
 			return sanitize_text_field( (string) $payload['callback_query']['data'] );
 		}
 
+		if ( array_key_exists( 'query', (array) ( ! empty( $payload['inline_query'] ) ? $payload['inline_query'] : array() ) ) ) {
+			return sanitize_text_field( (string) $payload['inline_query']['query'] );
+		}
+
+		if ( array_key_exists( 'query', (array) ( ! empty( $payload['chosen_inline_result'] ) ? $payload['chosen_inline_result'] : array() ) ) ) {
+			return sanitize_text_field( (string) $payload['chosen_inline_result']['query'] );
+		}
+
 		return '';
+	}
+
+	private function extract_update_telegram_user_id( $payload ) {
+		if ( ! empty( $payload['message']['from']['id'] ) ) {
+			return (string) $payload['message']['from']['id'];
+		}
+
+		if ( ! empty( $payload['callback_query']['from']['id'] ) ) {
+			return (string) $payload['callback_query']['from']['id'];
+		}
+
+		if ( ! empty( $payload['inline_query']['from']['id'] ) ) {
+			return (string) $payload['inline_query']['from']['id'];
+		}
+
+		if ( ! empty( $payload['chosen_inline_result']['from']['id'] ) ) {
+			return (string) $payload['chosen_inline_result']['from']['id'];
+		}
+
+		return null;
+	}
+
+	private function extract_update_chat_id( $payload ) {
+		if ( ! empty( $payload['message']['chat']['id'] ) ) {
+			return (string) $payload['message']['chat']['id'];
+		}
+
+		if ( ! empty( $payload['callback_query']['message']['chat']['id'] ) ) {
+			return (string) $payload['callback_query']['message']['chat']['id'];
+		}
+
+		return null;
 	}
 
 	private function update_diagnostics( $data ) {

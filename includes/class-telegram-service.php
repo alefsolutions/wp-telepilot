@@ -23,6 +23,7 @@ class Telepilot_Telegram_Service {
 	private $plugins_service;
 	private $post_editor_service;
 	private $confirmation_service;
+	private $inline_query_service;
 
 	public function __construct() {
 		$this->client             = new Telepilot_Telegram_Client();
@@ -34,6 +35,7 @@ class Telepilot_Telegram_Service {
 		$this->users_service      = new Telepilot_Users_Service( $this->confirmation_service );
 		$this->plugins_service    = new Telepilot_Plugins_Service( $this->confirmation_service );
 		$this->post_editor_service = new Telepilot_Post_Editor_Service();
+		$this->inline_query_service = new Telepilot_Inline_Query_Service( $this->permission_service );
 		$this->command_router     = new Telepilot_Command_Router(
 			new Telepilot_User_Linking_Service(),
 			$this->permission_service,
@@ -61,6 +63,10 @@ class Telepilot_Telegram_Service {
 	}
 
 	private function queue_or_process_update( $update, $transport ) {
+		if ( $this->is_inline_update( $update ) ) {
+			return $this->process_inline_update( $update, $transport );
+		}
+
 		$command = $this->command_router->parse_command( $update );
 
 		if ( ! $this->should_queue_update( $command, $update, $transport ) ) {
@@ -132,6 +138,10 @@ class Telepilot_Telegram_Service {
 		);
 	}
 
+	private function is_inline_update( $update ) {
+		return ! empty( $update['inline_query'] ) || ! empty( $update['chosen_inline_result'] );
+	}
+
 	private function should_queue_update( $command, $update, $transport ) {
 		if ( empty( $command['name'] ) || ! is_array( $command ) ) {
 			return false;
@@ -142,6 +152,181 @@ class Telepilot_Telegram_Service {
 		}
 
 		return ! empty( $update['callback_query'] ) || ! empty( $update['message']['text'] );
+	}
+
+	private function process_inline_update( $update, $transport ) {
+		if ( ! empty( $update['update_id'] ) && Telepilot_Processed_Updates_Repository::has_processed( (int) $update['update_id'] ) ) {
+			return Telepilot_Telegram_Response_Builder::success(
+				__( 'Duplicate Telegram inline update ignored.', 'wp-telepilot' ),
+				array(
+					'command'       => 'inline_query',
+					'skip_dispatch' => true,
+					'code'          => 'telepilot_duplicate_inline_update',
+				)
+			);
+		}
+
+		$this->record_transport_activity( $transport, $update );
+		$identity = $this->user_resolver->resolve_from_update( $update );
+
+		if ( ! empty( $update['chosen_inline_result'] ) ) {
+			$this->record_chosen_inline_result( $identity, $update, $transport );
+			$this->mark_update_processed( $update, $transport, 'inline_result_chosen' );
+
+			return Telepilot_Telegram_Response_Builder::success(
+				__( 'Chosen inline result recorded.', 'wp-telepilot' ),
+				array(
+					'command'       => 'chosen_inline_result',
+					'skip_dispatch' => true,
+				)
+			);
+		}
+
+		if ( empty( $update['inline_query']['id'] ) ) {
+			$this->mark_update_processed( $update, $transport, 'inline_missing_id' );
+
+			return Telepilot_Telegram_Response_Builder::error(
+				__( 'Inline query payload was incomplete.', 'wp-telepilot' ),
+				array(
+					'command'       => 'inline_query',
+					'skip_dispatch' => true,
+					'code'          => 'telepilot_inline_query_invalid',
+				)
+			);
+		}
+
+		$payload = $this->inline_query_service->build_response_payload( $update, $identity );
+
+		$response = $this->client->answer_inline_query(
+			(string) $update['inline_query']['id'],
+			isset( $payload['results'] ) && is_array( $payload['results'] ) ? $payload['results'] : array(),
+			array(
+				'cache_time'  => isset( $payload['cache_time'] ) ? (int) $payload['cache_time'] : 0,
+				'is_personal' => ! empty( $payload['is_personal'] ),
+				'next_offset' => isset( $payload['next_offset'] ) ? (string) $payload['next_offset'] : '',
+				'button'      => ! empty( $payload['button'] ) && is_array( $payload['button'] ) ? $payload['button'] : array(),
+			)
+		);
+
+		if ( is_wp_error( $response ) ) {
+			$this->update_diagnostics(
+				array(
+					'last_inline_query_at'        => time(),
+					'last_inline_query_status'    => 'failed',
+					'last_inline_query_error'     => $response->get_error_message(),
+					'last_inline_query_transport' => $transport,
+				)
+			);
+
+			Telepilot_Audit_Log_Repository::log(
+				array(
+					'wp_user_id'       => ! empty( $identity['wp_user'] ) && $identity['wp_user'] instanceof WP_User ? $identity['wp_user']->ID : null,
+					'telegram_user_id' => ! empty( $identity['telegram_user_id'] ) ? $identity['telegram_user_id'] : null,
+					'chat_id'          => ! empty( $identity['chat_id'] ) ? $identity['chat_id'] : null,
+					'action_name'      => 'telegram_inline_query_failed',
+					'resource_type'    => 'telegram_inline_query',
+					'resource_id'      => isset( $update['update_id'] ) ? (string) $update['update_id'] : null,
+					'was_successful'   => 0,
+					'failure_reason'   => $response->get_error_message(),
+					'context'          => array(
+						'query'    => isset( $update['inline_query']['query'] ) ? (string) $update['inline_query']['query'] : '',
+						'context'  => isset( $payload['context'] ) ? (string) $payload['context'] : '',
+						'transport'=> $transport,
+					),
+				)
+			);
+
+			$this->mark_update_processed( $update, $transport, 'inline_failed' );
+
+			return Telepilot_Telegram_Response_Builder::error(
+				__( 'WP Telepilot could not answer that inline query.', 'wp-telepilot' ),
+				array(
+					'command'       => 'inline_query',
+					'skip_dispatch' => true,
+					'code'          => 'telepilot_inline_query_failed',
+				)
+			);
+		}
+
+		$result_count = isset( $payload['results'] ) && is_array( $payload['results'] ) ? count( $payload['results'] ) : 0;
+
+		$this->update_diagnostics(
+			array(
+				'last_inline_query_at'        => time(),
+				'last_inline_query_status'    => 'success',
+				'last_inline_query_error'     => '',
+				'last_inline_query_transport' => $transport,
+				'last_inline_query_text'      => isset( $update['inline_query']['query'] ) ? sanitize_text_field( (string) $update['inline_query']['query'] ) : '',
+				'last_inline_query_results'   => $result_count,
+				'last_inline_query_context'   => isset( $payload['context'] ) ? (string) $payload['context'] : '',
+			),
+			array(
+				'inline_queries_processed' => 1,
+			)
+		);
+
+		Telepilot_Audit_Log_Repository::log(
+			array(
+				'wp_user_id'       => ! empty( $identity['wp_user'] ) && $identity['wp_user'] instanceof WP_User ? $identity['wp_user']->ID : null,
+				'telegram_user_id' => ! empty( $identity['telegram_user_id'] ) ? $identity['telegram_user_id'] : null,
+				'chat_id'          => ! empty( $identity['chat_id'] ) ? $identity['chat_id'] : null,
+				'action_name'      => 'telegram_inline_query_answered',
+				'resource_type'    => 'telegram_inline_query',
+				'resource_id'      => isset( $update['update_id'] ) ? (string) $update['update_id'] : null,
+				'after_state'      => array(
+					'result_count' => $result_count,
+					'context'      => isset( $payload['context'] ) ? (string) $payload['context'] : '',
+				),
+				'context'          => array(
+					'query'     => isset( $update['inline_query']['query'] ) ? (string) $update['inline_query']['query'] : '',
+					'chat_type' => isset( $update['inline_query']['chat_type'] ) ? (string) $update['inline_query']['chat_type'] : '',
+				),
+			)
+		);
+
+		$this->mark_update_processed( $update, $transport, 'inline_answered' );
+
+		return Telepilot_Telegram_Response_Builder::success(
+			__( 'Inline query answered.', 'wp-telepilot' ),
+			array(
+				'command'       => 'inline_query',
+				'skip_dispatch' => true,
+			)
+		);
+	}
+
+	private function record_chosen_inline_result( $identity, $update, $transport ) {
+		$chosen = ! empty( $update['chosen_inline_result'] ) && is_array( $update['chosen_inline_result'] ) ? $update['chosen_inline_result'] : array();
+
+		$this->update_diagnostics(
+			array(
+				'last_chosen_inline_result_at'        => time(),
+				'last_chosen_inline_result_id'        => isset( $chosen['result_id'] ) ? sanitize_text_field( (string) $chosen['result_id'] ) : '',
+				'last_chosen_inline_result_query'     => isset( $chosen['query'] ) ? sanitize_text_field( (string) $chosen['query'] ) : '',
+				'last_chosen_inline_result_transport' => $transport,
+			),
+			array(
+				'chosen_inline_results' => 1,
+			)
+		);
+
+		Telepilot_Audit_Log_Repository::log(
+			array(
+				'wp_user_id'       => ! empty( $identity['wp_user'] ) && $identity['wp_user'] instanceof WP_User ? $identity['wp_user']->ID : null,
+				'telegram_user_id' => ! empty( $identity['telegram_user_id'] ) ? $identity['telegram_user_id'] : null,
+				'chat_id'          => ! empty( $identity['chat_id'] ) ? $identity['chat_id'] : null,
+				'action_name'      => 'telegram_inline_result_chosen',
+				'resource_type'    => 'telegram_inline_query',
+				'resource_id'      => isset( $chosen['result_id'] ) ? (string) $chosen['result_id'] : null,
+				'after_state'      => array(
+					'inline_message_id' => isset( $chosen['inline_message_id'] ) ? (string) $chosen['inline_message_id'] : '',
+				),
+				'context'          => array(
+					'query'     => isset( $chosen['query'] ) ? (string) $chosen['query'] : '',
+					'transport' => $transport,
+				),
+			)
+		);
 	}
 
 	private function send_processing_placeholder( $update, $command ) {
@@ -1224,11 +1409,23 @@ class Telepilot_Telegram_Service {
 	}
 
 	private function record_transport_activity( $transport, $update ) {
+		$last_message = '';
+
+		if ( isset( $update['message']['text'] ) ) {
+			$last_message = sanitize_text_field( (string) $update['message']['text'] );
+		} elseif ( isset( $update['callback_query']['data'] ) ) {
+			$last_message = sanitize_text_field( (string) $update['callback_query']['data'] );
+		} elseif ( array_key_exists( 'query', (array) ( ! empty( $update['inline_query'] ) ? $update['inline_query'] : array() ) ) ) {
+			$last_message = sanitize_text_field( (string) $update['inline_query']['query'] );
+		} elseif ( array_key_exists( 'query', (array) ( ! empty( $update['chosen_inline_result'] ) ? $update['chosen_inline_result'] : array() ) ) ) {
+			$last_message = sanitize_text_field( (string) $update['chosen_inline_result']['query'] );
+		}
+
 		$data = array(
 			'last_transport'      => $transport,
 			'last_processed_at'   => time(),
 			'last_update_id'      => isset( $update['update_id'] ) ? (int) $update['update_id'] : 0,
-			'last_update_message' => isset( $update['message']['text'] ) ? sanitize_text_field( $update['message']['text'] ) : ( isset( $update['callback_query']['data'] ) ? sanitize_text_field( $update['callback_query']['data'] ) : '' ),
+			'last_update_message' => $last_message,
 		);
 
 		if ( 'webhook' === $transport ) {

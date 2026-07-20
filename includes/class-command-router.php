@@ -39,6 +39,11 @@ class Telepilot_Command_Router {
 
 	public function route( $update, $identity ) {
 		$command = $this->parse_command( $update );
+		$pending = $this->maybe_handle_pending_post_creation( $command, $update, $identity );
+
+		if ( is_array( $pending ) ) {
+			return $pending;
+		}
 
 		if ( empty( $command['name'] ) ) {
 			return Telepilot_Telegram_Response_Builder::success(
@@ -89,6 +94,9 @@ class Telepilot_Command_Router {
 
 			case 'tp:post':
 				return $this->handle_post_callback( $command, $identity );
+
+			case 'tp:postflow':
+				return $this->handle_post_flow_callback( $command, $identity );
 
 			case '/pages':
 				return $this->handle_pages( $command, $identity );
@@ -237,6 +245,7 @@ class Telepilot_Command_Router {
 				$commands[] = Telepilot_Telegram_Response_Builder::code( '/comments pending' );
 			}
 			if ( $this->permission_service->user_can( $identity['wp_user'], 'edit_posts' ) ) {
+				$commands[] = Telepilot_Telegram_Response_Builder::code( '/posts new' ) . ' ' . __( 'Start a guided draft flow', 'wp-telepilot' );
 				$commands[] = Telepilot_Telegram_Response_Builder::code( '/posts list' );
 				$commands[] = Telepilot_Telegram_Response_Builder::code( '/posts search keyword' );
 				$commands[] = Telepilot_Telegram_Response_Builder::code( '/posts open 123' );
@@ -267,6 +276,7 @@ class Telepilot_Command_Router {
 			}
 			if ( $this->permission_service->user_can( $identity['wp_user'], 'manage_categories' ) ) {
 				$commands[] = Telepilot_Telegram_Response_Builder::code( '/categories list' );
+				$commands[] = Telepilot_Telegram_Response_Builder::code( '/categories post 12' ) . ' ' . __( 'Start a post in a category', 'wp-telepilot' );
 				$commands[] = Telepilot_Telegram_Response_Builder::code( '/categories search keyword' );
 				$commands[] = Telepilot_Telegram_Response_Builder::code( '/tags list' );
 				$commands[] = Telepilot_Telegram_Response_Builder::code( '/tags search keyword' );
@@ -908,7 +918,12 @@ class Telepilot_Command_Router {
 				$this->posts_service->render_help_message(),
 				array(
 					'command'      => '/posts',
-				'reply_markup' => $this->safe_home_keyboard( $identity ),
+					'reply_markup' => $this->safe_reply_markup(
+						function() {
+							return $this->posts_service->build_hub_keyboard();
+						},
+						'posts_help'
+					),
 				)
 			);
 		}
@@ -987,12 +1002,17 @@ class Telepilot_Command_Router {
 				$this->posts_service->render_stats_message( $this->posts_service->stats() ),
 				array(
 					'command'      => '/posts',
-				'reply_markup' => $this->safe_home_keyboard( $identity ),
+					'reply_markup' => $this->safe_reply_markup(
+						function() {
+							return $this->posts_service->build_hub_keyboard();
+						},
+						'posts_stats'
+					),
 				)
 			);
 		}
 
-		if ( 'create' === $subcommand ) {
+		if ( in_array( $subcommand, array( 'create', 'new' ), true ) ) {
 			$private_chat_result = $this->require_private_action( $identity );
 			if ( true !== $private_chat_result ) {
 				return $private_chat_result;
@@ -1000,35 +1020,24 @@ class Telepilot_Command_Router {
 
 			$title = implode( ' ', array_slice( $args, 1 ) );
 			if ( '' === trim( $title ) ) {
-				return Telepilot_Telegram_Response_Builder::error_html(
-					Telepilot_Telegram_Response_Builder::bold( __( 'Create Post', 'wp-telepilot' ) ) . "\n\n" .
-					__( 'Usage:', 'wp-telepilot' ) . ' ' . Telepilot_Telegram_Response_Builder::code( '/posts create My draft title' )
-				);
+				return $this->start_pending_post_creation( $identity );
 			}
 
-			$result = $this->posts_service->create_draft( $title );
-			if ( is_wp_error( $result ) ) {
-				return Telepilot_Telegram_Response_Builder::error( $result->get_error_message() );
-			}
-
-			$this->log_content_action( $identity, 'post_created', 'post', $result['post']->ID, 'create', $result );
-
-			return Telepilot_Telegram_Response_Builder::success_html(
-				Telepilot_Telegram_Response_Builder::bold( __( 'Post Created', 'wp-telepilot' ) ) .
-				"\n\n" .
-				sprintf( __( 'Post: [%1$d] %2$s', 'wp-telepilot' ), $result['post']->ID, Telepilot_Telegram_Response_Builder::escape( get_the_title( $result['post'] ) ) ) .
-				"\n" .
-				sprintf( __( 'Status: %s', 'wp-telepilot' ), Telepilot_Telegram_Response_Builder::escape( $result['post']->post_status ) ),
-				array( 'command' => '/posts' )
-			);
+			return $this->create_post_and_open_category_picker( $identity, $title, array() );
 		}
 
 		$post_id = ! empty( $args[1] ) ? absint( $args[1] ) : 0;
 		if ( ! $post_id ) {
-			return Telepilot_Telegram_Response_Builder::error_html(
+			return Telepilot_Telegram_Response_Builder::success_html(
 				$this->posts_service->render_help_message(),
 				array(
-					'command' => '/posts',
+					'command'      => '/posts',
+					'reply_markup' => $this->safe_reply_markup(
+						function() {
+							return $this->posts_service->build_hub_keyboard();
+						},
+						'posts_default'
+					),
 				)
 			);
 		}
@@ -1198,6 +1207,10 @@ class Telepilot_Command_Router {
 				return $permission_result;
 			}
 
+			if ( 'categories' === $subcommand && ( ! isset( $args[2] ) || '' === trim( (string) $args[2] ) ) ) {
+				return $this->open_post_category_picker( $post_id, $identity );
+			}
+
 			$term_ids = $this->parse_id_list( isset( $args[2] ) ? (string) $args[2] : '' );
 			if ( empty( $term_ids ) && 'none' !== strtolower( isset( $args[2] ) ? (string) $args[2] : '' ) ) {
 				return Telepilot_Telegram_Response_Builder::error(
@@ -1309,7 +1322,12 @@ class Telepilot_Command_Router {
 			'/posts',
 			$subcommand,
 			$this->posts_service->render_help_message(),
-			$this->safe_home_keyboard( $identity )
+			$this->safe_reply_markup(
+				function() {
+					return $this->posts_service->build_hub_keyboard();
+				},
+				'posts_invalid'
+			)
 		);
 	}
 
@@ -1367,6 +1385,284 @@ class Telepilot_Command_Router {
 			sprintf( __( 'Post #%1$d has been %2$s.', 'wp-telepilot' ), $post_id, $result['label'] ),
 			array( 'command' => '/posts' )
 		);
+	}
+
+	private function handle_post_flow_callback( $command, $identity ) {
+		$private_chat_result = $this->require_private_action( $identity );
+		if ( true !== $private_chat_result ) {
+			return $private_chat_result;
+		}
+
+		$action       = isset( $command['args'][0] ) ? (string) $command['args'][0] : '';
+		$state_token  = isset( $command['args'][1] ) ? (string) $command['args'][1] : '';
+		$flow_service = $this->get_flow_state_service();
+		$state        = $flow_service->get_flow( $state_token );
+
+		if ( empty( $state ) || empty( $identity['telegram_user_id'] ) || (string) $state['telegram_user_id'] !== (string) $identity['telegram_user_id'] ) {
+			return Telepilot_Telegram_Response_Builder::error( __( 'That post category selection is invalid or expired.', 'wp-telepilot' ) );
+		}
+
+		$post_id = ! empty( $state['post_id'] ) ? absint( $state['post_id'] ) : 0;
+		if ( ! $post_id ) {
+			$flow_service->delete_flow( $state_token );
+
+			return Telepilot_Telegram_Response_Builder::error( __( 'That post category selection is incomplete.', 'wp-telepilot' ) );
+		}
+
+		$permission_result = $this->permission_service->require_capability( $identity, 'edit_post', $post_id );
+		if ( true !== $permission_result ) {
+			return $permission_result;
+		}
+
+		$selected_ids = ! empty( $state['selected_ids'] ) ? array_values( array_filter( array_map( 'absint', (array) $state['selected_ids'] ) ) ) : array();
+		$page         = isset( $command['args'][3] ) ? max( 1, absint( $command['args'][3] ) ) : 1;
+
+		switch ( $action ) {
+			case 'togglecat':
+				$term_id = isset( $command['args'][2] ) ? absint( $command['args'][2] ) : 0;
+				if ( $term_id ) {
+					$selected_ids = $this->toggle_id_in_list( $selected_ids, $term_id );
+				}
+
+				$state['selected_ids'] = $selected_ids;
+				$flow_service->update_flow( $state_token, $state );
+
+				return $this->render_post_category_picker_state( $state_token, $state, $page );
+
+			case 'pagecat':
+				$page = isset( $command['args'][2] ) ? max( 1, absint( $command['args'][2] ) ) : 1;
+				$flow_service->update_flow( $state_token, $state );
+
+				return $this->render_post_category_picker_state( $state_token, $state, $page );
+
+			case 'clearcat':
+				$page                 = isset( $command['args'][2] ) ? max( 1, absint( $command['args'][2] ) ) : 1;
+				$state['selected_ids'] = array();
+				$flow_service->update_flow( $state_token, $state );
+
+				return $this->render_post_category_picker_state( $state_token, $state, $page );
+
+			case 'applycat':
+				$result = $this->posts_service->assign_terms( $post_id, 'category', $selected_ids );
+				if ( is_wp_error( $result ) ) {
+					return Telepilot_Telegram_Response_Builder::error( $result->get_error_message() );
+				}
+
+				$flow_service->delete_flow( $state_token );
+				$this->log_content_action( $identity, 'post_updated', 'post', $post_id, 'categories', $result );
+
+				return Telepilot_Telegram_Response_Builder::success_html(
+					$this->posts_service->render_post_categories_saved_message(
+						$result['post'],
+						isset( $result['after_state']['category'] ) ? $result['after_state']['category'] : array()
+					),
+					array(
+						'command'      => '/posts',
+						'reply_markup' => $this->safe_reply_markup(
+							function() use ( $result ) {
+								return $this->posts_service->build_post_followup_keyboard( $result['post'] );
+							},
+							'post_categories_saved'
+						),
+					)
+				);
+
+			case 'cancelcat':
+				$flow_service->delete_flow( $state_token );
+				$post = get_post( $post_id );
+
+				return Telepilot_Telegram_Response_Builder::success_html(
+					Telepilot_Telegram_Response_Builder::join_blocks(
+						array(
+							Telepilot_Telegram_Response_Builder::bold( __( 'Category Selection Closed', 'wp-telepilot' ) ),
+							sprintf( __( 'No category changes were saved for post [%d].', 'wp-telepilot' ), $post_id ),
+						)
+					),
+					array(
+						'command'      => '/posts',
+						'reply_markup' => $this->safe_reply_markup(
+							function() use ( $post ) {
+								return $this->posts_service->build_post_followup_keyboard( $post );
+							},
+							'post_categories_cancelled'
+						),
+					)
+				);
+		}
+
+		return Telepilot_Telegram_Response_Builder::error( __( 'That post category action is not supported.', 'wp-telepilot' ) );
+	}
+
+	private function start_pending_post_creation( $identity, $category_ids = array() ) {
+		$flow_service      = $this->get_flow_state_service();
+		$category_ids      = array_values( array_filter( array_map( 'absint', (array) $category_ids ) ) );
+		$primary_category  = ! empty( $category_ids ) ? get_term( $category_ids[0], 'category' ) : null;
+		$pending_started   = $flow_service->start_pending_post(
+			$identity['telegram_user_id'],
+			array(
+				'chat_id'       => ! empty( $identity['chat_id'] ) ? (string) $identity['chat_id'] : '',
+				'wp_user_id'    => $identity['wp_user']->ID,
+				'category_ids'  => $category_ids,
+				'started_at'    => time(),
+			)
+		);
+
+		if ( ! $pending_started ) {
+			return Telepilot_Telegram_Response_Builder::error( __( 'WP Telepilot could not start that post creation flow.', 'wp-telepilot' ) );
+		}
+
+		return Telepilot_Telegram_Response_Builder::success_html(
+			$this->posts_service->render_creation_prompt_message( $primary_category instanceof WP_Term ? $primary_category : null ),
+			array(
+				'command'      => '/posts',
+				'reply_markup' => $this->safe_reply_markup(
+					function() {
+						return $this->posts_service->build_hub_keyboard();
+					},
+					'post_create_prompt'
+				),
+			)
+		);
+	}
+
+	private function maybe_handle_pending_post_creation( $command, $update, $identity ) {
+		if ( empty( $identity['telegram_user_id'] ) ) {
+			return null;
+		}
+
+		$flow_service = $this->get_flow_state_service();
+		$pending      = $flow_service->get_pending_post( $identity['telegram_user_id'] );
+
+		if ( empty( $pending ) ) {
+			return null;
+		}
+
+		if ( ! empty( $command['name'] ) && '/' === substr( (string) $command['name'], 0, 1 ) ) {
+			$flow_service->clear_pending_post( $identity['telegram_user_id'] );
+
+			return null;
+		}
+
+		if ( empty( $identity['wp_user'] ) || ! $identity['wp_user'] instanceof WP_User ) {
+			$flow_service->clear_pending_post( $identity['telegram_user_id'] );
+
+			return Telepilot_Telegram_Response_Builder::error( __( 'This post creation flow is no longer linked to a WordPress user.', 'wp-telepilot' ) );
+		}
+
+		$private_chat_result = $this->require_private_action( $identity );
+		if ( true !== $private_chat_result ) {
+			return $private_chat_result;
+		}
+
+		if ( ! empty( $pending['chat_id'] ) && (string) $pending['chat_id'] !== (string) $identity['chat_id'] ) {
+			$flow_service->clear_pending_post( $identity['telegram_user_id'] );
+
+			return Telepilot_Telegram_Response_Builder::error( __( 'This post creation flow belongs to a different chat. Start it again from the current conversation.', 'wp-telepilot' ) );
+		}
+
+		if ( ! empty( $pending['wp_user_id'] ) && (int) $pending['wp_user_id'] !== (int) $identity['wp_user']->ID ) {
+			$flow_service->clear_pending_post( $identity['telegram_user_id'] );
+
+			return Telepilot_Telegram_Response_Builder::error( __( 'This post creation flow no longer matches the linked WordPress account.', 'wp-telepilot' ) );
+		}
+
+		$title = isset( $update['message']['text'] ) ? trim( wp_strip_all_tags( (string) $update['message']['text'] ) ) : '';
+		if ( '' === $title ) {
+			return null;
+		}
+
+		$flow_service->clear_pending_post( $identity['telegram_user_id'] );
+
+		return $this->create_post_and_open_category_picker(
+			$identity,
+			$title,
+			! empty( $pending['category_ids'] ) ? (array) $pending['category_ids'] : array()
+		);
+	}
+
+	private function create_post_and_open_category_picker( $identity, $title, $category_ids ) {
+		$result = $this->posts_service->create_draft( $title, $category_ids );
+		if ( is_wp_error( $result ) ) {
+			return Telepilot_Telegram_Response_Builder::error( $result->get_error_message() );
+		}
+
+		$this->log_content_action( $identity, 'post_created', 'post', $result['post']->ID, 'create', $result );
+
+		return $this->open_post_category_picker(
+			$result['post']->ID,
+			$identity,
+			isset( $result['after_state']['category'] ) ? (array) $result['after_state']['category'] : array()
+		);
+	}
+
+	private function open_post_category_picker( $post_id, $identity, $selected_ids = null ) {
+		$post = get_post( $post_id );
+		if ( ! $post || 'post' !== $post->post_type ) {
+			return Telepilot_Telegram_Response_Builder::error( __( 'Post not found.', 'wp-telepilot' ) );
+		}
+
+		$flow_service = $this->get_flow_state_service();
+		if ( null === $selected_ids ) {
+			$selected_ids = $this->posts_service->get_assigned_term_ids( $post_id, 'category' );
+		}
+
+		$state = array(
+			'post_id'          => $post_id,
+			'telegram_user_id' => (string) $identity['telegram_user_id'],
+			'selected_ids'     => array_values( array_filter( array_map( 'absint', (array) $selected_ids ) ) ),
+			'opened_at'        => time(),
+		);
+
+		$token = $flow_service->create_flow( $state );
+		if ( '' === $token ) {
+			return Telepilot_Telegram_Response_Builder::error( __( 'WP Telepilot could not open that category picker.', 'wp-telepilot' ) );
+		}
+
+		return $this->render_post_category_picker_state( $token, $state, 1 );
+	}
+
+	private function render_post_category_picker_state( $state_token, $state, $page ) {
+		$post_id            = ! empty( $state['post_id'] ) ? absint( $state['post_id'] ) : 0;
+		$selected_ids       = ! empty( $state['selected_ids'] ) ? array_values( array_filter( array_map( 'absint', (array) $state['selected_ids'] ) ) ) : array();
+		$post               = get_post( $post_id );
+		$categories_result  = $this->taxonomies_service->list_terms( 'category', $page );
+
+		if ( is_wp_error( $categories_result ) ) {
+			return Telepilot_Telegram_Response_Builder::error( $categories_result->get_error_message() );
+		}
+
+		return Telepilot_Telegram_Response_Builder::success_html(
+			$this->posts_service->render_category_picker_message( $post, $categories_result, $selected_ids ),
+			array(
+				'command'      => '/posts',
+				'reply_markup' => $this->safe_reply_markup(
+					function() use ( $state_token, $categories_result, $selected_ids, $post ) {
+						return $this->posts_service->build_category_picker_keyboard( $state_token, $categories_result, $selected_ids, $post );
+					},
+					'post_category_picker'
+				),
+			)
+		);
+	}
+
+	private function toggle_id_in_list( $ids, $target_id ) {
+		$ids       = array_values( array_filter( array_map( 'absint', (array) $ids ) ) );
+		$target_id = absint( $target_id );
+
+		if ( ! $target_id ) {
+			return $ids;
+		}
+
+		$existing_key = array_search( $target_id, $ids, true );
+		if ( false !== $existing_key ) {
+			unset( $ids[ $existing_key ] );
+
+			return array_values( $ids );
+		}
+
+		$ids[] = $target_id;
+
+		return array_values( array_unique( $ids ) );
 	}
 
 	private function handle_pages( $command, $identity ) {
@@ -2842,8 +3138,8 @@ class Telepilot_Command_Router {
 				array(
 					'command'      => '/' . $resource,
 					'reply_markup' => $this->safe_reply_markup(
-						function() use ( $resource, $result ) {
-							return $this->taxonomies_service->build_terms_keyboard( $resource, $result );
+						function() use ( $resource, $result, $identity ) {
+							return $this->taxonomies_service->build_terms_keyboard( $resource, $result, 'categories' === $resource && $this->permission_service->user_can( $identity['wp_user'], 'edit_posts' ) );
 						},
 						'terms_list'
 					),
@@ -2867,8 +3163,8 @@ class Telepilot_Command_Router {
 				array(
 					'command'      => '/' . $resource,
 					'reply_markup' => $this->safe_reply_markup(
-						function() use ( $resource, $result ) {
-							return $this->taxonomies_service->build_terms_keyboard( $resource, $result );
+						function() use ( $resource, $result, $identity ) {
+							return $this->taxonomies_service->build_terms_keyboard( $resource, $result, 'categories' === $resource && $this->permission_service->user_can( $identity['wp_user'], 'edit_posts' ) );
 						},
 						'terms_search'
 					),
@@ -2889,7 +3185,7 @@ class Telepilot_Command_Router {
 				array(
 					'command'      => '/' . $resource,
 					'reply_markup' => $this->safe_reply_markup(
-						function() use ( $resource, $term ) {
+						function() use ( $resource, $term, $identity ) {
 							return $this->taxonomies_service->build_terms_keyboard(
 								$resource,
 								array(
@@ -2897,13 +3193,42 @@ class Telepilot_Command_Router {
 									'page'        => 1,
 									'total_pages' => 1,
 									'search'      => '',
-								)
+								),
+								'categories' === $resource && $this->permission_service->user_can( $identity['wp_user'], 'edit_posts' )
 							);
 						},
 						'term_details'
 					),
 				)
 			);
+		}
+
+		if ( 'post' === $subcommand && 'categories' === $resource ) {
+			$private_chat_result = $this->require_private_action( $identity );
+			if ( true !== $private_chat_result ) {
+				return $private_chat_result;
+			}
+
+			$edit_posts_result = $this->permission_service->require_capability( $identity, 'edit_posts' );
+			if ( true !== $edit_posts_result ) {
+				return $edit_posts_result;
+			}
+
+			if ( ! $term_id ) {
+				return Telepilot_Telegram_Response_Builder::error( __( 'Usage: `/categories post 12` or `/categories post 12 My draft title`', 'wp-telepilot' ) );
+			}
+
+			$term = $this->taxonomies_service->get_term_details( $taxonomy, $term_id );
+			if ( is_wp_error( $term ) ) {
+				return Telepilot_Telegram_Response_Builder::error( $term->get_error_message() );
+			}
+
+			$title = implode( ' ', array_slice( $args, 2 ) );
+			if ( '' === trim( $title ) ) {
+				return $this->start_pending_post_creation( $identity, array( $term_id ) );
+			}
+
+			return $this->create_post_and_open_category_picker( $identity, $title, array( $term_id ) );
 		}
 
 		if ( 'create' === $subcommand ) {
@@ -3278,6 +3603,10 @@ class Telepilot_Command_Router {
 		return $this->permission_service->require_private_chat( $identity );
 	}
 
+	private function get_flow_state_service() {
+		return new Telepilot_Flow_State_Service();
+	}
+
 	private function safe_reply_markup( $callback, $context = '' ) {
 		try {
 			$markup = is_callable( $callback ) ? call_user_func( $callback ) : array();
@@ -3353,6 +3682,19 @@ class Telepilot_Command_Router {
 			}
 			if ( ! empty( $content_row ) ) {
 				$rows[] = $content_row;
+			}
+
+			if ( $this->permission_service->user_can( $identity['wp_user'], 'edit_posts' ) ) {
+				$rows[] = array(
+					array(
+						'text'          => Telepilot_Telegram_Response_Builder::label( 'posts', __( 'New Post', 'wp-telepilot' ) ),
+						'callback_data' => '/posts new',
+					),
+					array(
+						'text'          => Telepilot_Telegram_Response_Builder::label( 'draft', __( 'Drafts', 'wp-telepilot' ) ),
+						'callback_data' => '/posts drafts',
+					),
+				);
 			}
 
 			$editorial_row = array();

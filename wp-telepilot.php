@@ -34,6 +34,7 @@ require_once TELEPILOT_PATH . 'includes/class-linked-user-resolver.php';
 require_once TELEPILOT_PATH . 'includes/class-permission-service.php';
 require_once TELEPILOT_PATH . 'includes/class-rate-limiter.php';
 require_once TELEPILOT_PATH . 'includes/class-confirmation-service.php';
+require_once TELEPILOT_PATH . 'includes/class-flow-state-service.php';
 require_once TELEPILOT_PATH . 'includes/class-dashboard-service.php';
 require_once TELEPILOT_PATH . 'includes/class-comments-service.php';
 require_once TELEPILOT_PATH . 'includes/class-posts-service.php';

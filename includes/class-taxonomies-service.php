@@ -121,6 +121,7 @@ class Telepilot_Taxonomies_Service {
 
 		if ( 'categories' === $resource ) {
 			$lines[] = Telepilot_Telegram_Response_Builder::code( '/categories parent 12 3' ) . ' ' . __( 'Assign a parent category, or use `none` to clear it', 'wp-telepilot' );
+			$lines[] = Telepilot_Telegram_Response_Builder::code( '/categories post 12' ) . ' ' . __( 'Start a new post in a category', 'wp-telepilot' );
 		}
 
 		$lines[] = Telepilot_Telegram_Response_Builder::code( '/' . $resource . ' delete 12' ) . ' ' . sprintf( __( 'Delete a %s after confirmation', 'wp-telepilot' ), $singular );
@@ -293,21 +294,31 @@ class Telepilot_Taxonomies_Service {
 		return $term;
 	}
 
-	public function build_terms_keyboard( $resource, $result ) {
+	public function build_terms_keyboard( $resource, $result, $allow_post_creation = false ) {
 		$rows     = array();
 		$resource = $this->normalize_resource( $resource );
 
 		foreach ( $result['items'] as $term ) {
-			$rows[] = array(
+			$row = array(
 				array(
 					'text'          => Telepilot_Telegram_Response_Builder::label( 'details', sprintf( __( 'Details [%d]', 'wp-telepilot' ), $term->term_id ) ),
 					'callback_data' => '/' . $resource . ' details ' . (int) $term->term_id,
 				),
-				array(
-					'text'          => Telepilot_Telegram_Response_Builder::label( 'delete', sprintf( __( 'Delete [%d]', 'wp-telepilot' ), $term->term_id ) ),
-					'callback_data' => '/' . $resource . ' delete ' . (int) $term->term_id,
-				),
 			);
+
+			if ( $allow_post_creation && 'categories' === $resource ) {
+				$row[] = array(
+					'text'          => Telepilot_Telegram_Response_Builder::label( 'posts', sprintf( __( 'New Post [%d]', 'wp-telepilot' ), $term->term_id ) ),
+					'callback_data' => '/categories post ' . (int) $term->term_id,
+				);
+			}
+
+			$row[] = array(
+				'text'          => Telepilot_Telegram_Response_Builder::label( 'delete', sprintf( __( 'Delete [%d]', 'wp-telepilot' ), $term->term_id ) ),
+				'callback_data' => '/' . $resource . ' delete ' . (int) $term->term_id,
+			);
+
+			$rows[] = $row;
 		}
 
 		$pagination = $this->build_pagination_row( $resource, $result );

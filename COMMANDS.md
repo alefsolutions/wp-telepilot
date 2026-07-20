@@ -364,12 +364,19 @@ Each command below includes:
 - Example: `/posts stats`
 - Behavior: shows post counts by status.
 
+### `/posts new`
+
+- Scope: posts
+- Syntax: `/posts new`
+- Example: `/posts new`
+- Behavior: starts a guided draft-creation flow and asks for the title in chat.
+
 ### `/posts create TITLE`
 
 - Scope: posts
 - Syntax: `/posts create TITLE`
 - Example: `/posts create Launch checklist`
-- Behavior: creates a new draft post.
+- Behavior: creates a new draft post immediately. If no title is supplied, WP Telepilot prompts for one in chat.
 
 ### `/posts title POST_ID NEW_TITLE`
 
@@ -384,6 +391,13 @@ Each command below includes:
 - Syntax: `/posts excerpt POST_ID NEW_EXCERPT`
 - Example: `/posts excerpt 321 Short launch summary`
 - Behavior: updates the post excerpt.
+
+### `/posts categories POST_ID`
+
+- Scope: posts
+- Syntax: `/posts categories POST_ID`
+- Example: `/posts categories 321`
+- Behavior: opens an inline category checklist so you can toggle category assignments for the post.
 
 ### `/posts categories POST_ID ID_LIST`
 
@@ -877,6 +891,20 @@ Each command below includes:
 - Syntax: `/categories parent TERM_ID PARENT_ID|none`
 - Example: `/categories parent 12 3`
 - Behavior: assigns or clears a category parent immediately.
+
+### `/categories post TERM_ID`
+
+- Scope: categories
+- Syntax: `/categories post TERM_ID`
+- Example: `/categories post 12`
+- Behavior: starts a guided draft-creation flow with the selected category preassigned.
+
+### `/categories post TERM_ID TITLE`
+
+- Scope: categories
+- Syntax: `/categories post TERM_ID TITLE`
+- Example: `/categories post 12 Editorial rollout checklist`
+- Behavior: creates a new draft immediately with the chosen category preassigned, then opens the category checklist for refinement.
 
 ### `/categories delete TERM_ID`
 

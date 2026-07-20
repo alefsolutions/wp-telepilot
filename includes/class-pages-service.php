@@ -111,6 +111,8 @@ class Telepilot_Pages_Service {
 		return Telepilot_Telegram_Response_Builder::join_blocks(
 			array(
 				Telepilot_Telegram_Response_Builder::bold( Telepilot_Telegram_Response_Builder::label( 'pages', __( 'Pages Commands', 'wp-telepilot' ) ) ),
+				Telepilot_Telegram_Response_Builder::code( '/pages new' ) . ' ' . __( 'Start a guided draft page flow', 'wp-telepilot' ),
+				Telepilot_Telegram_Response_Builder::code( '/pages create About us' ) . ' ' . __( 'Create a new draft page immediately', 'wp-telepilot' ),
 				Telepilot_Telegram_Response_Builder::code( '/pages list' ) . ' ' . __( 'Show recent pages', 'wp-telepilot' ),
 				Telepilot_Telegram_Response_Builder::code( '/pages latest' ) . ' ' . __( 'Alias for the recent pages list', 'wp-telepilot' ),
 				Telepilot_Telegram_Response_Builder::code( '/pages drafts' ) . ' ' . __( 'Show draft pages only', 'wp-telepilot' ),
@@ -125,6 +127,7 @@ class Telepilot_Pages_Service {
 				Telepilot_Telegram_Response_Builder::code( '/pages trash 123' ) . ' ' . __( 'Trash a page', 'wp-telepilot' ),
 				Telepilot_Telegram_Response_Builder::code( '/pages restore 123' ) . ' ' . __( 'Restore a trashed page', 'wp-telepilot' ),
 				Telepilot_Telegram_Response_Builder::code( '/pages delete 123' ) . ' ' . __( 'Permanently delete a page after confirmation', 'wp-telepilot' ),
+				Telepilot_Telegram_Response_Builder::italic( __( 'Page creation keeps the title first. Optional fields like slug and status can be set later after the draft exists.', 'wp-telepilot' ) ),
 				Telepilot_Telegram_Response_Builder::italic( __( 'Published pages can be previewed directly from Telegram. Drafts are linked to wp-admin because browser preview for drafts normally requires WordPress authentication.', 'wp-telepilot' ) ),
 			)
 		);
@@ -159,6 +162,40 @@ class Telepilot_Pages_Service {
 		$blocks[] = $this->describe_access_link( $page );
 
 		return Telepilot_Telegram_Response_Builder::join_blocks( $blocks );
+	}
+
+	public function render_creation_prompt_message() {
+		return Telepilot_Telegram_Response_Builder::join_blocks(
+			array(
+				Telepilot_Telegram_Response_Builder::bold( __( 'New Page', 'wp-telepilot' ) ),
+				__( 'Send the page title now to create a new draft page.', 'wp-telepilot' ),
+				Telepilot_Telegram_Response_Builder::italic( __( 'Optional fields like slug or status can be set later after the draft exists.', 'wp-telepilot' ) ),
+			)
+		);
+	}
+
+	public function render_page_created_message( $page ) {
+		if ( ! ( $page instanceof WP_Post ) ) {
+			return Telepilot_Telegram_Response_Builder::bold( __( 'Page Created', 'wp-telepilot' ) );
+		}
+
+		$title = get_the_title( $page );
+		$title = '' !== (string) $title ? $title : __( 'Untitled page', 'wp-telepilot' );
+
+		return Telepilot_Telegram_Response_Builder::join_blocks(
+			array(
+				Telepilot_Telegram_Response_Builder::bold( __( 'Page Created', 'wp-telepilot' ) ),
+				implode(
+					"\n",
+					array(
+						sprintf( __( 'Page: [%1$d] %2$s', 'wp-telepilot' ), $page->ID, Telepilot_Telegram_Response_Builder::escape( $title ) ),
+						sprintf( __( 'Status: %s', 'wp-telepilot' ), Telepilot_Telegram_Response_Builder::escape( $this->humanize_status( $page->post_status ) ) ),
+						sprintf( __( 'Slug: %s', 'wp-telepilot' ), Telepilot_Telegram_Response_Builder::escape( $page->post_name ) ),
+					)
+				),
+				Telepilot_Telegram_Response_Builder::italic( __( 'Next steps: review details, change slug or status if needed, and publish when ready.', 'wp-telepilot' ) ),
+			)
+		);
 	}
 
 	public function create_page( $title ) {

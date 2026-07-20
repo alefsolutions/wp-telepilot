@@ -7,6 +7,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 class Telepilot_Flow_State_Service {
 	const FLOW_PREFIX         = 'telepilot_flow_';
 	const PENDING_POST_PREFIX = 'telepilot_pending_post_';
+	const PENDING_PAGE_PREFIX = 'telepilot_pending_page_';
 
 	public function create_flow( $payload, $expiration = 900, $token = '' ) {
 		$token = '' !== (string) $token ? $this->normalize_token( $token ) : $this->generate_token();
@@ -92,6 +93,41 @@ class Telepilot_Flow_State_Service {
 		}
 
 		return delete_transient( self::PENDING_POST_PREFIX . $user_key );
+	}
+
+	public function start_pending_page( $telegram_user_id, $payload, $expiration = 900 ) {
+		$user_key = $this->normalize_user_key( $telegram_user_id );
+		if ( '' === $user_key ) {
+			return false;
+		}
+
+		set_transient(
+			self::PENDING_PAGE_PREFIX . $user_key,
+			(array) $payload,
+			max( 60, absint( $expiration ) )
+		);
+
+		return true;
+	}
+
+	public function get_pending_page( $telegram_user_id ) {
+		$user_key = $this->normalize_user_key( $telegram_user_id );
+		if ( '' === $user_key ) {
+			return null;
+		}
+
+		$payload = get_transient( self::PENDING_PAGE_PREFIX . $user_key );
+
+		return is_array( $payload ) ? $payload : null;
+	}
+
+	public function clear_pending_page( $telegram_user_id ) {
+		$user_key = $this->normalize_user_key( $telegram_user_id );
+		if ( '' === $user_key ) {
+			return false;
+		}
+
+		return delete_transient( self::PENDING_PAGE_PREFIX . $user_key );
 	}
 
 	private function generate_token() {

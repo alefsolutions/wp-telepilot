@@ -293,6 +293,17 @@ class Telepilot_Inline_Query_Service {
 					$this->build_run_result( $resource_key, $resource, $action_key, $action ),
 				);
 
+			case 'run_or_query':
+				if ( '' !== $extra_text ) {
+					return array(
+						$this->build_run_query_result( $resource_key, $resource, $action_key, $action, $parsed ),
+					);
+				}
+
+				return array(
+					$this->build_run_result( $resource_key, $resource, $action_key, $action ),
+				);
+
 			case 'run_query':
 				if ( '' !== $extra_text ) {
 					return array(
@@ -378,7 +389,7 @@ class Telepilot_Inline_Query_Service {
 				'trashed' => array( 'title' => __( 'Trashed', 'wp-telepilot' ), 'description' => __( 'Show trashed posts.', 'wp-telepilot' ), 'next' => __( 'Run the trashed posts view.', 'wp-telepilot' ), 'inline_mode' => 'run' ),
 				'search'  => array( 'title' => __( 'Search', 'wp-telepilot' ), 'description' => __( 'Search posts by keyword.', 'wp-telepilot' ), 'next' => __( 'Next step: type a search keyword.', 'wp-telepilot' ), 'inline_mode' => 'run_query' ),
 				'stats'   => array( 'title' => __( 'Stats', 'wp-telepilot' ), 'description' => __( 'Show post counts by status.', 'wp-telepilot' ), 'next' => __( 'Run the post stats view.', 'wp-telepilot' ), 'inline_mode' => 'run' ),
-				'new'     => array( 'title' => __( 'New', 'wp-telepilot' ), 'description' => __( 'Start guided post creation.', 'wp-telepilot' ), 'next' => __( 'Run the new post flow.', 'wp-telepilot' ), 'inline_mode' => 'run' ),
+				'new'     => array( 'title' => __( 'New', 'wp-telepilot' ), 'description' => __( 'Start guided post creation.', 'wp-telepilot' ), 'next' => __( 'Type a title now or run the guided prompt.', 'wp-telepilot' ), 'inline_mode' => 'run_or_query' ),
 				'open'    => array( 'title' => __( 'Open', 'wp-telepilot' ), 'description' => __( 'Choose a post for secure browser editing.', 'wp-telepilot' ), 'next' => __( 'Next step: choose a post target.', 'wp-telepilot' ), 'inline_mode' => 'target_run' ),
 				'publish' => array( 'title' => __( 'Publish', 'wp-telepilot' ), 'description' => __( 'Choose a post to publish.', 'wp-telepilot' ), 'next' => __( 'Next step: choose a publishable post.', 'wp-telepilot' ), 'inline_mode' => 'target_run' ),
 				'draft'   => array( 'title' => __( 'Draft', 'wp-telepilot' ), 'description' => __( 'Choose a post to move back to draft.', 'wp-telepilot' ), 'next' => __( 'Next step: choose a post target.', 'wp-telepilot' ), 'inline_mode' => 'target_run' ),
@@ -398,7 +409,7 @@ class Telepilot_Inline_Query_Service {
 				'trash'   => array( 'title' => __( 'Trash', 'wp-telepilot' ), 'description' => __( 'Choose a page to move to trash.', 'wp-telepilot' ), 'next' => __( 'Next step: choose a page target.', 'wp-telepilot' ), 'inline_mode' => 'target_run' ),
 				'restore' => array( 'title' => __( 'Restore', 'wp-telepilot' ), 'description' => __( 'Choose a trashed page to restore.', 'wp-telepilot' ), 'next' => __( 'Next step: choose a trashed page.', 'wp-telepilot' ), 'inline_mode' => 'target_run' ),
 				'delete'  => array( 'title' => __( 'Delete', 'wp-telepilot' ), 'description' => __( 'Choose a trashed page to delete permanently.', 'wp-telepilot' ), 'next' => __( 'Next step: choose a trashed page.', 'wp-telepilot' ), 'inline_mode' => 'target_run' ),
-				'new'     => array( 'title' => __( 'New', 'wp-telepilot' ), 'description' => __( 'Guided page creation is planned for the next stage.', 'wp-telepilot' ), 'next' => __( 'This path will open in the next beta stage.', 'wp-telepilot' ), 'inline_mode' => 'guide' ),
+				'new'     => array( 'title' => __( 'New', 'wp-telepilot' ), 'description' => __( 'Start guided page creation.', 'wp-telepilot' ), 'next' => __( 'Type a title now or run the guided prompt.', 'wp-telepilot' ), 'inline_mode' => 'run_or_query' ),
 			),
 			'categories' => array(
 				'list'    => array( 'title' => __( 'List', 'wp-telepilot' ), 'description' => __( 'Show categories.', 'wp-telepilot' ), 'next' => __( 'Run the category list.', 'wp-telepilot' ), 'inline_mode' => 'run' ),

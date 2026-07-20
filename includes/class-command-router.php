@@ -45,6 +45,12 @@ class Telepilot_Command_Router {
 			return $pending;
 		}
 
+		$pending = $this->maybe_handle_pending_page_creation( $command, $update, $identity );
+
+		if ( is_array( $pending ) ) {
+			return $pending;
+		}
+
 		if ( empty( $command['name'] ) ) {
 			return Telepilot_Telegram_Response_Builder::success(
 				__( 'Webhook received. No supported command was detected yet.', 'wp-telepilot' ),
@@ -219,6 +225,7 @@ class Telepilot_Command_Router {
 				$commands[] = Telepilot_Telegram_Response_Builder::code( '/posts help' ) . ' ' . __( 'Show posts examples', 'wp-telepilot' );
 			}
 			if ( $this->permission_service->user_can( $identity['wp_user'], 'edit_pages' ) ) {
+				$commands[] = Telepilot_Telegram_Response_Builder::code( '/pages new' ) . ' ' . __( 'Start a guided draft page flow', 'wp-telepilot' );
 				$commands[] = Telepilot_Telegram_Response_Builder::code( '/pages list' );
 				$commands[] = Telepilot_Telegram_Response_Builder::code( '/pages search keyword' );
 				$commands[] = Telepilot_Telegram_Response_Builder::code( '/pages help' ) . ' ' . __( 'Show pages examples', 'wp-telepilot' );
@@ -1562,6 +1569,106 @@ class Telepilot_Command_Router {
 		);
 	}
 
+	private function start_pending_page_creation( $identity ) {
+		if ( empty( $identity['telegram_user_id'] ) ) {
+			return Telepilot_Telegram_Response_Builder::error( __( 'A Telegram identity is required to start that page creation flow.', 'wp-telepilot' ) );
+		}
+
+		$pending_started = $this->get_flow_state_service()->start_pending_page(
+			$identity['telegram_user_id'],
+			array(
+				'chat_id'     => ! empty( $identity['chat_id'] ) ? (string) $identity['chat_id'] : '',
+				'wp_user_id'  => $identity['wp_user']->ID,
+				'started_at'  => time(),
+			)
+		);
+
+		if ( ! $pending_started ) {
+			return Telepilot_Telegram_Response_Builder::error( __( 'WP Telepilot could not start that page creation flow.', 'wp-telepilot' ) );
+		}
+
+		return Telepilot_Telegram_Response_Builder::success_html(
+			$this->pages_service->render_creation_prompt_message(),
+			array(
+				'command'      => '/pages',
+				'reply_markup' => $this->safe_home_keyboard( $identity ),
+			)
+		);
+	}
+
+	private function maybe_handle_pending_page_creation( $command, $update, $identity ) {
+		if ( empty( $identity['telegram_user_id'] ) ) {
+			return null;
+		}
+
+		$flow_service = $this->get_flow_state_service();
+		$pending      = $flow_service->get_pending_page( $identity['telegram_user_id'] );
+
+		if ( empty( $pending ) ) {
+			return null;
+		}
+
+		if ( ! empty( $command['name'] ) && '/' === substr( (string) $command['name'], 0, 1 ) ) {
+			$flow_service->clear_pending_page( $identity['telegram_user_id'] );
+
+			return null;
+		}
+
+		if ( empty( $identity['wp_user'] ) || ! $identity['wp_user'] instanceof WP_User ) {
+			$flow_service->clear_pending_page( $identity['telegram_user_id'] );
+
+			return Telepilot_Telegram_Response_Builder::error( __( 'This page creation flow is no longer linked to a WordPress user.', 'wp-telepilot' ) );
+		}
+
+		$private_chat_result = $this->require_private_action( $identity );
+		if ( true !== $private_chat_result ) {
+			return $private_chat_result;
+		}
+
+		if ( ! empty( $pending['chat_id'] ) && (string) $pending['chat_id'] !== (string) $identity['chat_id'] ) {
+			$flow_service->clear_pending_page( $identity['telegram_user_id'] );
+
+			return Telepilot_Telegram_Response_Builder::error( __( 'This page creation flow belongs to a different chat. Start it again from the current conversation.', 'wp-telepilot' ) );
+		}
+
+		if ( ! empty( $pending['wp_user_id'] ) && (int) $pending['wp_user_id'] !== (int) $identity['wp_user']->ID ) {
+			$flow_service->clear_pending_page( $identity['telegram_user_id'] );
+
+			return Telepilot_Telegram_Response_Builder::error( __( 'This page creation flow no longer matches the linked WordPress account.', 'wp-telepilot' ) );
+		}
+
+		$title = isset( $update['message']['text'] ) ? trim( wp_strip_all_tags( (string) $update['message']['text'] ) ) : '';
+		if ( '' === $title ) {
+			return null;
+		}
+
+		$flow_service->clear_pending_page( $identity['telegram_user_id'] );
+
+		return $this->create_page_draft_response( $identity, $title );
+	}
+
+	private function create_page_draft_response( $identity, $title ) {
+		$result = $this->pages_service->create_page( $title );
+		if ( is_wp_error( $result ) ) {
+			return Telepilot_Telegram_Response_Builder::error( $result->get_error_message() );
+		}
+
+		$this->log_content_action( $identity, 'page_created', 'page', $result['post']->ID, 'create', $result );
+
+		return Telepilot_Telegram_Response_Builder::success_html(
+			$this->pages_service->render_page_created_message( $result['post'] ),
+			array(
+				'command'      => '/pages',
+				'reply_markup' => $this->safe_reply_markup(
+					function() use ( $result ) {
+						return $this->pages_service->build_list_keyboard( array( $result['post'] ), 'list', '', 1, 1 );
+					},
+					'page_created'
+				),
+			)
+		);
+	}
+
 	private function open_post_category_picker( $post_id, $identity, $selected_ids = null ) {
 		$post = get_post( $post_id );
 		if ( ! $post || 'post' !== $post->post_type ) {
@@ -1722,6 +1829,20 @@ class Telepilot_Command_Router {
 					),
 				)
 			);
+		}
+
+		if ( in_array( $subcommand, array( 'create', 'new' ), true ) ) {
+			$private_chat_result = $this->require_private_action( $identity );
+			if ( true !== $private_chat_result ) {
+				return $private_chat_result;
+			}
+
+			$title = implode( ' ', array_slice( $args, 1 ) );
+			if ( '' === trim( $title ) ) {
+				return $this->start_pending_page_creation( $identity );
+			}
+
+			return $this->create_page_draft_response( $identity, $title );
 		}
 
 		$page_id = ! empty( $args[1] ) ? absint( $args[1] ) : 0;
@@ -3660,6 +3781,19 @@ class Telepilot_Command_Router {
 					array(
 						'text'          => Telepilot_Telegram_Response_Builder::label( 'draft', __( 'Drafts', 'wp-telepilot' ) ),
 						'callback_data' => '/posts drafts',
+					),
+				);
+			}
+
+			if ( $this->permission_service->user_can( $identity['wp_user'], 'edit_pages' ) ) {
+				$rows[] = array(
+					array(
+						'text'          => Telepilot_Telegram_Response_Builder::label( 'pages', __( 'New Page', 'wp-telepilot' ) ),
+						'callback_data' => '/pages new',
+					),
+					array(
+						'text'          => Telepilot_Telegram_Response_Builder::label( 'draft', __( 'Page Drafts', 'wp-telepilot' ) ),
+						'callback_data' => '/pages drafts',
 					),
 				);
 			}

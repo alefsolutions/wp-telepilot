@@ -170,8 +170,13 @@ class Telepilot_Telegram_Service {
 		$identity = $this->user_resolver->resolve_from_update( $update );
 
 		if ( ! empty( $update['chosen_inline_result'] ) ) {
+			$handoff_result = $this->maybe_handle_chosen_inline_result( $identity, $update );
 			$this->record_chosen_inline_result( $identity, $update, $transport );
 			$this->mark_update_processed( $update, $transport, 'inline_result_chosen' );
+
+			if ( is_array( $handoff_result ) ) {
+				return $handoff_result;
+			}
 
 			return Telepilot_Telegram_Response_Builder::success(
 				__( 'Chosen inline result recorded.', 'wp-telepilot' ),
@@ -326,6 +331,132 @@ class Telepilot_Telegram_Service {
 					'transport' => $transport,
 				),
 			)
+		);
+	}
+
+	private function maybe_handle_chosen_inline_result( $identity, $update ) {
+		$chosen = ! empty( $update['chosen_inline_result'] ) && is_array( $update['chosen_inline_result'] ) ? $update['chosen_inline_result'] : array();
+
+		if ( empty( $chosen['result_id'] ) ) {
+			return null;
+		}
+
+		$command_text = $this->build_command_from_inline_result(
+			(string) $chosen['result_id'],
+			isset( $chosen['query'] ) ? (string) $chosen['query'] : ''
+		);
+
+		if ( '' === $command_text ) {
+			return null;
+		}
+
+		$chat_id = $this->get_linked_private_chat_id( $identity );
+
+		if ( '' === $chat_id ) {
+			Telepilot_Audit_Log_Repository::log(
+				array(
+					'wp_user_id'       => ! empty( $identity['wp_user'] ) && $identity['wp_user'] instanceof WP_User ? $identity['wp_user']->ID : null,
+					'telegram_user_id' => ! empty( $identity['telegram_user_id'] ) ? $identity['telegram_user_id'] : null,
+					'action_name'      => 'telegram_inline_command_handoff_failed',
+					'resource_type'    => 'telegram_inline_query',
+					'resource_id'      => isset( $chosen['result_id'] ) ? (string) $chosen['result_id'] : null,
+					'was_successful'   => 0,
+					'failure_reason'   => 'No linked private chat ID was available for inline handoff.',
+					'context'          => array(
+						'query'   => isset( $chosen['query'] ) ? (string) $chosen['query'] : '',
+						'command' => $command_text,
+					),
+				)
+			);
+
+			return null;
+		}
+
+		Telepilot_Audit_Log_Repository::log(
+			array(
+				'wp_user_id'       => ! empty( $identity['wp_user'] ) && $identity['wp_user'] instanceof WP_User ? $identity['wp_user']->ID : null,
+				'telegram_user_id' => ! empty( $identity['telegram_user_id'] ) ? $identity['telegram_user_id'] : null,
+				'chat_id'          => $chat_id,
+				'action_name'      => 'telegram_inline_command_handoff',
+				'resource_type'    => 'telegram_inline_query',
+				'resource_id'      => isset( $chosen['result_id'] ) ? (string) $chosen['result_id'] : null,
+				'after_state'      => array(
+					'command' => $command_text,
+				),
+				'context'          => array(
+					'query' => isset( $chosen['query'] ) ? (string) $chosen['query'] : '',
+				),
+			)
+		);
+
+		return $this->queue_or_process_update(
+			$this->build_inline_handoff_update( $identity, $chat_id, $command_text ),
+			'inline_handoff'
+		);
+	}
+
+	private function build_command_from_inline_result( $result_id, $query ) {
+		$result_id = trim( (string) $result_id );
+		$query     = trim( (string) $query );
+
+		if ( '' === $result_id ) {
+			return '';
+		}
+
+		if ( 0 === strpos( $result_id, 'runq:' ) ) {
+			if ( '' === $query ) {
+				return '';
+			}
+
+			return '/' . ltrim( $query, '/' );
+		}
+
+		if ( 0 !== strpos( $result_id, 'run:' ) ) {
+			return '';
+		}
+
+		$parts    = explode( ':', $result_id, 4 );
+		$resource = isset( $parts[1] ) ? sanitize_key( (string) $parts[1] ) : '';
+		$action   = isset( $parts[2] ) ? sanitize_key( (string) $parts[2] ) : '';
+		$target   = isset( $parts[3] ) ? trim( (string) $parts[3] ) : '';
+		$allowed  = array( 'posts', 'pages', 'categories', 'tags', 'plugins', 'settings' );
+
+		if ( '' === $resource || '' === $action || ! in_array( $resource, $allowed, true ) ) {
+			return '';
+		}
+
+		return '/' . trim( $resource . ' ' . $action . ( '' !== $target ? ' ' . $target : '' ) );
+	}
+
+	private function get_linked_private_chat_id( $identity ) {
+		if ( empty( $identity['wp_user'] ) || ! $identity['wp_user'] instanceof WP_User ) {
+			return '';
+		}
+
+		$chat_id = get_user_meta( $identity['wp_user']->ID, Telepilot_User_Linking_Service::META_TELEGRAM_CHAT, true );
+
+		return is_scalar( $chat_id ) ? trim( (string) $chat_id ) : '';
+	}
+
+	private function build_inline_handoff_update( $identity, $chat_id, $command_text ) {
+		$microtime_value = str_replace( '.', '', sprintf( '%.6F', microtime( true ) ) );
+		$update_id       = (int) substr( $microtime_value . wp_rand( 1000, 9999 ), 0, 18 );
+
+		return array(
+			'update_id' => $update_id,
+			'message'   => array(
+				'message_id' => wp_rand( 100000, 999999 ),
+				'date'       => current_time( 'timestamp', true ),
+				'text'       => (string) $command_text,
+				'chat'       => array(
+					'id'   => (string) $chat_id,
+					'type' => 'private',
+				),
+				'from'       => array(
+					'id'       => ! empty( $identity['telegram_user_id'] ) ? (string) $identity['telegram_user_id'] : '',
+					'username' => ! empty( $identity['telegram_username'] ) ? (string) $identity['telegram_username'] : '',
+				),
+			),
 		);
 	}
 

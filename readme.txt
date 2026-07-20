@@ -4,7 +4,7 @@ Tags: telegram, bot, notifications, moderation, remote management
 Requires at least: 6.6
 Tested up to: 7.0
 Requires PHP: 8.0
-Stable tag: 0.3.0-beta.4
+Stable tag: 0.3.0-beta.5
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -93,6 +93,14 @@ WP Telepilot stores Telegram linkage metadata such as Telegram user IDs, chat ID
 
 == Changelog ==
 
+= 0.3.0-beta.5 =
+
+* add private-chat inline query discovery for commands, actions, and ID-heavy targets
+* add runnable inline handoff back into the linked Telegram private chat
+* add guided page creation flows with immediate title-based draft creation
+* expand command documentation for inline mode, post creation, and page creation flows
+* align plugin metadata and release docs to the 0.3.0-beta.5 line
+
 = 0.3.0-beta.3 =
 
 * add WordPress.org packaging metadata and plugin-directory readme
@@ -102,6 +110,6 @@ WP Telepilot stores Telegram linkage metadata such as Telegram user IDs, chat ID
 
 == Upgrade Notice ==
 
-= 0.3.0-beta.3 =
+= 0.3.0-beta.5 =
 
-Beta build focused on WordPress-readiness hardening ahead of the planned 0.3.0 stable release.
+Beta build focused on inline command ergonomics, guided page creation, and smoother Telegram operator workflows ahead of the planned 0.3.0 stable release.

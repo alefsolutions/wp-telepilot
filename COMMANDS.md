@@ -18,6 +18,22 @@ Each command below includes:
 - Content: `/posts`, `/pages`, `/media`
 - Administration: `/users`, `/plugins`, `/categories`, `/tags`
 
+## Inline mode
+
+### `@YourBotUsername RESOURCE ...`
+
+- Scope: inline assistant
+- Syntax: `@YourBotUsername posts`
+- Example: `@YourBotUsername posts open`
+- Behavior: opens capability-aware inline suggestions for resources, actions, and ID-based targets in a private chat with the bot.
+
+### Runnable inline selections
+
+- Scope: inline execution handoff
+- Syntax: select a runnable inline result
+- Example: `@YourBotUsername pages new About us`
+- Behavior: if the selected inline result is runnable, WP Telepilot hands the matching slash command into the linked private chat and continues with the normal response flow there.
+
 ## Core commands
 
 ### `/start`
@@ -371,12 +387,19 @@ Each command below includes:
 - Example: `/posts new`
 - Behavior: starts a guided draft-creation flow and asks for the title in chat.
 
+### `/posts new TITLE`
+
+- Scope: posts
+- Syntax: `/posts new TITLE`
+- Example: `/posts new Launch checklist`
+- Behavior: creates a new draft post immediately using the supplied title. Optional fields can be set later.
+
 ### `/posts create TITLE`
 
 - Scope: posts
 - Syntax: `/posts create TITLE`
 - Example: `/posts create Launch checklist`
-- Behavior: creates a new draft post immediately. If no title is supplied, WP Telepilot prompts for one in chat.
+- Behavior: alias for creating a new draft post immediately. If no title is supplied, WP Telepilot prompts for one in chat.
 
 ### `/posts title POST_ID NEW_TITLE`
 
@@ -484,6 +507,27 @@ Each command below includes:
 - Syntax: `/pages help`
 - Example: `/pages help`
 - Behavior: shows the pages command cheat sheet.
+
+### `/pages new`
+
+- Scope: pages
+- Syntax: `/pages new`
+- Example: `/pages new`
+- Behavior: starts a guided draft page flow and asks for the title in chat.
+
+### `/pages new TITLE`
+
+- Scope: pages
+- Syntax: `/pages new TITLE`
+- Example: `/pages new About us`
+- Behavior: creates a new draft page immediately using the supplied title. Optional fields like slug and status can be set later.
+
+### `/pages create TITLE`
+
+- Scope: pages
+- Syntax: `/pages create TITLE`
+- Example: `/pages create About us`
+- Behavior: alias for creating a new draft page immediately.
 
 ### `/pages list`
 
@@ -982,6 +1026,7 @@ Each command below includes:
 
 - Commands only appear or work when the linked WordPress user has the required capability.
 - Sensitive actions are restricted to private Telegram chats.
+- Inline query assistance is intended for linked users in private chats and only suggests resources and actions the current user can access.
 - Some destructive operations use inline confirmation buttons before they execute.
 - Pagination uses the `page:N` suffix pattern on supported list and search commands.
 - Media is read-only in Telegram for this release. Use `wp-admin` for uploads, then return to `/media` commands for review and browser access.

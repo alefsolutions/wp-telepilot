@@ -27,8 +27,10 @@ It links an approved Telegram account to a WordPress user, shows capability-awar
 - Command groups for posts, pages, comments, media, users, plugins, categories, tags, notifications, and site settings
 - Search, pagination, confirmations, and audit logging across the main management flows
 - Guided post creation with in-chat follow-up actions
+- Guided page creation with title-first flow and optional slug or status updates later
 - Inline post category selection so users do not have to memorize category IDs
 - Category-driven post creation, including creating a new draft directly from a chosen category
+- Private-chat inline query assistance for resource discovery, command handoff, and ID-based target selection
 - Secure browser handoff for long-form post editing when chat is not the right editing surface
 - Transport diagnostics for webhook health, polling health, queue activity, stale updates, and delivery failures
 - Privacy integrations for WordPress personal-data export and erasure workflows
@@ -39,7 +41,9 @@ It links an approved Telegram account to a WordPress user, shows capability-awar
 - Open `/menu` for a capability-aware Telegram command hub
 - Review site status with `/site`
 - Create, review, update, publish, draft, trash, restore, and browser-edit posts
-- Review and manage pages, comments, users, plugins, categories, and tags
+- Create, review, update, publish, draft, trash, restore, and preview pages
+- Review and manage comments, users, plugins, categories, and tags
+- Use inline mode in a private chat to discover actions and choose ID-based targets without memorizing syntax
 - Manage Telegram notification preferences from chat
 - Update selected site settings from Telegram with controlled validation
 - Inspect transport health and operational diagnostics from the WordPress admin panel
@@ -63,11 +67,19 @@ It links an approved Telegram account to a WordPress user, shows capability-awar
 - `/help` shows the available command surface
 - `/chatid` shows the current Telegram chat ID
 - `/posts new` starts a guided draft-creation flow
+- `/pages new` starts a guided draft page flow
 - `/posts categories POST_ID` opens the inline category picker for an existing post
 - `/categories post TERM_ID` starts a new post with that category preselected
 - `/notifications list` reviews Telegram alert preferences
 
 For the full command surface, syntax, and examples, see [COMMANDS.md](COMMANDS.md).
+
+## Inline Mode
+
+- Inline mode is intended for a linked user in a private Telegram chat with the bot.
+- Start with queries such as `@YourBotUsername posts`, `@YourBotUsername posts open`, or `@YourBotUsername pages new About us`.
+- WP Telepilot responds with capability-aware resources, valid next actions, and ID-based targets such as posts, pages, categories, tags, and plugins.
+- When you choose a runnable inline result, WP Telepilot hands the underlying command back into your linked private chat and continues with the normal response flow there.
 
 ## Transport Modes
 
@@ -130,11 +142,11 @@ Telegram is a third-party service:
 - WordPress 6.6 or newer
 - PHP 8.0 or newer
 - HTTPS for webhook mode
-- Current plugin line: `0.3.0-beta.4`
+- Current plugin line: `0.3.0-beta.5`
 
 ## Project Status
 
-WP Telepilot is currently in the `0.3.0-beta.4` release line. The focus of the current cycle is reliability, admin polish, secure transport behavior, and smoother operator workflows ahead of the first stable release.
+WP Telepilot is currently in the `0.3.0-beta.5` release line. The focus of the current cycle is reliability, inline command ergonomics, guided creation workflows, admin polish, and smoother operator workflows ahead of the first stable release.
 
 ## Product Direction
 

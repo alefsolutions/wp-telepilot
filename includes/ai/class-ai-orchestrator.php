@@ -10,6 +10,7 @@ class Telepilot_AI_Orchestrator {
 	private $tool_executor;
 	private $conversation_store;
 	private $audit_logger;
+	private $confirmation_manager;
 
 	public function __construct() {
 		$this->provider           = new Telepilot_OpenAI_Provider();
@@ -17,6 +18,7 @@ class Telepilot_AI_Orchestrator {
 		$this->tool_executor      = new Telepilot_AI_Tool_Executor();
 		$this->conversation_store = new Telepilot_AI_Conversation_Store();
 		$this->audit_logger       = new Telepilot_AI_Audit_Logger();
+		$this->confirmation_manager = new Telepilot_AI_Confirmation_Manager();
 	}
 
 	public function handle_message( $text, $identity, $session ) {
@@ -112,7 +114,8 @@ class Telepilot_AI_Orchestrator {
 						$arguments = array();
 					}
 
-					$result = $this->tool_executor->execute( $tool_name, $arguments, $identity, $session );
+					$tool_definition = $this->tool_registry->get_tool( $tool_name );
+					$result          = $this->tool_executor->execute( $tool_name, $arguments, $identity, $session );
 
 					if ( is_wp_error( $result ) ) {
 						$tool_payload = array(
@@ -130,6 +133,40 @@ class Telepilot_AI_Orchestrator {
 							false,
 							$tool_name,
 							$result->get_error_message()
+						);
+					} elseif ( ! empty( $tool_definition['requires_confirmation'] ) ) {
+						$pending_action = $this->confirmation_manager->create_pending_action(
+							$session,
+							$identity,
+							$tool_name,
+							! empty( $result['ability'] ) ? $result['ability'] : '',
+							! empty( $result['arguments'] ) ? $result['arguments'] : array(),
+							! empty( $result['prompt'] ) ? $result['prompt'] : '',
+							! empty( $result['risk_level'] ) ? $result['risk_level'] : 'low_write'
+						);
+
+						$this->audit_logger->log(
+							$identity,
+							'ai_confirmation_created',
+							array(
+								'session_id' => ! empty( $session['session_id'] ) ? (string) $session['session_id'] : '',
+								'tool_name'  => $tool_name,
+								'action_id'  => ! empty( $pending_action['action_id'] ) ? (string) $pending_action['action_id'] : '',
+							)
+						);
+
+						return Telepilot_Telegram_Response_Builder::success_html(
+							Telepilot_Telegram_Response_Builder::join_blocks(
+								array(
+									Telepilot_Telegram_Response_Builder::bold( __( 'Confirmation Required', 'wp-telepilot' ) ),
+									! empty( $result['prompt'] ) ? Telepilot_Telegram_Response_Builder::escape( $result['prompt'] ) : __( 'Confirm this AI action before it runs.', 'wp-telepilot' ),
+									Telepilot_Telegram_Response_Builder::italic( __( 'The action will run only after you confirm it below.', 'wp-telepilot' ) ),
+								)
+							),
+							array(
+								'command'      => '/chat',
+								'reply_markup' => $this->confirmation_manager->build_confirmation_keyboard( $pending_action['action_id'] ),
+							)
 						);
 					} else {
 						$tool_payload = $result;
@@ -202,6 +239,147 @@ class Telepilot_AI_Orchestrator {
 				'command' => '/chat',
 			)
 		);
+	}
+
+	public function confirm_pending_action( $action_id, $identity ) {
+		$pending_action = $this->confirmation_manager->consume_pending_action( $action_id );
+
+		if ( ! is_array( $pending_action ) ) {
+			return Telepilot_Telegram_Response_Builder::error_html(
+				Telepilot_Telegram_Response_Builder::join_blocks(
+					array(
+						Telepilot_Telegram_Response_Builder::bold( __( 'AI Action Expired', 'wp-telepilot' ) ),
+						__( 'That pending AI action is invalid or expired.', 'wp-telepilot' ),
+					)
+				),
+				array(
+					'command' => '/chat',
+				)
+			);
+		}
+
+		if (
+			(string) $pending_action['telegram_user_id'] !== (string) $identity['telegram_user_id'] ||
+			(int) $pending_action['wordpress_user_id'] !== ( ! empty( $identity['wp_user'] ) && $identity['wp_user'] instanceof WP_User ? (int) $identity['wp_user']->ID : 0 ) ||
+			(int) $pending_action['site_id'] !== (int) get_current_blog_id()
+		) {
+			return Telepilot_Telegram_Response_Builder::error_html(
+				Telepilot_Telegram_Response_Builder::join_blocks(
+					array(
+						Telepilot_Telegram_Response_Builder::bold( __( 'AI Action Denied', 'wp-telepilot' ) ),
+						__( 'That pending AI action does not belong to this Telegram user or site context.', 'wp-telepilot' ),
+					)
+				),
+				array(
+					'command' => '/chat',
+				)
+			);
+		}
+
+		$session = array(
+			'session_id' => ! empty( $pending_action['session_id'] ) ? (string) $pending_action['session_id'] : '',
+		);
+		$result  = $this->tool_executor->execute_confirmed(
+			(string) $pending_action['tool_name'],
+			! empty( $pending_action['arguments'] ) && is_array( $pending_action['arguments'] ) ? $pending_action['arguments'] : array(),
+			$identity,
+			$session
+		);
+
+		if ( is_wp_error( $result ) ) {
+			$this->audit_logger->log(
+				$identity,
+				'ai_confirmation_failed',
+				array(
+					'action_id' => (string) $action_id,
+					'tool_name' => (string) $pending_action['tool_name'],
+				),
+				false,
+				(string) $pending_action['tool_name'],
+				$result->get_error_message()
+			);
+
+			return Telepilot_Telegram_Response_Builder::error_html(
+				Telepilot_Telegram_Response_Builder::join_blocks(
+					array(
+						Telepilot_Telegram_Response_Builder::bold( __( 'AI Action Failed', 'wp-telepilot' ) ),
+						Telepilot_Telegram_Response_Builder::escape( $result->get_error_message() ),
+						__( 'No unexpected changes were reported beyond the failed request.', 'wp-telepilot' ),
+					)
+				),
+				array(
+					'command' => '/chat',
+				)
+			);
+		}
+
+		if ( ! empty( $pending_action['session_id'] ) ) {
+			$this->conversation_store->add_message( $pending_action['session_id'], 'assistant', ! empty( $result['summary'] ) ? (string) $result['summary'] : '' );
+		}
+
+		$this->audit_logger->log(
+			$identity,
+			'ai_confirmation_approved',
+			array(
+				'action_id' => (string) $action_id,
+				'tool_name' => (string) $pending_action['tool_name'],
+			)
+		);
+
+		return Telepilot_Telegram_Response_Builder::success_html(
+			Telepilot_Telegram_Response_Builder::join_blocks(
+				array(
+					Telepilot_Telegram_Response_Builder::bold( __( 'Action Completed', 'wp-telepilot' ) ),
+					Telepilot_Telegram_Response_Builder::escape( ! empty( $result['summary'] ) ? (string) $result['summary'] : __( 'The confirmed AI action completed.', 'wp-telepilot' ) ),
+				)
+			),
+			array(
+				'command' => '/chat',
+			)
+		);
+	}
+
+	public function cancel_pending_action( $action_id, $identity ) {
+		$pending_action = $this->confirmation_manager->cancel_pending_action( $action_id );
+
+		if ( ! is_array( $pending_action ) ) {
+			return Telepilot_Telegram_Response_Builder::error_html(
+				Telepilot_Telegram_Response_Builder::join_blocks(
+					array(
+						Telepilot_Telegram_Response_Builder::bold( __( 'Nothing To Cancel', 'wp-telepilot' ) ),
+						__( 'That pending AI action is already gone or expired.', 'wp-telepilot' ),
+					)
+				),
+				array(
+					'command' => '/cancel',
+				)
+			);
+		}
+
+		$this->audit_logger->log(
+			$identity,
+			'ai_confirmation_cancelled',
+			array(
+				'action_id' => (string) $action_id,
+				'tool_name' => (string) $pending_action['tool_name'],
+			)
+		);
+
+		return Telepilot_Telegram_Response_Builder::success_html(
+			Telepilot_Telegram_Response_Builder::join_blocks(
+				array(
+					Telepilot_Telegram_Response_Builder::bold( __( 'Pending Action Cancelled', 'wp-telepilot' ) ),
+					__( 'The AI-generated pending action was cancelled.', 'wp-telepilot' ),
+				)
+			),
+			array(
+				'command' => '/cancel',
+			)
+		);
+	}
+
+	public function cancel_session_actions( $session_id ) {
+		$this->confirmation_manager->cancel_session_actions( $session_id );
 	}
 
 	private function build_messages( $identity, $session, $text ) {

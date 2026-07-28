@@ -161,6 +161,144 @@ class Telepilot_AI_Tool_Registry {
 				),
 				'risk_level'   => 'read',
 			),
+			'telepilot_create_draft' => array(
+				'ability'               => 'telepilot/create-draft',
+				'description'           => 'Prepare a new WordPress draft post using a title and optional category IDs.',
+				'input_schema'          => array(
+					'type'       => 'object',
+					'properties' => array(
+						'title'      => array( 'type' => 'string' ),
+						'categories' => array(
+							'type'  => 'array',
+							'items' => array( 'type' => 'integer', 'minimum' => 1 ),
+						),
+					),
+					'required'   => array( 'title' ),
+				),
+				'risk_level'            => 'low_write',
+				'requires_confirmation' => true,
+			),
+			'telepilot_update_draft' => array(
+				'ability'               => 'telepilot/update-draft',
+				'description'           => 'Prepare a title or excerpt update for a draft post by post ID or recent reference.',
+				'input_schema'          => array(
+					'type'       => 'object',
+					'properties' => array(
+						'post_id'          => array( 'type' => 'integer', 'minimum' => 1 ),
+						'reference_number' => array( 'type' => 'integer', 'minimum' => 1 ),
+						'title'            => array( 'type' => 'string' ),
+						'excerpt'          => array( 'type' => 'string' ),
+					),
+				),
+				'risk_level'            => 'low_write',
+				'requires_confirmation' => true,
+			),
+			'telepilot_schedule_post' => array(
+				'ability'               => 'telepilot/schedule-post',
+				'description'           => 'Prepare scheduling for a post using a post ID or recent reference and a site-local datetime string.',
+				'input_schema'          => array(
+					'type'       => 'object',
+					'properties' => array(
+						'post_id'          => array( 'type' => 'integer', 'minimum' => 1 ),
+						'reference_number' => array( 'type' => 'integer', 'minimum' => 1 ),
+						'scheduled_at'     => array( 'type' => 'string' ),
+					),
+					'required'   => array( 'scheduled_at' ),
+				),
+				'risk_level'            => 'moderate_write',
+				'requires_confirmation' => true,
+			),
+			'telepilot_publish_post' => array(
+				'ability'               => 'telepilot/publish-post',
+				'description'           => 'Prepare publishing for a post by post ID or recent reference.',
+				'input_schema'          => array(
+					'type'       => 'object',
+					'properties' => array(
+						'post_id'          => array( 'type' => 'integer', 'minimum' => 1 ),
+						'reference_number' => array( 'type' => 'integer', 'minimum' => 1 ),
+					),
+				),
+				'risk_level'            => 'high_risk',
+				'requires_confirmation' => true,
+			),
+			'telepilot_unpublish_post' => array(
+				'ability'               => 'telepilot/unpublish-post',
+				'description'           => 'Prepare moving a published post back to draft by post ID or recent reference.',
+				'input_schema'          => array(
+					'type'       => 'object',
+					'properties' => array(
+						'post_id'          => array( 'type' => 'integer', 'minimum' => 1 ),
+						'reference_number' => array( 'type' => 'integer', 'minimum' => 1 ),
+					),
+				),
+				'risk_level'            => 'moderate_write',
+				'requires_confirmation' => true,
+			),
+			'telepilot_approve_comment' => array(
+				'ability'               => 'telepilot/approve-comment',
+				'description'           => 'Prepare approving a comment by comment ID or recent reference.',
+				'input_schema'          => array(
+					'type'       => 'object',
+					'properties' => array(
+						'comment_id'       => array( 'type' => 'integer', 'minimum' => 1 ),
+						'reference_number' => array( 'type' => 'integer', 'minimum' => 1 ),
+					),
+				),
+				'risk_level'            => 'moderate_write',
+				'requires_confirmation' => true,
+			),
+			'telepilot_trash_comment' => array(
+				'ability'               => 'telepilot/trash-comment',
+				'description'           => 'Prepare trashing a comment by comment ID or recent reference.',
+				'input_schema'          => array(
+					'type'       => 'object',
+					'properties' => array(
+						'comment_id'       => array( 'type' => 'integer', 'minimum' => 1 ),
+						'reference_number' => array( 'type' => 'integer', 'minimum' => 1 ),
+					),
+				),
+				'risk_level'            => 'moderate_write',
+				'requires_confirmation' => true,
+			),
+			'telepilot_activate_plugin' => array(
+				'ability'               => 'telepilot/activate-plugin',
+				'description'           => 'Prepare activation for a plugin by identifier or recent reference.',
+				'input_schema'          => array(
+					'type'       => 'object',
+					'properties' => array(
+						'identifier'       => array( 'type' => 'string' ),
+						'reference_number' => array( 'type' => 'integer', 'minimum' => 1 ),
+					),
+				),
+				'risk_level'            => 'moderate_write',
+				'requires_confirmation' => true,
+			),
+			'telepilot_deactivate_plugin' => array(
+				'ability'               => 'telepilot/deactivate-plugin',
+				'description'           => 'Prepare deactivation for a plugin by identifier or recent reference.',
+				'input_schema'          => array(
+					'type'       => 'object',
+					'properties' => array(
+						'identifier'       => array( 'type' => 'string' ),
+						'reference_number' => array( 'type' => 'integer', 'minimum' => 1 ),
+					),
+				),
+				'risk_level'            => 'high_risk',
+				'requires_confirmation' => true,
+			),
+			'telepilot_update_plugin' => array(
+				'ability'               => 'telepilot/update-plugin',
+				'description'           => 'Prepare updating a plugin by identifier or recent reference.',
+				'input_schema'          => array(
+					'type'       => 'object',
+					'properties' => array(
+						'identifier'       => array( 'type' => 'string' ),
+						'reference_number' => array( 'type' => 'integer', 'minimum' => 1 ),
+					),
+				),
+				'risk_level'            => 'moderate_write',
+				'requires_confirmation' => true,
+			),
 		);
 	}
 }

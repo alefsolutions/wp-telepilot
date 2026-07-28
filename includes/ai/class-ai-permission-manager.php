@@ -65,6 +65,13 @@ class Telepilot_AI_Permission_Manager {
 			'telepilot/activate-plugin'   => 'ai_allow_activate_plugins',
 			'telepilot/deactivate-plugin' => 'ai_allow_activate_plugins',
 			'telepilot/update-plugin'     => 'ai_allow_update_plugins',
+			'telepilot/create-draft'      => 'ai_allow_create_drafts',
+			'telepilot/update-draft'      => 'ai_allow_edit_drafts',
+			'telepilot/schedule-post'     => 'ai_allow_edit_drafts',
+			'telepilot/publish-post'      => 'ai_allow_publish_posts',
+			'telepilot/unpublish-post'    => 'ai_allow_publish_posts',
+			'telepilot/approve-comment'   => 'ai_allow_manage_comments',
+			'telepilot/trash-comment'     => 'ai_allow_manage_comments',
 		);
 
 		if ( empty( $map[ $tool_name ] ) ) {

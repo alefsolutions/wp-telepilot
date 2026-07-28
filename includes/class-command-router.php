@@ -154,6 +154,9 @@ class Telepilot_Command_Router {
 			case 'tp:term':
 				return $this->handle_term_callback( $command, $identity );
 
+			case 'tp:ai':
+				return $this->ai_chat_handler->handle_callback( $command, $identity );
+
 			default:
 				return $this->unknown_command_response( $command['name'], $identity );
 		}

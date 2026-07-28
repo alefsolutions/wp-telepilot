@@ -11,6 +11,7 @@ class Telepilot_AI_Chat_Handler {
 	private $audit_logger;
 	private $conversation_store;
 	private $orchestrator;
+	private $confirmation_manager;
 
 	public function __construct() {
 		$this->session_manager    = new Telepilot_AI_Session_Manager();
@@ -19,6 +20,7 @@ class Telepilot_AI_Chat_Handler {
 		$this->audit_logger       = new Telepilot_AI_Audit_Logger();
 		$this->conversation_store = new Telepilot_AI_Conversation_Store();
 		$this->orchestrator       = new Telepilot_AI_Orchestrator();
+		$this->confirmation_manager = new Telepilot_AI_Confirmation_Manager();
 	}
 
 	public function start_chat_mode( $identity ) {
@@ -111,6 +113,7 @@ class Telepilot_AI_Chat_Handler {
 		$session = $this->session_manager->start_session( $identity, $this->provider->get_name(), Telepilot_AI_Settings::get_model() );
 		if ( ! empty( $session['session_id'] ) ) {
 			$this->conversation_store->clear( $session['session_id'] );
+			$this->orchestrator->cancel_session_actions( $session['session_id'] );
 		}
 
 		$this->audit_logger->log(
@@ -155,6 +158,7 @@ class Telepilot_AI_Chat_Handler {
 		if ( is_array( $session ) && empty( $session['expired'] ) ) {
 			if ( ! empty( $session['session_id'] ) ) {
 				$this->conversation_store->clear( $session['session_id'] );
+				$this->orchestrator->cancel_session_actions( $session['session_id'] );
 			}
 			$this->audit_logger->log(
 				$identity,
@@ -202,6 +206,7 @@ class Telepilot_AI_Chat_Handler {
 		$this->session_manager->update_session( $identity, $session );
 		if ( ! empty( $session['session_id'] ) ) {
 			$this->conversation_store->clear( $session['session_id'] );
+			$this->orchestrator->cancel_session_actions( $session['session_id'] );
 		}
 
 		$this->audit_logger->log(
@@ -285,6 +290,20 @@ class Telepilot_AI_Chat_Handler {
 			);
 		}
 
+		if ( ! empty( $session['pending_action_id'] ) ) {
+			$this->session_manager->update_session(
+				$identity,
+				array_merge(
+					$session,
+					array(
+						'pending_action_id' => '',
+					)
+				)
+			);
+
+			return $this->orchestrator->cancel_pending_action( $session['pending_action_id'], $identity );
+		}
+
 		$session['pending_action_id'] = '';
 		$this->session_manager->update_session( $identity, $session );
 
@@ -351,7 +370,49 @@ class Telepilot_AI_Chat_Handler {
 			$result['reply_markup'] = $this->build_ai_keyboard();
 		}
 
+		if ( is_array( $result ) && ! empty( $result['reply_markup']['inline_keyboard'][0][0]['callback_data'] ) && ! empty( $session['session_id'] ) ) {
+			$action_id = str_replace( 'tp:ai:confirm:', '', (string) $result['reply_markup']['inline_keyboard'][0][0]['callback_data'] );
+			$session['pending_action_id'] = sanitize_key( $action_id );
+			$this->session_manager->update_session( $identity, $session );
+		}
+
 		return $result;
+	}
+
+	public function handle_callback( $command, $identity ) {
+		$action    = ! empty( $command['args'][0] ) ? sanitize_key( (string) $command['args'][0] ) : '';
+		$action_id = ! empty( $command['args'][1] ) ? sanitize_key( (string) $command['args'][1] ) : '';
+		$session   = $this->session_manager->get_session( $identity );
+
+		if ( 'confirm' === $action ) {
+			if ( is_array( $session ) && empty( $session['expired'] ) ) {
+				$session['pending_action_id'] = '';
+				$this->session_manager->update_session( $identity, $session );
+			}
+
+			return $this->orchestrator->confirm_pending_action( $action_id, $identity );
+		}
+
+		if ( 'cancel' === $action ) {
+			if ( is_array( $session ) && empty( $session['expired'] ) ) {
+				$session['pending_action_id'] = '';
+				$this->session_manager->update_session( $identity, $session );
+			}
+
+			return $this->orchestrator->cancel_pending_action( $action_id, $identity );
+		}
+
+		return Telepilot_Telegram_Response_Builder::error_html(
+			Telepilot_Telegram_Response_Builder::join_blocks(
+				array(
+					Telepilot_Telegram_Response_Builder::bold( __( 'AI Action Not Recognized', 'wp-telepilot' ) ),
+					__( 'That AI callback action is invalid or no longer supported.', 'wp-telepilot' ),
+				)
+			),
+			array(
+				'command' => '/chat',
+			)
+		);
 	}
 
 	public function render_help( $identity ) {

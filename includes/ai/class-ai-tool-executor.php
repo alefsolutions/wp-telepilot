@@ -77,6 +77,18 @@ class Telepilot_AI_Tool_Executor {
 
 			case 'telepilot_get_recent_alerts':
 				return $this->get_recent_alerts( $arguments );
+
+			case 'telepilot_create_draft':
+			case 'telepilot_update_draft':
+			case 'telepilot_schedule_post':
+			case 'telepilot_publish_post':
+			case 'telepilot_unpublish_post':
+			case 'telepilot_approve_comment':
+			case 'telepilot_trash_comment':
+			case 'telepilot_activate_plugin':
+			case 'telepilot_deactivate_plugin':
+			case 'telepilot_update_plugin':
+				return $this->prepare_action( $tool_name, $arguments, $session );
 		}
 
 		return new WP_Error( 'telepilot_ai_tool_unsupported', __( 'That AI tool is not supported yet.', 'wp-telepilot' ) );
@@ -470,6 +482,48 @@ class Telepilot_AI_Tool_Executor {
 		);
 	}
 
+	public function execute_confirmed( $tool_name, $arguments, $identity, $session ) {
+		$tool = $this->registry->get_tool( $tool_name );
+
+		if ( empty( $tool ) ) {
+			return new WP_Error( 'telepilot_ai_tool_missing', __( 'That AI tool is not registered.', 'wp-telepilot' ) );
+		}
+
+		if ( ! $this->permission_manager->is_tool_enabled( $tool['ability'] ) ) {
+			return new WP_Error( 'telepilot_ai_tool_disabled', __( 'That AI ability is currently disabled by the site administrator.', 'wp-telepilot' ) );
+		}
+
+		$capability_check = $this->check_tool_capability( $tool['ability'], $identity );
+		if ( is_wp_error( $capability_check ) ) {
+			return $capability_check;
+		}
+
+		switch ( $tool_name ) {
+			case 'telepilot_create_draft':
+				return $this->execute_create_draft( $arguments );
+			case 'telepilot_update_draft':
+				return $this->execute_update_draft( $arguments, $session );
+			case 'telepilot_schedule_post':
+				return $this->execute_schedule_post( $arguments, $session );
+			case 'telepilot_publish_post':
+				return $this->execute_publish_post( $arguments, $session );
+			case 'telepilot_unpublish_post':
+				return $this->execute_unpublish_post( $arguments, $session );
+			case 'telepilot_approve_comment':
+				return $this->execute_comment_action( 'approve', $arguments, $session );
+			case 'telepilot_trash_comment':
+				return $this->execute_comment_action( 'trash', $arguments, $session );
+			case 'telepilot_activate_plugin':
+				return $this->execute_plugin_action( 'activate', $arguments, $session );
+			case 'telepilot_deactivate_plugin':
+				return $this->execute_plugin_action( 'deactivate', $arguments, $session );
+			case 'telepilot_update_plugin':
+				return $this->execute_plugin_action( 'update', $arguments, $session );
+		}
+
+		return new WP_Error( 'telepilot_ai_tool_unsupported', __( 'That AI tool is not supported yet.', 'wp-telepilot' ) );
+	}
+
 	private function build_post_list_result( $result, $intent ) {
 		$items    = array();
 		$entities = array();
@@ -510,6 +564,153 @@ class Telepilot_AI_Tool_Executor {
 				'total_items' => isset( $result['total_items'] ) ? (int) $result['total_items'] : count( $items ),
 			),
 		);
+	}
+
+	private function prepare_action( $tool_name, $arguments, $session ) {
+		switch ( $tool_name ) {
+			case 'telepilot_create_draft':
+				$title = ! empty( $arguments['title'] ) ? sanitize_text_field( (string) $arguments['title'] ) : '';
+				if ( '' === $title ) {
+					return new WP_Error( 'telepilot_ai_title_required', __( 'A draft title is required.', 'wp-telepilot' ) );
+				}
+
+				return array(
+					'ok'         => true,
+					'ability'    => 'telepilot/create-draft',
+					'tool_name'  => $tool_name,
+					'arguments'  => array(
+						'title'      => $title,
+						'categories' => array_values( array_filter( array_map( 'absint', isset( $arguments['categories'] ) ? (array) $arguments['categories'] : array() ) ) ),
+					),
+					'prompt'     => sprintf( __( 'You are about to create a new draft post titled "%s".', 'wp-telepilot' ), $title ),
+					'risk_level' => 'low_write',
+				);
+
+			case 'telepilot_update_draft':
+				$post = $this->resolve_post_from_arguments( $arguments, $session );
+				if ( is_wp_error( $post ) ) {
+					return $post;
+				}
+				if ( 'draft' !== $post->post_status && 'pending' !== $post->post_status && 'future' !== $post->post_status ) {
+					return new WP_Error( 'telepilot_ai_update_draft_invalid', __( 'Only drafts, pending posts, or scheduled posts can be updated through this AI draft tool.', 'wp-telepilot' ) );
+				}
+				$title   = isset( $arguments['title'] ) ? sanitize_text_field( (string) $arguments['title'] ) : '';
+				$excerpt = isset( $arguments['excerpt'] ) ? sanitize_textarea_field( (string) $arguments['excerpt'] ) : '';
+				if ( '' === $title && '' === $excerpt ) {
+					return new WP_Error( 'telepilot_ai_update_draft_empty', __( 'Provide a new title or excerpt for the draft update.', 'wp-telepilot' ) );
+				}
+
+				return array(
+					'ok'         => true,
+					'ability'    => 'telepilot/update-draft',
+					'tool_name'  => $tool_name,
+					'arguments'  => array(
+						'post_id' => (int) $post->ID,
+						'title'   => $title,
+						'excerpt' => $excerpt,
+					),
+					'prompt'     => sprintf( __( 'You are about to update draft post [%1$d] %2$s.', 'wp-telepilot' ), $post->ID, get_the_title( $post ) ),
+					'risk_level' => 'low_write',
+				);
+
+			case 'telepilot_schedule_post':
+				$post = $this->resolve_post_from_arguments( $arguments, $session );
+				if ( is_wp_error( $post ) ) {
+					return $post;
+				}
+				$scheduled_at = $this->parse_site_datetime( ! empty( $arguments['scheduled_at'] ) ? $arguments['scheduled_at'] : '' );
+				if ( ! $scheduled_at ) {
+					return new WP_Error( 'telepilot_ai_schedule_invalid', __( 'Provide a valid site-local schedule datetime such as 2026-07-28 14:30.', 'wp-telepilot' ) );
+				}
+
+				return array(
+					'ok'         => true,
+					'ability'    => 'telepilot/schedule-post',
+					'tool_name'  => $tool_name,
+					'arguments'  => array(
+						'post_id'      => (int) $post->ID,
+						'scheduled_at' => $scheduled_at->format( 'Y-m-d H:i:s' ),
+					),
+					'prompt'     => sprintf( __( 'You are about to schedule post [%1$d] %2$s for %3$s.', 'wp-telepilot' ), $post->ID, get_the_title( $post ), $scheduled_at->format( 'Y-m-d H:i:s' ) ),
+					'risk_level' => 'moderate_write',
+				);
+
+			case 'telepilot_publish_post':
+				$post = $this->resolve_post_from_arguments( $arguments, $session );
+				if ( is_wp_error( $post ) ) {
+					return $post;
+				}
+
+				return array(
+					'ok'         => true,
+					'ability'    => 'telepilot/publish-post',
+					'tool_name'  => $tool_name,
+					'arguments'  => array(
+						'post_id' => (int) $post->ID,
+					),
+					'prompt'     => sprintf( __( 'You are about to publish post [%1$d] %2$s.', 'wp-telepilot' ), $post->ID, get_the_title( $post ) ),
+					'risk_level' => 'high_risk',
+				);
+
+			case 'telepilot_unpublish_post':
+				$post = $this->resolve_post_from_arguments( $arguments, $session );
+				if ( is_wp_error( $post ) ) {
+					return $post;
+				}
+
+				return array(
+					'ok'         => true,
+					'ability'    => 'telepilot/unpublish-post',
+					'tool_name'  => $tool_name,
+					'arguments'  => array(
+						'post_id' => (int) $post->ID,
+					),
+					'prompt'     => sprintf( __( 'You are about to move post [%1$d] %2$s back to draft.', 'wp-telepilot' ), $post->ID, get_the_title( $post ) ),
+					'risk_level' => 'moderate_write',
+				);
+
+			case 'telepilot_approve_comment':
+			case 'telepilot_trash_comment':
+				$comment = $this->resolve_comment_from_arguments( $arguments, $session );
+				if ( is_wp_error( $comment ) ) {
+					return $comment;
+				}
+				$action_label = 'telepilot_approve_comment' === $tool_name ? __( 'approve', 'wp-telepilot' ) : __( 'trash', 'wp-telepilot' );
+
+				return array(
+					'ok'         => true,
+					'ability'    => 'telepilot_approve_comment' === $tool_name ? 'telepilot/approve-comment' : 'telepilot/trash-comment',
+					'tool_name'  => $tool_name,
+					'arguments'  => array(
+						'comment_id' => (int) $comment->comment_ID,
+					),
+					'prompt'     => sprintf( __( 'You are about to %1$s comment [%2$d] by %3$s.', 'wp-telepilot' ), $action_label, $comment->comment_ID, $comment->comment_author ? $comment->comment_author : __( 'Anonymous', 'wp-telepilot' ) ),
+					'risk_level' => 'moderate_write',
+				);
+
+			case 'telepilot_activate_plugin':
+			case 'telepilot_deactivate_plugin':
+			case 'telepilot_update_plugin':
+				$plugin = $this->resolve_plugin_from_arguments( $arguments, $session );
+				if ( is_wp_error( $plugin ) ) {
+					return $plugin;
+				}
+				$action_label = str_replace( 'telepilot_', '', $tool_name );
+				$action_label = str_replace( '_', ' ', $action_label );
+
+				return array(
+					'ok'         => true,
+					'ability'    => $this->registry->get_tool( $tool_name )['ability'],
+					'tool_name'  => $tool_name,
+					'arguments'  => array(
+						'identifier' => (string) $plugin['identifier'],
+					),
+					'prompt'     => sprintf( __( 'You are about to %1$s plugin [%2$s] %3$s.', 'wp-telepilot' ), $action_label, $plugin['identifier'], $plugin['name'] ),
+					'risk_level' => in_array( $tool_name, array( 'telepilot_deactivate_plugin' ), true ) ? 'high_risk' : 'moderate_write',
+				);
+		}
+
+		return new WP_Error( 'telepilot_ai_prepare_unsupported', __( 'That AI action preview is not supported yet.', 'wp-telepilot' ) );
 	}
 
 	private function build_page_list_result( $result, $intent ) {
@@ -607,8 +808,257 @@ class Telepilot_AI_Tool_Executor {
 				return ( user_can( $user, 'activate_plugins' ) || user_can( $user, 'update_plugins' ) || user_can( $user, 'delete_plugins' ) )
 					? true
 					: new WP_Error( 'telepilot_ai_capability_denied', __( 'That account cannot read plugin management data through AI mode.', 'wp-telepilot' ) );
+
+			case 'telepilot/create-draft':
+			case 'telepilot/update-draft':
+				return user_can( $user, 'edit_posts' ) ? true : new WP_Error( 'telepilot_ai_capability_denied', __( 'That account cannot modify draft posts through AI mode.', 'wp-telepilot' ) );
+
+			case 'telepilot/schedule-post':
+			case 'telepilot/publish-post':
+			case 'telepilot/unpublish-post':
+				return ( user_can( $user, 'edit_posts' ) && user_can( $user, 'publish_posts' ) ) ? true : new WP_Error( 'telepilot_ai_capability_denied', __( 'That account cannot publish or schedule posts through AI mode.', 'wp-telepilot' ) );
+
+			case 'telepilot/approve-comment':
+			case 'telepilot/trash-comment':
+				return user_can( $user, 'moderate_comments' ) ? true : new WP_Error( 'telepilot_ai_capability_denied', __( 'That account cannot moderate comments through AI mode.', 'wp-telepilot' ) );
+
+			case 'telepilot/activate-plugin':
+				return user_can( $user, 'activate_plugins' ) ? true : new WP_Error( 'telepilot_ai_capability_denied', __( 'That account cannot activate plugins through AI mode.', 'wp-telepilot' ) );
+
+			case 'telepilot/deactivate-plugin':
+				return user_can( $user, 'activate_plugins' ) ? true : new WP_Error( 'telepilot_ai_capability_denied', __( 'That account cannot deactivate plugins through AI mode.', 'wp-telepilot' ) );
+
+			case 'telepilot/update-plugin':
+				return user_can( $user, 'update_plugins' ) ? true : new WP_Error( 'telepilot_ai_capability_denied', __( 'That account cannot update plugins through AI mode.', 'wp-telepilot' ) );
 		}
 
 		return new WP_Error( 'telepilot_ai_capability_unknown', __( 'That AI capability is not mapped yet.', 'wp-telepilot' ) );
+	}
+
+	private function resolve_post_from_arguments( $arguments, $session ) {
+		$post_id = ! empty( $arguments['post_id'] ) ? absint( $arguments['post_id'] ) : 0;
+
+		if ( ! $post_id && ! empty( $arguments['reference_number'] ) && ! empty( $session['session_id'] ) ) {
+			$entity  = $this->conversation_store->resolve_reference( $session['session_id'], absint( $arguments['reference_number'] ), array( 'post' ) );
+			$post_id = ! empty( $entity['id'] ) ? absint( $entity['id'] ) : 0;
+		}
+
+		$post = get_post( $post_id );
+
+		return ( $post && 'post' === $post->post_type ) ? $post : new WP_Error( 'telepilot_ai_post_not_found', __( 'That post could not be found.', 'wp-telepilot' ) );
+	}
+
+	private function resolve_comment_from_arguments( $arguments, $session ) {
+		$comment_id = ! empty( $arguments['comment_id'] ) ? absint( $arguments['comment_id'] ) : 0;
+
+		if ( ! $comment_id && ! empty( $arguments['reference_number'] ) && ! empty( $session['session_id'] ) ) {
+			$entity     = $this->conversation_store->resolve_reference( $session['session_id'], absint( $arguments['reference_number'] ), array( 'comment' ) );
+			$comment_id = ! empty( $entity['id'] ) ? absint( $entity['id'] ) : 0;
+		}
+
+		$comment = get_comment( $comment_id );
+
+		return $comment instanceof WP_Comment ? $comment : new WP_Error( 'telepilot_ai_comment_not_found', __( 'That comment could not be found.', 'wp-telepilot' ) );
+	}
+
+	private function resolve_plugin_from_arguments( $arguments, $session ) {
+		$identifier = ! empty( $arguments['identifier'] ) ? sanitize_text_field( (string) $arguments['identifier'] ) : '';
+
+		if ( '' === $identifier && ! empty( $arguments['reference_number'] ) && ! empty( $session['session_id'] ) ) {
+			$entity     = $this->conversation_store->resolve_reference( $session['session_id'], absint( $arguments['reference_number'] ), array( 'plugin' ) );
+			$identifier = ! empty( $entity['identifier'] ) ? sanitize_text_field( (string) $entity['identifier'] ) : '';
+		}
+
+		$plugin = $this->plugins_service->get_plugin_details( $identifier );
+
+		return is_wp_error( $plugin ) ? $plugin : $plugin;
+	}
+
+	private function execute_create_draft( $arguments ) {
+		$result = $this->posts_service->create_draft(
+			! empty( $arguments['title'] ) ? (string) $arguments['title'] : '',
+			! empty( $arguments['categories'] ) ? (array) $arguments['categories'] : array()
+		);
+
+		if ( is_wp_error( $result ) ) {
+			return $result;
+		}
+
+		return array(
+			'ok'      => true,
+			'summary' => sprintf( __( 'Draft post [%1$d] %2$s was created.', 'wp-telepilot' ), $result['post']->ID, get_the_title( $result['post'] ) ),
+			'data'    => array(
+				'post_id' => $result['post']->ID,
+				'title'   => get_the_title( $result['post'] ),
+				'status'  => $result['post']->post_status,
+			),
+		);
+	}
+
+	private function execute_update_draft( $arguments, $session ) {
+		$post = $this->resolve_post_from_arguments( $arguments, $session );
+		if ( is_wp_error( $post ) ) {
+			return $post;
+		}
+
+		$messages = array();
+		$title    = isset( $arguments['title'] ) ? (string) $arguments['title'] : '';
+		$excerpt  = isset( $arguments['excerpt'] ) ? (string) $arguments['excerpt'] : '';
+
+		if ( '' !== $title ) {
+			$title_result = $this->posts_service->update_title( $post->ID, $title );
+			if ( is_wp_error( $title_result ) ) {
+				return $title_result;
+			}
+			$messages[] = __( 'title updated', 'wp-telepilot' );
+		}
+
+		if ( '' !== $excerpt ) {
+			$excerpt_result = $this->posts_service->update_excerpt( $post->ID, $excerpt );
+			if ( is_wp_error( $excerpt_result ) ) {
+				return $excerpt_result;
+			}
+			$messages[] = __( 'excerpt updated', 'wp-telepilot' );
+		}
+
+		return array(
+			'ok'      => true,
+			'summary' => sprintf( __( 'Draft post [%1$d] %2$s was updated: %3$s.', 'wp-telepilot' ), $post->ID, get_the_title( get_post( $post->ID ) ), implode( ', ', $messages ) ),
+			'data'    => array(
+				'post_id' => $post->ID,
+			),
+		);
+	}
+
+	private function execute_schedule_post( $arguments, $session ) {
+		$post = $this->resolve_post_from_arguments( $arguments, $session );
+		if ( is_wp_error( $post ) ) {
+			return $post;
+		}
+
+		$scheduled_at = $this->parse_site_datetime( ! empty( $arguments['scheduled_at'] ) ? $arguments['scheduled_at'] : '' );
+		if ( ! $scheduled_at ) {
+			return new WP_Error( 'telepilot_ai_schedule_invalid', __( 'The requested schedule time is invalid.', 'wp-telepilot' ) );
+		}
+
+		$result = $this->posts_service->schedule( $post->ID, $scheduled_at );
+		if ( is_wp_error( $result ) ) {
+			return $result;
+		}
+
+		return array(
+			'ok'      => true,
+			'summary' => sprintf( __( 'Post [%1$d] %2$s was scheduled for %3$s.', 'wp-telepilot' ), $post->ID, get_the_title( $post ), $scheduled_at->format( 'Y-m-d H:i:s' ) ),
+			'data'    => array(
+				'post_id'      => $post->ID,
+				'scheduled_at' => $scheduled_at->format( 'Y-m-d H:i:s' ),
+			),
+		);
+	}
+
+	private function execute_publish_post( $arguments, $session ) {
+		$post = $this->resolve_post_from_arguments( $arguments, $session );
+		if ( is_wp_error( $post ) ) {
+			return $post;
+		}
+
+		$result = $this->posts_service->publish( $post->ID );
+		if ( is_wp_error( $result ) ) {
+			return $result;
+		}
+
+		return array(
+			'ok'      => true,
+			'summary' => sprintf( __( 'Post [%1$d] %2$s was published.', 'wp-telepilot' ), $post->ID, get_the_title( $post ) ),
+			'data'    => array(
+				'post_id' => $post->ID,
+			),
+		);
+	}
+
+	private function execute_unpublish_post( $arguments, $session ) {
+		$post = $this->resolve_post_from_arguments( $arguments, $session );
+		if ( is_wp_error( $post ) ) {
+			return $post;
+		}
+
+		$result = $this->posts_service->unpublish( $post->ID );
+		if ( is_wp_error( $result ) ) {
+			return $result;
+		}
+
+		return array(
+			'ok'      => true,
+			'summary' => sprintf( __( 'Post [%1$d] %2$s was moved back to draft.', 'wp-telepilot' ), $post->ID, get_the_title( $post ) ),
+			'data'    => array(
+				'post_id' => $post->ID,
+			),
+		);
+	}
+
+	private function execute_comment_action( $action, $arguments, $session ) {
+		$comment = $this->resolve_comment_from_arguments( $arguments, $session );
+		if ( is_wp_error( $comment ) ) {
+			return $comment;
+		}
+
+		$result = $this->comments_service->moderate_comment( $comment->comment_ID, $action );
+		if ( is_wp_error( $result ) ) {
+			return $result;
+		}
+
+		return array(
+			'ok'      => true,
+			'summary' => sprintf( __( 'Comment [%1$d] was %2$s.', 'wp-telepilot' ), $comment->comment_ID, $result['label'] ),
+			'data'    => array(
+				'comment_id' => $comment->comment_ID,
+			),
+		);
+	}
+
+	private function execute_plugin_action( $action, $arguments, $session ) {
+		$plugin = $this->resolve_plugin_from_arguments( $arguments, $session );
+		if ( is_wp_error( $plugin ) ) {
+			return $plugin;
+		}
+
+		switch ( $action ) {
+			case 'activate':
+				$result = $this->plugins_service->activate( $plugin['identifier'] );
+				break;
+			case 'deactivate':
+				$result = $this->plugins_service->deactivate( $plugin['identifier'] );
+				break;
+			case 'update':
+				$result = $this->plugins_service->update( $plugin['identifier'] );
+				break;
+			default:
+				return new WP_Error( 'telepilot_ai_plugin_action_invalid', __( 'Unsupported AI plugin action.', 'wp-telepilot' ) );
+		}
+
+		if ( is_wp_error( $result ) ) {
+			return $result;
+		}
+
+		return array(
+			'ok'      => true,
+			'summary' => sprintf( __( 'Plugin [%1$s] %2$s was %3$s.', 'wp-telepilot' ), $plugin['identifier'], $plugin['name'], $result['label'] ),
+			'data'    => array(
+				'identifier' => $plugin['identifier'],
+			),
+		);
+	}
+
+	private function parse_site_datetime( $raw_value ) {
+		$raw_value = trim( (string) $raw_value );
+		if ( '' === $raw_value ) {
+			return null;
+		}
+
+		try {
+			return new DateTimeImmutable( $raw_value, wp_timezone() );
+		} catch ( Exception $exception ) {
+			return null;
+		}
 	}
 }

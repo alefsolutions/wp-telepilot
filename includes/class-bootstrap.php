@@ -136,6 +136,7 @@ class Telepilot_Bootstrap {
 			'linking_enabled'       => 1,
 			'cleanup_on_uninstall'  => 0,
 		);
+		$defaults = array_merge( $defaults, Telepilot_AI_Settings::defaults() );
 
 		if ( ! is_array( $settings ) ) {
 			$settings = array();

@@ -82,6 +82,7 @@ class Telepilot_Settings_Page {
 		$output['default_notifications']  = isset( $input['default_notifications'] ) && is_array( $input['default_notifications'] )
 			? array_map( 'sanitize_text_field', $input['default_notifications'] )
 			: array();
+		$output                            = array_merge( $output, Telepilot_AI_Settings::sanitize_into_settings( $input, $existing ) );
 
 		return $output;
 	}
@@ -123,6 +124,8 @@ class Telepilot_Settings_Page {
 		$product_url              = 'https://alefdigitalsolutions.com/solutions/wp-telepilot';
 		$bugs_url                 = 'https://alefdigitalsolutions.com/solutions/wp-telepilot';
 		$license_url              = 'https://www.gnu.org/licenses/gpl-2.0.html';
+		$ai_provider_status       = Telepilot_AI_Settings::get_provider_status();
+		$masked_ai_key            = Telepilot_AI_Settings::masked_api_key( $settings );
 		?>
 		<div class="wrap telepilot-admin">
 			<div class="telepilot-shell">
@@ -189,6 +192,7 @@ class Telepilot_Settings_Page {
 							<nav class="telepilot-tabs" aria-label="<?php esc_attr_e( 'Settings sections', 'wp-telepilot' ); ?>">
 								<button class="telepilot-tab is-active" type="button" data-tab="telegram"><?php esc_html_e( 'Telegram', 'wp-telepilot' ); ?></button>
 								<button class="telepilot-tab" type="button" data-tab="security"><?php esc_html_e( 'Security', 'wp-telepilot' ); ?></button>
+								<button class="telepilot-tab" type="button" data-tab="ai"><?php esc_html_e( 'AI Assistant', 'wp-telepilot' ); ?></button>
 								<button class="telepilot-tab" type="button" data-tab="notifications"><?php esc_html_e( 'Notifications', 'wp-telepilot' ); ?></button>
 								<button class="telepilot-tab" type="button" data-tab="logging"><?php esc_html_e( 'Logging', 'wp-telepilot' ); ?></button>
 								<button class="telepilot-tab" type="button" data-tab="linking"><?php esc_html_e( 'Linking', 'wp-telepilot' ); ?></button>
@@ -262,6 +266,104 @@ class Telepilot_Settings_Page {
 								</div>
 							</div>
 
+							<div class="telepilot-tab-panel" data-panel="ai">
+								<div class="telepilot-field-grid">
+									<label class="telepilot-check telepilot-check-inline telepilot-field-full">
+										<input type="checkbox" name="telepilot_settings[ai_enabled]" value="1" <?php checked( ! empty( $settings['ai_enabled'] ) ); ?> />
+										<span><?php esc_html_e( 'Enable AI Chat Mode', 'wp-telepilot' ); ?></span>
+									</label>
+									<label class="telepilot-field">
+										<span><?php esc_html_e( 'Provider', 'wp-telepilot' ); ?></span>
+										<select name="telepilot_settings[ai_provider]">
+											<option value="openai" <?php selected( 'openai', $settings['ai_provider'] ); ?>><?php esc_html_e( 'OpenAI', 'wp-telepilot' ); ?></option>
+										</select>
+										<small><?php esc_html_e( 'Additional providers can be added later without changing the Telegram AI mode experience.', 'wp-telepilot' ); ?></small>
+									</label>
+									<label class="telepilot-field">
+										<span><?php esc_html_e( 'Model', 'wp-telepilot' ); ?></span>
+										<input type="text" name="telepilot_settings[ai_model]" value="<?php echo esc_attr( $settings['ai_model'] ); ?>" class="regular-text code" />
+										<small><?php esc_html_e( 'Use the OpenAI model name that should power AI chat mode.', 'wp-telepilot' ); ?></small>
+									</label>
+									<label class="telepilot-field telepilot-field-full">
+										<span><?php esc_html_e( 'OpenAI API Key', 'wp-telepilot' ); ?></span>
+										<input type="password" name="telepilot_settings[ai_openai_api_key]" value="" class="regular-text" autocomplete="off" />
+										<small>
+											<?php
+											echo $masked_ai_key
+												? esc_html( sprintf( __( 'Stored key: %s. Leave blank to keep it unchanged.', 'wp-telepilot' ), $masked_ai_key ) )
+												: esc_html__( 'Enter an OpenAI API key to enable the provider connection.', 'wp-telepilot' );
+											?>
+										</small>
+									</label>
+									<label class="telepilot-field">
+										<span><?php esc_html_e( 'Conversation Timeout (minutes)', 'wp-telepilot' ); ?></span>
+										<input type="number" min="5" name="telepilot_settings[ai_timeout_minutes]" value="<?php echo esc_attr( (string) $settings['ai_timeout_minutes'] ); ?>" />
+									</label>
+									<label class="telepilot-field">
+										<span><?php esc_html_e( 'Max Tool Calls per Request', 'wp-telepilot' ); ?></span>
+										<input type="number" min="1" max="10" name="telepilot_settings[ai_max_tool_calls]" value="<?php echo esc_attr( (string) $settings['ai_max_tool_calls'] ); ?>" />
+									</label>
+									<label class="telepilot-field">
+										<span><?php esc_html_e( 'Max Provider Retries', 'wp-telepilot' ); ?></span>
+										<input type="number" min="0" max="5" name="telepilot_settings[ai_max_retries]" value="<?php echo esc_attr( (string) $settings['ai_max_retries'] ); ?>" />
+									</label>
+									<label class="telepilot-field">
+										<span><?php esc_html_e( 'Max Pending Confirmations', 'wp-telepilot' ); ?></span>
+										<input type="number" min="1" max="20" name="telepilot_settings[ai_max_pending_confirmations]" value="<?php echo esc_attr( (string) $settings['ai_max_pending_confirmations'] ); ?>" />
+									</label>
+								</div>
+
+								<div class="telepilot-checkbox-grid">
+									<label class="telepilot-check">
+										<input type="checkbox" name="telepilot_settings[ai_preserve_context]" value="1" <?php checked( ! empty( $settings['ai_preserve_context'] ) ); ?> />
+										<span><?php esc_html_e( 'Preserve short-term conversation context', 'wp-telepilot' ); ?></span>
+									</label>
+									<label class="telepilot-check">
+										<input type="checkbox" name="telepilot_settings[ai_confirm_writes]" value="1" <?php checked( ! empty( $settings['ai_confirm_writes'] ) ); ?> />
+										<span><?php esc_html_e( 'Require confirmation for AI write operations', 'wp-telepilot' ); ?></span>
+									</label>
+									<label class="telepilot-check">
+										<input type="checkbox" name="telepilot_settings[ai_log_activity]" value="1" <?php checked( ! empty( $settings['ai_log_activity'] ) ); ?> />
+										<span><?php esc_html_e( 'Log AI activity', 'wp-telepilot' ); ?></span>
+									</label>
+									<label class="telepilot-check">
+										<input type="checkbox" name="telepilot_settings[ai_mask_sensitive]" value="1" <?php checked( ! empty( $settings['ai_mask_sensitive'] ) ); ?> />
+										<span><?php esc_html_e( 'Mask sensitive information in AI logs and responses', 'wp-telepilot' ); ?></span>
+									</label>
+								</div>
+
+								<div class="telepilot-panel telepilot-panel-nested">
+									<div class="telepilot-panel-heading">
+										<div>
+											<p class="telepilot-section-label"><?php esc_html_e( 'Tool Permissions', 'wp-telepilot' ); ?></p>
+											<h3><?php esc_html_e( 'Allowed AI Tasks', 'wp-telepilot' ); ?></h3>
+										</div>
+									</div>
+									<div class="telepilot-checkbox-grid">
+										<label class="telepilot-check"><input type="checkbox" name="telepilot_settings[ai_allow_site_read]" value="1" <?php checked( ! empty( $settings['ai_allow_site_read'] ) ); ?> /><span><?php esc_html_e( 'Read site information and alerts', 'wp-telepilot' ); ?></span></label>
+										<label class="telepilot-check"><input type="checkbox" name="telepilot_settings[ai_allow_content_read]" value="1" <?php checked( ! empty( $settings['ai_allow_content_read'] ) ); ?> /><span><?php esc_html_e( 'Read posts and pages', 'wp-telepilot' ); ?></span></label>
+										<label class="telepilot-check"><input type="checkbox" name="telepilot_settings[ai_allow_plugins_read]" value="1" <?php checked( ! empty( $settings['ai_allow_plugins_read'] ) ); ?> /><span><?php esc_html_e( 'Read plugins and updates', 'wp-telepilot' ); ?></span></label>
+										<label class="telepilot-check"><input type="checkbox" name="telepilot_settings[ai_allow_users_read]" value="1" <?php checked( ! empty( $settings['ai_allow_users_read'] ) ); ?> /><span><?php esc_html_e( 'Read users', 'wp-telepilot' ); ?></span></label>
+										<label class="telepilot-check"><input type="checkbox" name="telepilot_settings[ai_allow_comments_read]" value="1" <?php checked( ! empty( $settings['ai_allow_comments_read'] ) ); ?> /><span><?php esc_html_e( 'Read comments', 'wp-telepilot' ); ?></span></label>
+										<label class="telepilot-check"><input type="checkbox" name="telepilot_settings[ai_allow_create_drafts]" value="1" <?php checked( ! empty( $settings['ai_allow_create_drafts'] ) ); ?> /><span><?php esc_html_e( 'Create drafts', 'wp-telepilot' ); ?></span></label>
+										<label class="telepilot-check"><input type="checkbox" name="telepilot_settings[ai_allow_edit_drafts]" value="1" <?php checked( ! empty( $settings['ai_allow_edit_drafts'] ) ); ?> /><span><?php esc_html_e( 'Edit drafts and schedules', 'wp-telepilot' ); ?></span></label>
+										<label class="telepilot-check"><input type="checkbox" name="telepilot_settings[ai_allow_publish_posts]" value="1" <?php checked( ! empty( $settings['ai_allow_publish_posts'] ) ); ?> /><span><?php esc_html_e( 'Publish and unpublish posts', 'wp-telepilot' ); ?></span></label>
+										<label class="telepilot-check"><input type="checkbox" name="telepilot_settings[ai_allow_manage_comments]" value="1" <?php checked( ! empty( $settings['ai_allow_manage_comments'] ) ); ?> /><span><?php esc_html_e( 'Manage comments', 'wp-telepilot' ); ?></span></label>
+										<label class="telepilot-check"><input type="checkbox" name="telepilot_settings[ai_allow_activate_plugins]" value="1" <?php checked( ! empty( $settings['ai_allow_activate_plugins'] ) ); ?> /><span><?php esc_html_e( 'Activate and deactivate plugins', 'wp-telepilot' ); ?></span></label>
+										<label class="telepilot-check"><input type="checkbox" name="telepilot_settings[ai_allow_update_plugins]" value="1" <?php checked( ! empty( $settings['ai_allow_update_plugins'] ) ); ?> /><span><?php esc_html_e( 'Update plugins', 'wp-telepilot' ); ?></span></label>
+										<label class="telepilot-check"><input type="checkbox" name="telepilot_settings[ai_allow_manage_users]" value="1" <?php checked( ! empty( $settings['ai_allow_manage_users'] ) ); ?> /><span><?php esc_html_e( 'Manage users', 'wp-telepilot' ); ?></span></label>
+									</div>
+								</div>
+
+								<div class="telepilot-inline-note">
+									<strong><?php esc_html_e( 'Provider status:', 'wp-telepilot' ); ?></strong>
+									<?php echo esc_html( $ai_provider_status['message'] ); ?>
+									<?php if ( ! empty( $ai_provider_status['checked_at'] ) ) : ?>
+										<?php echo esc_html( ' ' . sprintf( __( '(checked %s)', 'wp-telepilot' ), $this->format_timestamp( (int) $ai_provider_status['checked_at'] ) ) ); ?>
+									<?php endif; ?>
+								</div>
+							</div>
+
 							<div class="telepilot-tab-panel" data-panel="notifications">
 								<div class="telepilot-checkbox-grid">
 									<?php foreach ( $this->notification_options() as $key => $label ) : ?>
@@ -300,6 +402,11 @@ class Telepilot_Settings_Page {
 							<div class="telepilot-actions">
 								<?php submit_button( __( 'Save WP Telepilot Settings', 'wp-telepilot' ), 'primary', 'submit', false ); ?>
 							</div>
+						</form>
+
+						<form method="post" class="telepilot-inline-tools">
+							<?php wp_nonce_field( 'telepilot_tools_actions', 'telepilot_tools_nonce' ); ?>
+							<button type="submit" class="button" name="telepilot_test_ai_connection" value="1"><?php esc_html_e( 'Test AI Connection', 'wp-telepilot' ); ?></button>
 						</form>
 					</section>
 
@@ -932,6 +1039,7 @@ class Telepilot_Settings_Page {
 			'linking_enabled'       => 1,
 			'cleanup_on_uninstall'  => 0,
 		);
+		$defaults = array_merge( $defaults, Telepilot_AI_Settings::defaults() );
 
 		return wp_parse_args( get_option( 'telepilot_settings', array() ), $defaults );
 	}
@@ -1003,6 +1111,26 @@ class Telepilot_Settings_Page {
 			array(
 				'command'     => 'menu',
 				'description' => __( 'Open the WP Telepilot command hub', 'wp-telepilot' ),
+			),
+			array(
+				'command'     => 'chat',
+				'description' => __( 'Enter AI chat mode', 'wp-telepilot' ),
+			),
+			array(
+				'command'     => 'endchat',
+				'description' => __( 'Leave AI chat mode', 'wp-telepilot' ),
+			),
+			array(
+				'command'     => 'newchat',
+				'description' => __( 'Start a fresh AI conversation', 'wp-telepilot' ),
+			),
+			array(
+				'command'     => 'context',
+				'description' => __( 'Show AI session context', 'wp-telepilot' ),
+			),
+			array(
+				'command'     => 'cancel',
+				'description' => __( 'Cancel the pending AI action', 'wp-telepilot' ),
 			),
 			array(
 				'command'     => 'site',
@@ -1231,6 +1359,37 @@ class Telepilot_Settings_Page {
 					! empty( $worker['message'] ) ? $worker['message'] : __( 'Unknown', 'wp-telepilot' )
 				)
 			);
+			return;
+		}
+
+		if ( ! empty( $_POST['telepilot_test_ai_connection'] ) ) {
+			$provider = new Telepilot_OpenAI_Provider();
+			$result   = $provider->test_connection();
+
+			if ( is_wp_error( $result ) ) {
+				Telepilot_AI_Settings::store_provider_status(
+					array(
+						'ok'         => 0,
+						'message'    => $result->get_error_message(),
+						'checked_at' => time(),
+						'provider'   => $provider->get_name(),
+						'model'      => Telepilot_AI_Settings::get_model( $settings ),
+					)
+				);
+				$this->set_tools_notice( 'error', $result->get_error_message() );
+				return;
+			}
+
+			Telepilot_AI_Settings::store_provider_status(
+				array(
+					'ok'         => 1,
+					'message'    => ! empty( $result['message'] ) ? (string) $result['message'] : __( 'OpenAI connection verified successfully.', 'wp-telepilot' ),
+					'checked_at' => time(),
+					'provider'   => $provider->get_name(),
+					'model'      => Telepilot_AI_Settings::get_model( $settings ),
+				)
+			);
+			$this->set_tools_notice( 'success', ! empty( $result['message'] ) ? (string) $result['message'] : __( 'OpenAI connection verified successfully.', 'wp-telepilot' ) );
 			return;
 		}
 

@@ -23,6 +23,7 @@ class Telepilot_Telegram_Service {
 	private $plugins_service;
 	private $post_editor_service;
 	private $confirmation_service;
+	private $ai_chat_handler;
 
 	public function __construct() {
 		$this->client             = new Telepilot_Telegram_Client();
@@ -34,6 +35,7 @@ class Telepilot_Telegram_Service {
 		$this->users_service      = new Telepilot_Users_Service( $this->confirmation_service );
 		$this->plugins_service    = new Telepilot_Plugins_Service( $this->confirmation_service );
 		$this->post_editor_service = new Telepilot_Post_Editor_Service();
+		$this->ai_chat_handler    = new Telepilot_AI_Chat_Handler();
 		$this->command_router     = new Telepilot_Command_Router(
 			new Telepilot_User_Linking_Service(),
 			$this->permission_service,
@@ -503,7 +505,11 @@ class Telepilot_Telegram_Service {
 				$result = $this->handle_media_upload( $update, $identity, $command );
 
 				if ( null === $result ) {
-					$result = $this->command_router->route( $update, $identity );
+					if ( empty( $command['name'] ) && $this->ai_chat_handler->is_active( $identity ) ) {
+						$result = $this->ai_chat_handler->handle_text_message( $update, $identity );
+					} else {
+						$result = $this->command_router->route( $update, $identity );
+					}
 				}
 
 				$this->maybe_cache_command_response( $identity, $command, $update, $result );
@@ -1087,6 +1093,10 @@ class Telepilot_Telegram_Service {
 		$subcommand = $this->get_command_subcommand( $command );
 
 		if ( in_array( $name, array( '/start', '/help', '/menu', '/chatid', '/site', '/dashboard' ), true ) ) {
+			return true;
+		}
+
+		if ( in_array( $name, array( '/chat', '/context' ), true ) ) {
 			return true;
 		}
 

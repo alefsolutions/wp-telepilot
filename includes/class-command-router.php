@@ -19,6 +19,7 @@ class Telepilot_Command_Router {
 	private $notifications_command_service;
 	private $site_settings_command_service;
 	private $confirmation_service;
+	private $ai_chat_handler;
 
 	public function __construct( Telepilot_User_Linking_Service $linking_service, Telepilot_Permission_Service $permission_service, Telepilot_Dashboard_Service $dashboard_service, Telepilot_Comments_Service $comments_service, Telepilot_Posts_Service $posts_service, Telepilot_Post_Editor_Service $post_editor_service, Telepilot_Pages_Service $pages_service, Telepilot_Media_Service $media_service, Telepilot_Users_Service $users_service, Telepilot_Plugins_Service $plugins_service, Telepilot_Taxonomies_Service $taxonomies_service, Telepilot_Notifications_Command_Service $notifications_command_service, Telepilot_Site_Settings_Command_Service $site_settings_command_service, Telepilot_Confirmation_Service $confirmation_service ) {
 		$this->linking_service    = $linking_service;
@@ -35,6 +36,7 @@ class Telepilot_Command_Router {
 		$this->notifications_command_service = $notifications_command_service;
 		$this->site_settings_command_service = $site_settings_command_service;
 		$this->confirmation_service = $confirmation_service;
+		$this->ai_chat_handler = new Telepilot_AI_Chat_Handler();
 	}
 
 	public function route( $update, $identity ) {
@@ -69,6 +71,21 @@ class Telepilot_Command_Router {
 
 			case '/menu':
 				return $this->handle_menu( $identity );
+
+			case '/chat':
+				return $this->ai_chat_handler->start_chat_mode( $identity );
+
+			case '/endchat':
+				return $this->ai_chat_handler->end_chat_mode( $identity );
+
+			case '/newchat':
+				return $this->ai_chat_handler->new_chat( $identity );
+
+			case '/context':
+				return $this->ai_chat_handler->render_context( $identity );
+
+			case '/cancel':
+				return $this->ai_chat_handler->cancel_pending_action( $identity );
 
 			case '/settings':
 				return $this->handle_settings( $command, $identity );
@@ -190,6 +207,10 @@ class Telepilot_Command_Router {
 	}
 
 	private function handle_help( $identity ) {
+		if ( $this->ai_chat_handler->is_active( $identity ) ) {
+			return $this->ai_chat_handler->render_help( $identity );
+		}
+
 		$commands = array();
 
 		if ( empty( $identity['wp_user'] ) || ! $identity['wp_user'] instanceof WP_User ) {
@@ -203,10 +224,13 @@ class Telepilot_Command_Router {
 		$commands[] = Telepilot_Telegram_Response_Builder::bold( Telepilot_Telegram_Response_Builder::label( 'menu', __( 'Core Commands', 'wp-telepilot' ) ) );
 		$commands[] = Telepilot_Telegram_Response_Builder::code( '/start' ) . ' ' . __( 'Onboarding', 'wp-telepilot' );
 		$commands[] = Telepilot_Telegram_Response_Builder::code( '/help' ) . ' ' . __( 'Show commands', 'wp-telepilot' );
-		$commands[] = Telepilot_Telegram_Response_Builder::code( '/menu' ) . ' ' . __( 'Open the command hub', 'wp-telepilot' );
-		$commands[] = Telepilot_Telegram_Response_Builder::code( '/site' ) . ' ' . __( 'Show site overview', 'wp-telepilot' );
-		$commands[] = Telepilot_Telegram_Response_Builder::code( '/chatid' ) . ' ' . __( 'Reveal the current chat ID', 'wp-telepilot' );
-		$commands[] = Telepilot_Telegram_Response_Builder::code( '/link CODE' ) . ' ' . __( 'Link Telegram to WordPress', 'wp-telepilot' );
+			$commands[] = Telepilot_Telegram_Response_Builder::code( '/menu' ) . ' ' . __( 'Open the command hub', 'wp-telepilot' );
+			$commands[] = Telepilot_Telegram_Response_Builder::code( '/site' ) . ' ' . __( 'Show site overview', 'wp-telepilot' );
+			$commands[] = Telepilot_Telegram_Response_Builder::code( '/chatid' ) . ' ' . __( 'Reveal the current chat ID', 'wp-telepilot' );
+			$commands[] = Telepilot_Telegram_Response_Builder::code( '/link CODE' ) . ' ' . __( 'Link Telegram to WordPress', 'wp-telepilot' );
+			if ( Telepilot_AI_Settings::is_enabled() ) {
+				$commands[] = Telepilot_Telegram_Response_Builder::code( '/chat' ) . ' ' . __( 'Enter AI chat mode', 'wp-telepilot' );
+			}
 
 		if ( ! empty( $identity['wp_user'] ) && $identity['wp_user'] instanceof WP_User ) {
 			$commands[] = Telepilot_Telegram_Response_Builder::code( '/unlink' ) . ' ' . __( 'Unlink Telegram', 'wp-telepilot' );
@@ -3970,6 +3994,19 @@ class Telepilot_Command_Router {
 					array(
 						'text'          => Telepilot_Telegram_Response_Builder::label( 'settings', __( 'Settings', 'wp-telepilot' ) ),
 						'callback_data' => '/settings',
+					),
+				);
+			}
+
+			if ( Telepilot_AI_Settings::is_enabled() ) {
+				$rows[] = array(
+					array(
+						'text'          => Telepilot_Telegram_Response_Builder::label( 'chat', __( 'AI Chat', 'wp-telepilot' ) ),
+						'callback_data' => '/chat',
+					),
+					array(
+						'text'          => Telepilot_Telegram_Response_Builder::label( 'context', __( 'AI Context', 'wp-telepilot' ) ),
+						'callback_data' => '/context',
 					),
 				);
 			}

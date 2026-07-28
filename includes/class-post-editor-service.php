@@ -6,7 +6,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 class Telepilot_Post_Editor_Service {
 	const TOKEN_PREFIX      = 'telepilot_post_editor_';
-	const DEFAULT_EXPIRY    = 900;
+	const DEFAULT_EXPIRY    = 3600;
 	const HANDLER_ACTION    = 'telepilot_post_editor';
 
 	public function create_edit_link( $post_id, WP_User $wp_user, $telegram_user_id = '', $expiration = self::DEFAULT_EXPIRY ) {
@@ -54,6 +54,15 @@ class Telepilot_Post_Editor_Service {
 			$this->render_error_page(
 				__( 'Link Expired', 'wp-telepilot' ),
 				__( 'That post editor link is invalid, expired, or has already been used. Generate a fresh link from Telegram and try again.', 'wp-telepilot' ),
+				410
+			);
+		}
+
+		if ( $this->is_session_expired( $session ) ) {
+			$this->delete_session( $token );
+			$this->render_error_page(
+				__( 'Link Expired', 'wp-telepilot' ),
+				__( 'That post editor link has expired. Generate a fresh link from Telegram and try again.', 'wp-telepilot' ),
 				410
 			);
 		}
@@ -141,6 +150,13 @@ class Telepilot_Post_Editor_Service {
 		$preview_url  = get_permalink( $post );
 		$status_label = ucfirst( (string) $post->post_status );
 		$title        = get_the_title( $post );
+		$logo_url     = $this->get_logo_url();
+		$expires_at   = time() + self::DEFAULT_EXPIRY;
+
+		$session = $this->get_session( $token );
+		if ( ! empty( $session['expires_at'] ) ) {
+			$expires_at = (int) $session['expires_at'];
+		}
 
 		status_header( 200 );
 		?>
@@ -151,39 +167,67 @@ class Telepilot_Post_Editor_Service {
 			<meta name="viewport" content="width=device-width, initial-scale=1">
 			<title><?php echo esc_html( sprintf( __( 'Edit Post: %s', 'wp-telepilot' ), $title ) ); ?></title>
 			<style>
-				body{margin:0;background:linear-gradient(180deg,#f8fbfd 0%,#eef4f7 100%);color:#1f2933;font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
-				.shell{max-width:1040px;margin:0 auto;padding:32px 20px 48px}
-				.card{background:#fff;border:1px solid #d5dde3;border-radius:28px;box-shadow:0 24px 70px rgba(15,23,42,.06);padding:28px}
-				.hero{margin-bottom:20px;padding:28px;border-radius:28px;background:linear-gradient(135deg,#1f2933,#111827);color:#fff}
-				.kicker{margin:0 0 10px;font-size:11px;font-weight:800;letter-spacing:.22em;text-transform:uppercase;color:rgba(255,255,255,.7)}
-				h1{margin:0;font-size:34px;line-height:1.1}
+				:root{--tp-ink:#1f2933;--tp-ink-strong:#111827;--tp-cyan:#0ea5d3;--tp-cyan-deep:#0b88af;--tp-cyan-soft:#e7f8fd;--tp-border:#d5dde3;--tp-panel:#ffffff;--tp-surface:#f3f7f9;--tp-muted:#52606d;--tp-danger:#b42318;--tp-danger-bg:#fef3f2;--tp-shadow:0 24px 70px rgba(15,23,42,.08)}
+				*{box-sizing:border-box}
+				body{margin:0;background:
+					radial-gradient(circle at top left,rgba(14,165,211,.14),transparent 26%),
+					radial-gradient(circle at top right,rgba(31,41,51,.1),transparent 30%),
+					linear-gradient(180deg,#f8fbfd 0%,#eef4f7 100%);
+					color:var(--tp-ink);font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+				.shell{max-width:1080px;margin:0 auto;padding:32px 20px 48px}
+				.card{background:var(--tp-panel);border:1px solid var(--tp-border);border-radius:28px;box-shadow:var(--tp-shadow);padding:28px}
+				.hero{margin-bottom:20px;padding:28px;border-radius:30px;background:
+					linear-gradient(135deg,rgba(14,165,211,.14),rgba(14,165,211,0) 42%),
+					linear-gradient(135deg,var(--tp-ink),var(--tp-ink-strong));color:#fff;position:relative;overflow:hidden}
+				.hero:after{content:"";position:absolute;right:-80px;top:-80px;width:240px;height:240px;border-radius:50%;background:rgba(14,165,211,.12)}
+				.brand{display:flex;align-items:center;gap:14px;margin-bottom:16px;position:relative;z-index:1}
+				.brand img{width:52px;height:52px;object-fit:contain;border-radius:16px;background:rgba(255,255,255,.08);padding:8px}
+				.brand-copy{display:flex;flex-direction:column;gap:4px}
+				.kicker{margin:0;font-size:11px;font-weight:800;letter-spacing:.22em;text-transform:uppercase;color:rgba(255,255,255,.7)}
+				.product{margin:0;font-size:13px;font-weight:700;color:#d5eef7}
+				h1{margin:0;font-size:34px;line-height:1.1;position:relative;z-index:1}
 				p{line-height:1.7}
-				.meta{display:flex;flex-wrap:wrap;gap:10px;margin-top:16px}
-				.pill{display:inline-flex;align-items:center;justify-content:center;padding:8px 12px;border-radius:999px;font-size:11px;font-weight:800;letter-spacing:.16em;text-transform:uppercase;background:#ecfeff;color:#0f766e}
-				.notice{margin-bottom:18px;padding:14px 16px;border-radius:18px;border:1px solid #d5dde3;background:#f8fbff}
-				.notice.error{background:#fef3f2;border-color:#f3c1bc;color:#b42318}
+				.hero p{position:relative;z-index:1;max-width:780px}
+				.meta{display:flex;flex-wrap:wrap;gap:10px;margin-top:16px;position:relative;z-index:1}
+				.pill{display:inline-flex;align-items:center;justify-content:center;padding:8px 12px;border-radius:999px;font-size:11px;font-weight:800;letter-spacing:.16em;text-transform:uppercase;background:var(--tp-cyan-soft);color:var(--tp-cyan-deep);border:1px solid rgba(14,165,211,.18)}
+				.notice{margin-bottom:18px;padding:14px 16px;border-radius:18px;border:1px solid var(--tp-border);background:#f8fbff}
+				.notice.error{background:var(--tp-danger-bg);border-color:#f3c1bc;color:var(--tp-danger)}
 				.grid{display:grid;gap:18px}
 				label{display:block;font-weight:700;margin-bottom:8px}
-				input[type=text],textarea{width:100%;border:1px solid #d5dde3;border-radius:18px;background:#f3f7f9;padding:14px 16px;color:#1f2933;font:inherit}
+				input[type=text],textarea{width:100%;border:1px solid var(--tp-border);border-radius:18px;background:var(--tp-surface);padding:14px 16px;color:var(--tp-ink);font:inherit;transition:border-color .2s ease, box-shadow .2s ease, background-color .2s ease}
+				input[type=text]:focus,textarea:focus{outline:none;border-color:var(--tp-cyan);background:#fff;box-shadow:0 0 0 4px rgba(14,165,211,.14)}
 				textarea.content{min-height:420px;line-height:1.7}
 				textarea.excerpt{min-height:120px}
 				.actions{display:flex;flex-wrap:wrap;gap:12px;margin-top:24px}
 				button,a.button{display:inline-flex;align-items:center;justify-content:center;padding:12px 18px;border-radius:999px;border:0;text-decoration:none;font-weight:700;cursor:pointer}
-				button.primary{background:linear-gradient(135deg,#0ea5d3,#0b88af);color:#fff}
-				a.secondary{background:#fff;color:#1f2933;border:1px solid #d5dde3}
-				.help{margin-top:20px;color:#52606d}
+				button.primary{background:linear-gradient(135deg,var(--tp-cyan),var(--tp-cyan-deep));color:#fff;box-shadow:0 14px 30px rgba(14,165,211,.22)}
+				button.primary:hover,a.primary:hover{filter:brightness(1.03)}
+				a.secondary{background:#fff;color:var(--tp-ink);border:1px solid var(--tp-border)}
+				.help{margin-top:20px;color:var(--tp-muted)}
+				.expiry{margin-top:14px;font-size:13px;color:#d5eef7}
+				.expiry strong{color:#fff}
+				@media (max-width: 720px){.shell{padding:20px 14px 36px}.card,.hero{padding:22px;border-radius:24px}h1{font-size:28px}.brand{align-items:flex-start}.brand img{width:44px;height:44px}}
 			</style>
 		</head>
 		<body>
 			<div class="shell">
 				<section class="hero">
-					<p class="kicker"><?php esc_html_e( 'WP Telepilot Long-Form Editor', 'wp-telepilot' ); ?></p>
+					<div class="brand">
+						<?php if ( $logo_url ) : ?>
+							<img src="<?php echo esc_url( $logo_url ); ?>" alt="<?php esc_attr_e( 'WP Telepilot logo', 'wp-telepilot' ); ?>">
+						<?php endif; ?>
+						<div class="brand-copy">
+							<p class="kicker"><?php esc_html_e( 'WP Telepilot Long-Form Editor', 'wp-telepilot' ); ?></p>
+							<p class="product"><?php esc_html_e( 'Secure browser bridge for Telegram-managed post editing', 'wp-telepilot' ); ?></p>
+						</div>
+					</div>
 					<h1><?php echo esc_html( $title ); ?></h1>
 					<div class="meta">
 						<span class="pill"><?php echo esc_html( sprintf( __( 'Post [%d]', 'wp-telepilot' ), $post->ID ) ); ?></span>
 						<span class="pill"><?php echo esc_html( $status_label ); ?></span>
 					</div>
 					<p><?php esc_html_e( 'This secure browser editor is designed for longer post changes that are awkward to make in Telegram chat. Save here, then continue your workflow back in Telegram.', 'wp-telepilot' ); ?></p>
+					<p class="expiry"><strong><?php esc_html_e( 'Session expiry:', 'wp-telepilot' ); ?></strong> <?php echo esc_html( wp_date( 'Y-m-d H:i:s T', $expires_at ) ); ?></p>
 				</section>
 
 				<section class="card">
@@ -228,6 +272,7 @@ class Telepilot_Post_Editor_Service {
 
 	private function render_success_page( $post ) {
 		$preview_url = get_permalink( $post );
+		$logo_url    = $this->get_logo_url();
 
 		status_header( 200 );
 		?>
@@ -238,22 +283,34 @@ class Telepilot_Post_Editor_Service {
 			<meta name="viewport" content="width=device-width, initial-scale=1">
 			<title><?php esc_html_e( 'Post Saved', 'wp-telepilot' ); ?></title>
 			<style>
-				body{margin:0;background:linear-gradient(180deg,#f8fbfd 0%,#eef4f7 100%);color:#1f2933;font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+				:root{--tp-ink:#1f2933;--tp-ink-strong:#111827;--tp-cyan:#0ea5d3;--tp-cyan-deep:#0b88af;--tp-cyan-soft:#e7f8fd;--tp-border:#d5dde3;--tp-panel:#ffffff;--tp-shadow:0 24px 70px rgba(15,23,42,.08)}
+				*{box-sizing:border-box}
+				body{margin:0;background:
+					radial-gradient(circle at top left,rgba(14,165,211,.14),transparent 26%),
+					linear-gradient(180deg,#f8fbfd 0%,#eef4f7 100%);
+					color:var(--tp-ink);font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
 				.shell{max-width:760px;margin:0 auto;padding:40px 20px}
-				.card{background:#fff;border:1px solid #d5dde3;border-radius:28px;box-shadow:0 24px 70px rgba(15,23,42,.06);padding:32px}
-				.badge{display:inline-flex;align-items:center;justify-content:center;padding:8px 14px;border-radius:999px;background:#ecfeff;color:#0f766e;font-size:11px;font-weight:800;letter-spacing:.18em;text-transform:uppercase}
-				h1{margin:16px 0 12px;font-size:34px;line-height:1.1}
+				.card{background:var(--tp-panel);border:1px solid var(--tp-border);border-radius:28px;box-shadow:var(--tp-shadow);padding:32px}
+				.brand{display:flex;align-items:center;gap:14px}
+				.brand img{width:48px;height:48px;object-fit:contain;border-radius:14px;background:#f3f7f9;padding:8px}
+				.badge{display:inline-flex;align-items:center;justify-content:center;padding:8px 14px;border-radius:999px;background:var(--tp-cyan-soft);color:var(--tp-cyan-deep);font-size:11px;font-weight:800;letter-spacing:.18em;text-transform:uppercase;border:1px solid rgba(14,165,211,.18)}
+				h1{margin:16px 0 12px;font-size:34px;line-height:1.1;color:var(--tp-ink-strong)}
 				p{line-height:1.8}
 				.actions{display:flex;flex-wrap:wrap;gap:12px;margin-top:24px}
 				a.button{display:inline-flex;align-items:center;justify-content:center;padding:12px 18px;border-radius:999px;text-decoration:none;font-weight:700}
-				a.primary{background:linear-gradient(135deg,#0ea5d3,#0b88af);color:#fff}
-				a.secondary{background:#fff;color:#1f2933;border:1px solid #d5dde3}
+				a.primary{background:linear-gradient(135deg,var(--tp-cyan),var(--tp-cyan-deep));color:#fff;box-shadow:0 14px 30px rgba(14,165,211,.22)}
+				a.secondary{background:#fff;color:var(--tp-ink);border:1px solid var(--tp-border)}
 			</style>
 		</head>
 		<body>
 			<div class="shell">
 				<div class="card">
-					<span class="badge"><?php esc_html_e( 'Saved', 'wp-telepilot' ); ?></span>
+					<div class="brand">
+						<?php if ( $logo_url ) : ?>
+							<img src="<?php echo esc_url( $logo_url ); ?>" alt="<?php esc_attr_e( 'WP Telepilot logo', 'wp-telepilot' ); ?>">
+						<?php endif; ?>
+						<span class="badge"><?php esc_html_e( 'Saved', 'wp-telepilot' ); ?></span>
+					</div>
 					<h1><?php esc_html_e( 'Post updated successfully', 'wp-telepilot' ); ?></h1>
 					<p><?php esc_html_e( 'Your long-form changes were saved. You can now return to Telegram to keep working with WP Telepilot.', 'wp-telepilot' ); ?></p>
 					<div class="actions">
@@ -271,6 +328,8 @@ class Telepilot_Post_Editor_Service {
 	}
 
 	private function render_error_page( $title, $message, $status_code = 403 ) {
+		$logo_url = $this->get_logo_url();
+
 		status_header( (int) $status_code );
 		?>
 		<!doctype html>
@@ -280,16 +339,30 @@ class Telepilot_Post_Editor_Service {
 			<meta name="viewport" content="width=device-width, initial-scale=1">
 			<title><?php echo esc_html( $title ); ?></title>
 			<style>
-				body{margin:0;background:#f8fbfd;color:#1f2933;font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+				:root{--tp-ink:#1f2933;--tp-danger:#b42318;--tp-danger-bg:#fef3f2;--tp-danger-border:#f3c1bc}
+				*{box-sizing:border-box}
+				body{margin:0;background:
+					radial-gradient(circle at top left,rgba(180,35,24,.08),transparent 24%),
+					linear-gradient(180deg,#f8fbfd 0%,#eef4f7 100%);
+					color:var(--tp-ink);font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
 				.shell{max-width:760px;margin:0 auto;padding:48px 20px}
-				.card{background:#fff;border:1px solid #f3c1bc;border-radius:28px;box-shadow:0 24px 70px rgba(15,23,42,.06);padding:32px}
-				h1{margin:0 0 12px;font-size:34px;line-height:1.1;color:#b42318}
+				.card{background:#fff;border:1px solid var(--tp-danger-border);border-radius:28px;box-shadow:0 24px 70px rgba(15,23,42,.06);padding:32px}
+				.brand{display:flex;align-items:center;gap:14px;margin-bottom:18px}
+				.brand img{width:44px;height:44px;object-fit:contain;border-radius:14px;background:#f3f7f9;padding:8px}
+				.label{display:inline-flex;align-items:center;justify-content:center;padding:8px 14px;border-radius:999px;background:var(--tp-danger-bg);color:var(--tp-danger);font-size:11px;font-weight:800;letter-spacing:.18em;text-transform:uppercase}
+				h1{margin:0 0 12px;font-size:34px;line-height:1.1;color:var(--tp-danger)}
 				p{line-height:1.8}
 			</style>
 		</head>
 		<body>
 			<div class="shell">
 				<div class="card">
+					<div class="brand">
+						<?php if ( $logo_url ) : ?>
+							<img src="<?php echo esc_url( $logo_url ); ?>" alt="<?php esc_attr_e( 'WP Telepilot logo', 'wp-telepilot' ); ?>">
+						<?php endif; ?>
+						<span class="label"><?php esc_html_e( 'Unavailable', 'wp-telepilot' ); ?></span>
+					</div>
 					<h1><?php echo esc_html( $title ); ?></h1>
 					<p><?php echo esc_html( $message ); ?></p>
 				</div>
@@ -341,10 +414,36 @@ class Telepilot_Post_Editor_Service {
 	}
 
 	private function generate_token() {
-		return $this->normalize_token( wp_generate_password( 24, false, false ) );
+		do {
+			try {
+				$token = $this->normalize_token( bin2hex( random_bytes( 24 ) ) );
+			} catch ( Exception $exception ) {
+				$token = $this->normalize_token( wp_generate_password( 48, false, false ) );
+			}
+		} while ( '' === $token || get_transient( self::TOKEN_PREFIX . $token ) );
+
+		return $token;
 	}
 
 	private function normalize_token( $token ) {
-		return sanitize_key( (string) $token );
+		return preg_replace( '/[^a-f0-9]/', '', strtolower( (string) $token ) );
+	}
+
+	private function is_session_expired( $session ) {
+		if ( empty( $session['expires_at'] ) ) {
+			return true;
+		}
+
+		return (int) $session['expires_at'] <= time();
+	}
+
+	private function get_logo_url() {
+		$logo_path = TELEPILOT_PATH . 'assets/images/telepilot-logo.png';
+
+		if ( ! file_exists( $logo_path ) ) {
+			return '';
+		}
+
+		return TELEPILOT_URL . 'assets/images/telepilot-logo.png';
 	}
 }

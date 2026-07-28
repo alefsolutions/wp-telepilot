@@ -134,11 +134,11 @@ Telegram is a third-party service:
 - WordPress 6.6 or newer
 - PHP 8.0 or newer
 - HTTPS for webhook mode
-- Current plugin line: `0.3.0-beta.5`
+- Current plugin line: `0.3.0`
 
 ## Project Status
 
-WP Telepilot is currently in the `0.3.0-beta.5` release line. The focus of the current cycle is reliability, guided creation workflows, admin polish, and smoother operator workflows ahead of the first stable release.
+WP Telepilot is currently in the `0.3.0` stable release line. The focus now is operational reliability, clear Telegram workflows, and incremental refinement toward the next feature cycle.
 
 ## Product Direction
 

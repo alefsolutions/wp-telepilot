@@ -29,6 +29,13 @@ jobs:
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
           echo "tag=v$VERSION" >> "$GITHUB_OUTPUT"
 
+      - name: Lint PHP sources
+        run: |
+          set -euo pipefail
+          php -l wp-telepilot.php
+          find includes -name '*.php' -print0 | xargs -0 -n 1 php -l
+          php -l uninstall.php
+
       - name: Build plugin package
         id: package
         run: |
@@ -40,17 +47,30 @@ jobs:
           rm -rf "$STAGING_DIR" "$ZIP_PATH"
           mkdir -p "$PLUGIN_DIR"
 
-          rsync -a ./ "$PLUGIN_DIR/" \
-            --exclude '.git/' \
-            --exclude '.github/' \
-            --exclude 'docs/' \
-            --exclude 'README.md'
+          rsync -a assets/ "$PLUGIN_DIR/assets/"
+          rsync -a includes/ "$PLUGIN_DIR/includes/"
+          rsync -a languages/ "$PLUGIN_DIR/languages/"
+          cp wp-telepilot.php "$PLUGIN_DIR/"
+          cp uninstall.php "$PLUGIN_DIR/"
+          cp readme.txt "$PLUGIN_DIR/"
+          cp LICENSE "$PLUGIN_DIR/"
 
           cd "$STAGING_DIR"
           zip -r "$ZIP_PATH" "wp-telepilot"
 
           echo "Created package at $ZIP_PATH"
           echo "zip_path=$ZIP_PATH" >> "$GITHUB_OUTPUT"
+
+      - name: Validate package contents
+        run: |
+          set -euo pipefail
+          ZIP_PATH="${{ steps.package.outputs.zip_path }}"
+          unzip -l "$ZIP_PATH"
+
+          if unzip -l "$ZIP_PATH" | grep -E 'README\.md|COMMANDS\.md|QA-|BETA-|LANDING-|\.github/|docs/|\.gitignore'; then
+            echo "Package contains unexpected development files." >&2
+            exit 1
+          fi
 
       - name: Sync release tag
         run: |

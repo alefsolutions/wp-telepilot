@@ -4,7 +4,7 @@ Tags: telegram, bot, notifications, moderation, remote management
 Requires at least: 6.6
 Tested up to: 7.0
 Requires PHP: 8.0
-Stable tag: 0.3.0-beta.5
+Stable tag: 0.3.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -14,7 +14,7 @@ Telegram-first WordPress operations for linked site teams who want structured si
 
 WP Telepilot lets approved WordPress users link a Telegram account to a WordPress account and then perform short, structured operational tasks from Telegram without trying to replace all of wp-admin.
 
-Features in the current beta include:
+WP Telepilot currently includes:
 
 * secure Telegram-to-WordPress account linking with short-lived one-time codes
 * webhook mode with polling fallback
@@ -25,7 +25,7 @@ Features in the current beta include:
 * transport diagnostics, queue processing, and webhook/polling health controls
 * personal-data export and erasure hooks for linked Telegram account data
 
-WP Telepilot is still in beta during the 0.3.0 cycle. The goal of this release line is to harden packaging, privacy, and operator workflows ahead of the planned 0.3.0 stable release.
+WP Telepilot 0.3.0 is the first stable release line. It focuses on secure Telegram linking, structured operational workflows, transport resilience, and practical WordPress administration from chat.
 
 Full command reference:
 https://github.com/alefsolutions/wp-telepilot/blob/main/COMMANDS.md
@@ -54,11 +54,11 @@ Yes. Webhook mode is the default. Polling fallback is available for hosts or rev
 
 = Can it edit long post content directly in chat? =
 
-Long-form post content is handled through a secure browser editing bridge in this beta. Telegram remains the place for shorter actions, decisions, and operational workflows.
+Long-form post content is handled through a secure browser editing bridge. Telegram remains the place for shorter actions, decisions, and operational workflows.
 
 = Can it upload media directly from Telegram? =
 
-No. Media is read-only in the current beta release. You can list, search, inspect, and open media items from Telegram, but uploads and destructive media changes remain in wp-admin for now.
+No. Media is read-only in the current stable release. You can list, search, inspect, and open media items from Telegram, but uploads and destructive media changes remain in wp-admin for now.
 
 = Does it include privacy tooling? =
 
@@ -93,12 +93,14 @@ WP Telepilot stores Telegram linkage metadata such as Telegram user IDs, chat ID
 
 == Changelog ==
 
-= 0.3.0-beta.5 =
+= 0.3.0 =
 
-* add guided page creation flows with immediate title-based draft creation
-* expand command documentation for post creation and page creation flows
-* remove Telegram inline query support to keep the release focused on command-first workflows
-* align plugin metadata and release docs to the 0.3.0-beta.5 line
+* first stable WP Telepilot release
+* secure Telegram-to-WordPress account linking with short-lived one-time codes
+* webhook transport with polling fallback, diagnostics, queue controls, and delivery hardening
+* capability-aware command menus and structured workflows for posts, pages, comments, users, plugins, categories, tags, notifications, and site settings
+* guided post and page creation flows plus secure browser handoff for long-form post editing
+* privacy export and erasure support for linked Telegram metadata and audit records
 
 = 0.3.0-beta.3 =
 
@@ -109,6 +111,6 @@ WP Telepilot stores Telegram linkage metadata such as Telegram user IDs, chat ID
 
 == Upgrade Notice ==
 
-= 0.3.0-beta.5 =
+= 0.3.0 =
 
-Beta build focused on guided page creation and smoother Telegram operator workflows ahead of the planned 0.3.0 stable release.
+First stable WP Telepilot release with secure linking, structured Telegram workflows, transport resilience, and admin diagnostics.

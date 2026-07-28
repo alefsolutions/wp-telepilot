@@ -35,6 +35,7 @@ require_once TELEPILOT_PATH . 'includes/ai/class-openai-provider.php';
 require_once TELEPILOT_PATH . 'includes/ai/class-ai-permission-manager.php';
 require_once TELEPILOT_PATH . 'includes/ai/class-ai-conversation-store.php';
 require_once TELEPILOT_PATH . 'includes/ai/class-ai-confirmation-manager.php';
+require_once TELEPILOT_PATH . 'includes/ai/class-ability-registry.php';
 require_once TELEPILOT_PATH . 'includes/ai/class-ai-tool-registry.php';
 require_once TELEPILOT_PATH . 'includes/ai/class-ai-tool-executor.php';
 require_once TELEPILOT_PATH . 'includes/ai/class-ai-orchestrator.php';

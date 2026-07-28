@@ -939,7 +939,14 @@ Each command below includes:
 - Scope: categories
 - Syntax: `/categories delete TERM_ID`
 - Example: `/categories delete 12`
-- Behavior: deletes a category after confirmation.
+- Behavior: deletes a category after confirmation when it is unused.
+
+### `/categories delete TERM_ID reassign TARGET_TERM_ID`
+
+- Scope: categories
+- Syntax: `/categories delete TERM_ID reassign TARGET_TERM_ID`
+- Example: `/categories delete 12 reassign 3`
+- Behavior: reassigns attached content to another category, then deletes the original category after confirmation.
 
 ## Tags commands
 
@@ -1004,7 +1011,14 @@ Each command below includes:
 - Scope: tags
 - Syntax: `/tags delete TERM_ID`
 - Example: `/tags delete 8`
-- Behavior: deletes a tag after confirmation.
+- Behavior: deletes a tag after confirmation when it is unused.
+
+### `/tags delete TERM_ID reassign TARGET_TERM_ID`
+
+- Scope: tags
+- Syntax: `/tags delete TERM_ID reassign TARGET_TERM_ID`
+- Example: `/tags delete 8 reassign 14`
+- Behavior: reassigns attached content to another tag, then deletes the original tag after confirmation.
 
 ## Permissions and behavior notes
 

@@ -3494,13 +3494,62 @@ class Telepilot_Command_Router {
 				return $private_chat_result;
 			}
 
+			$term = $this->taxonomies_service->get_term_details( $taxonomy, $term_id );
+			if ( is_wp_error( $term ) ) {
+				return Telepilot_Telegram_Response_Builder::error( $term->get_error_message() );
+			}
+
+			$replacement_term_id = 0;
+			if ( ! empty( $args[2] ) || ! empty( $args[3] ) ) {
+				if ( empty( $args[2] ) || 'reassign' !== strtolower( (string) $args[2] ) || empty( $args[3] ) ) {
+					return Telepilot_Telegram_Response_Builder::error(
+						sprintf(
+							'categories' === $resource
+								? __( 'Usage: `/categories delete 12` or `/categories delete 12 reassign 3`', 'wp-telepilot' )
+								: __( 'Usage: `/tags delete 8` or `/tags delete 8 reassign 14`', 'wp-telepilot' )
+						)
+					);
+				}
+
+				$replacement_term_id = absint( $args[3] );
+				if ( ! $replacement_term_id || $replacement_term_id === $term_id ) {
+					return Telepilot_Telegram_Response_Builder::error( __( 'Choose a different replacement term ID.', 'wp-telepilot' ) );
+				}
+
+				$replacement_term = $this->taxonomies_service->get_term_details( $taxonomy, $replacement_term_id );
+				if ( is_wp_error( $replacement_term ) ) {
+					return Telepilot_Telegram_Response_Builder::error( $replacement_term->get_error_message() );
+				}
+			}
+
+			$usage = $this->taxonomies_service->get_term_usage_details( $taxonomy, $term_id );
+			if ( is_wp_error( $usage ) ) {
+				return Telepilot_Telegram_Response_Builder::error( $usage->get_error_message() );
+			}
+
+			if ( ! empty( $usage['usage_count'] ) && ! $replacement_term_id ) {
+				return Telepilot_Telegram_Response_Builder::error_html(
+					$this->build_term_delete_reassignment_message( $resource, $term, (int) $usage['usage_count'] ),
+					array(
+						'command'      => '/' . $resource,
+						'reply_markup' => $this->safe_home_keyboard( $identity ),
+					)
+				);
+			}
+
 			return Telepilot_Telegram_Response_Builder::success(
-				sprintf( __( 'Confirm delete for %1$s #%2$d', 'wp-telepilot' ), rtrim( $resource, 's' ), $term_id ),
+				sprintf(
+					$replacement_term_id
+						? __( 'Confirm reassignment and delete for %1$s #%2$d', 'wp-telepilot' )
+						: __( 'Confirm delete for %1$s #%2$d', 'wp-telepilot' ),
+					rtrim( $resource, 's' ),
+					$term_id
+				),
 				array(
 					'command'      => '/' . $resource,
 					'reply_markup' => $this->safe_reply_markup(
-						function() use ( $taxonomy, $term_id, $identity ) {
-							return $this->taxonomies_service->build_delete_confirmation_keyboard( $taxonomy, $term_id, $identity['telegram_user_id'] );
+						function() use ( $taxonomy, $term_id, $identity, $replacement_term_id ) {
+							return $this->taxonomies_service->build_delete_confirmation_keyboard( $taxonomy, $term_id, $identity['telegram_user_id'], $replacement_term_id );
 						},
 						'terms_delete_confirm'
 					),
@@ -3535,6 +3584,51 @@ class Telepilot_Command_Router {
 		$payload = $this->confirmation_service->consume_token( $token );
 		if ( empty( $payload ) || (string) $payload['telegram_user_id'] !== (string) $identity['telegram_user_id'] || (string) $payload['taxonomy'] !== $taxonomy || (int) $payload['term_id'] !== $term_id || 'delete' !== $action || (string) $payload['action'] !== $action ) {
 			return Telepilot_Telegram_Response_Builder::error( __( 'That term action is invalid or expired.', 'wp-telepilot' ) );
+		}
+
+		$replacement_term_id = ! empty( $payload['replacement_term_id'] ) ? absint( $payload['replacement_term_id'] ) : 0;
+
+		if ( $replacement_term_id ) {
+			$result = $this->taxonomies_service->reassign_and_delete_term( $taxonomy, $term_id, $replacement_term_id );
+			if ( is_wp_error( $result ) ) {
+				return Telepilot_Telegram_Response_Builder::error( $result->get_error_message() );
+			}
+
+			$term             = $result['term'];
+			$replacement_term = $result['replacement_term'];
+			$affected_objects = ! empty( $result['affected_objects'] ) ? (int) $result['affected_objects'] : 0;
+
+			$this->log_term_action(
+				$identity,
+				'term_deleted',
+				$taxonomy,
+				$term_id,
+				$this->build_term_state( $term ),
+				array(
+					'action'           => 'delete',
+					'reassigned_to'    => array(
+						'id'   => $replacement_term->term_id,
+						'name' => $replacement_term->name,
+					),
+					'affected_objects' => $affected_objects,
+				)
+			);
+
+			$resource = 'post_tag' === $taxonomy ? 'tags' : 'categories';
+
+			return Telepilot_Telegram_Response_Builder::success(
+				sprintf(
+					'post_tag' === $taxonomy
+						? __( 'Tag #%1$d `%2$s` was reassigned to [%3$d] %4$s for %5$d item(s), then deleted.', 'wp-telepilot' )
+						: __( 'Category #%1$d `%2$s` was reassigned to [%3$d] %4$s for %5$d item(s), then deleted.', 'wp-telepilot' ),
+					$term_id,
+					$term->name,
+					$replacement_term->term_id,
+					$replacement_term->name,
+					$affected_objects
+				),
+				array( 'command' => '/' . $resource )
+			);
 		}
 
 		$term = $this->taxonomies_service->delete_term( $taxonomy, $term_id );
@@ -3598,6 +3692,28 @@ class Telepilot_Command_Router {
 		}
 
 		return $state;
+	}
+
+	private function build_term_delete_reassignment_message( $resource, $term, $usage_count ) {
+		$singular = 'tags' === $resource ? __( 'tag', 'wp-telepilot' ) : __( 'category', 'wp-telepilot' );
+		$examples = 'tags' === $resource
+			? Telepilot_Telegram_Response_Builder::code( '/tags delete ' . $term->term_id . ' reassign TARGET_ID' )
+			: Telepilot_Telegram_Response_Builder::code( '/categories delete ' . $term->term_id . ' reassign TARGET_ID' );
+
+		return Telepilot_Telegram_Response_Builder::join_blocks(
+			array(
+				Telepilot_Telegram_Response_Builder::bold( sprintf( __( 'Cannot delete %s in place', 'wp-telepilot' ), $singular ) ),
+				implode(
+					"\n",
+					array(
+						sprintf( __( '%1$s: [%2$d] %3$s', 'wp-telepilot' ), ucfirst( $singular ), $term->term_id, Telepilot_Telegram_Response_Builder::escape( $term->name ) ),
+						sprintf( __( 'Attached content: %d item(s)', 'wp-telepilot' ), (int) $usage_count ),
+					)
+				),
+				__( 'Reassign the attached content to another term first, then delete the original.', 'wp-telepilot' ),
+				sprintf( __( 'Example: %s', 'wp-telepilot' ), $examples ),
+			)
+		);
 	}
 
 	private function extract_page_from_args( $args ) {

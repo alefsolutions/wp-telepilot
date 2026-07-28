@@ -333,7 +333,63 @@ class Telepilot_Posts_Service {
 			sprintf( __( 'Updated: %s', 'wp-telepilot' ), Telepilot_Telegram_Response_Builder::escape( get_post_modified_time( 'Y-m-d H:i:s', false, $post, true ) ) ),
 		);
 
+		$lines = array_merge( $lines, $this->build_post_taxonomy_lines( $post ) );
+
 		return implode( "\n", $lines );
+	}
+
+	private function build_post_taxonomy_lines( $post ) {
+		if ( ! $post instanceof WP_Post ) {
+			return array();
+		}
+
+		$lines      = array();
+		$categories = $this->format_taxonomy_term_summary( $post->ID, 'category' );
+		$tags       = $this->format_taxonomy_term_summary( $post->ID, 'post_tag' );
+
+		if ( '' !== $categories ) {
+			$lines[] = sprintf( __( 'Categories: %s', 'wp-telepilot' ), Telepilot_Telegram_Response_Builder::escape( $categories ) );
+		}
+
+		if ( '' !== $tags ) {
+			$lines[] = sprintf( __( 'Tags: %s', 'wp-telepilot' ), Telepilot_Telegram_Response_Builder::escape( $tags ) );
+		}
+
+		return $lines;
+	}
+
+	private function format_taxonomy_term_summary( $post_id, $taxonomy ) {
+		$terms = get_the_terms( (int) $post_id, (string) $taxonomy );
+
+		if ( empty( $terms ) || is_wp_error( $terms ) ) {
+			return '';
+		}
+
+		$labels = array();
+		foreach ( $terms as $term ) {
+			if ( ! $term instanceof WP_Term ) {
+				continue;
+			}
+
+			$labels[] = sprintf( '%1$s [%2$d]', $term->name, $term->term_id );
+		}
+
+		if ( empty( $labels ) ) {
+			return '';
+		}
+
+		if ( count( $labels ) > 4 ) {
+			$visible = array_slice( $labels, 0, 4 );
+
+			return sprintf(
+				/* translators: 1: visible terms, 2: number of additional terms. */
+				__( '%1$s and %2$d more', 'wp-telepilot' ),
+				implode( ', ', $visible ),
+				count( $labels ) - 4
+			);
+		}
+
+		return implode( ', ', $labels );
 	}
 
 	private function query_posts_page( $args, $page, $limit ) {

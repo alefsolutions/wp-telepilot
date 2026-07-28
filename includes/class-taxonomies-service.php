@@ -124,7 +124,8 @@ class Telepilot_Taxonomies_Service {
 			$lines[] = Telepilot_Telegram_Response_Builder::code( '/categories post 12' ) . ' ' . __( 'Start a new post in a category', 'wp-telepilot' );
 		}
 
-		$lines[] = Telepilot_Telegram_Response_Builder::code( '/' . $resource . ' delete 12' ) . ' ' . sprintf( __( 'Delete a %s after confirmation', 'wp-telepilot' ), $singular );
+		$lines[] = Telepilot_Telegram_Response_Builder::code( '/' . $resource . ' delete 12' ) . ' ' . sprintf( __( 'Delete a %s after confirmation when it is unused', 'wp-telepilot' ), $singular );
+		$lines[] = Telepilot_Telegram_Response_Builder::code( '/' . $resource . ' delete 12 reassign 3' ) . ' ' . sprintf( __( 'Reassign attached content to another %s, then delete the original', 'wp-telepilot' ), $singular );
 		$lines[] = Telepilot_Telegram_Response_Builder::italic( __( 'Tip: use the bracketed term ID from list results when updating or deleting.', 'wp-telepilot' ) );
 
 		return Telepilot_Telegram_Response_Builder::join_blocks( $lines );
@@ -283,6 +284,15 @@ class Telepilot_Taxonomies_Service {
 			return new WP_Error( 'telepilot_term_not_found', __( 'Term not found.', 'wp-telepilot' ) );
 		}
 
+		$usage = $this->get_term_usage_details( $taxonomy, $term->term_id );
+		if ( is_wp_error( $usage ) ) {
+			return $usage;
+		}
+
+		if ( ! empty( $usage['object_ids'] ) ) {
+			return new WP_Error( 'telepilot_term_reassign_required', __( 'That term is still attached to content. Reassign it before deleting.', 'wp-telepilot' ), $usage );
+		}
+
 		$deleted = wp_delete_term( $term->term_id, $taxonomy );
 
 		if ( is_wp_error( $deleted ) || false === $deleted ) {
@@ -292,6 +302,89 @@ class Telepilot_Taxonomies_Service {
 		$this->bump_cache_version();
 
 		return $term;
+	}
+
+	public function reassign_and_delete_term( $taxonomy, $term_id, $replacement_term_id ) {
+		$taxonomy            = $this->normalize_taxonomy( $taxonomy );
+		$term_id             = absint( $term_id );
+		$replacement_term_id = absint( $replacement_term_id );
+		$term                = get_term( $term_id, $taxonomy );
+
+		if ( ! $term || is_wp_error( $term ) ) {
+			return new WP_Error( 'telepilot_term_not_found', __( 'Term not found.', 'wp-telepilot' ) );
+		}
+
+		if ( ! $replacement_term_id || $replacement_term_id === $term_id ) {
+			return new WP_Error( 'telepilot_term_reassign_invalid', __( 'Choose a different replacement term ID.', 'wp-telepilot' ) );
+		}
+
+		$replacement = get_term( $replacement_term_id, $taxonomy );
+		if ( ! $replacement || is_wp_error( $replacement ) ) {
+			return new WP_Error( 'telepilot_term_reassign_missing', __( 'Replacement term not found.', 'wp-telepilot' ) );
+		}
+
+		$usage = $this->get_term_usage_details( $taxonomy, $term_id );
+		if ( is_wp_error( $usage ) ) {
+			return $usage;
+		}
+
+		$object_ids = ! empty( $usage['object_ids'] ) ? array_map( 'absint', (array) $usage['object_ids'] ) : array();
+		foreach ( $object_ids as $object_id ) {
+			$current_terms = wp_get_object_terms( $object_id, $taxonomy, array( 'fields' => 'ids' ) );
+			if ( is_wp_error( $current_terms ) ) {
+				return $current_terms;
+			}
+
+			$current_terms = array_values( array_filter( array_map( 'absint', (array) $current_terms ) ) );
+			$new_terms     = array_values(
+				array_unique(
+					array_merge(
+						array_diff( $current_terms, array( $term_id ) ),
+						array( $replacement_term_id )
+					)
+				)
+			);
+
+			$updated_terms = wp_set_object_terms( $object_id, $new_terms, $taxonomy, false );
+			if ( is_wp_error( $updated_terms ) ) {
+				return $updated_terms;
+			}
+		}
+
+		$deleted = wp_delete_term( $term->term_id, $taxonomy );
+		if ( is_wp_error( $deleted ) || false === $deleted ) {
+			return is_wp_error( $deleted ) ? $deleted : new WP_Error( 'telepilot_term_delete_failed', __( 'WordPress could not delete that term.', 'wp-telepilot' ) );
+		}
+
+		$this->bump_cache_version();
+
+		return array(
+			'term'              => $term,
+			'replacement_term'  => $replacement,
+			'affected_objects'  => count( $object_ids ),
+		);
+	}
+
+	public function get_term_usage_details( $taxonomy, $term_id ) {
+		$taxonomy = $this->normalize_taxonomy( $taxonomy );
+		$term     = get_term( absint( $term_id ), $taxonomy );
+
+		if ( ! $term || is_wp_error( $term ) ) {
+			return new WP_Error( 'telepilot_term_not_found', __( 'Term not found.', 'wp-telepilot' ) );
+		}
+
+		$object_ids = get_objects_in_term( $term->term_id, $taxonomy );
+		if ( is_wp_error( $object_ids ) ) {
+			return $object_ids;
+		}
+
+		$object_ids = array_values( array_unique( array_filter( array_map( 'absint', (array) $object_ids ) ) ) );
+
+		return array(
+			'term'         => $term,
+			'object_ids'   => $object_ids,
+			'usage_count'  => count( $object_ids ),
+		);
 	}
 
 	public function build_terms_keyboard( $resource, $result, $allow_post_creation = false ) {
@@ -332,13 +425,14 @@ class Telepilot_Taxonomies_Service {
 		);
 	}
 
-	public function build_delete_confirmation_keyboard( $taxonomy, $term_id, $telegram_user_id ) {
+	public function build_delete_confirmation_keyboard( $taxonomy, $term_id, $telegram_user_id, $replacement_term_id = 0 ) {
 		$taxonomy = $this->normalize_taxonomy( $taxonomy );
 		$token    = $this->confirmation_service->create_token(
 			array(
 				'action'           => 'delete',
 				'taxonomy'         => $taxonomy,
 				'term_id'          => (int) $term_id,
+				'replacement_term_id' => absint( $replacement_term_id ),
 				'telegram_user_id' => (string) $telegram_user_id,
 			)
 		);

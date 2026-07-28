@@ -49,7 +49,6 @@ require_once TELEPILOT_PATH . 'includes/class-notification-service.php';
 require_once TELEPILOT_PATH . 'includes/class-notifications-command-service.php';
 require_once TELEPILOT_PATH . 'includes/class-privacy-service.php';
 require_once TELEPILOT_PATH . 'includes/class-site-settings-command-service.php';
-require_once TELEPILOT_PATH . 'includes/class-inline-query-service.php';
 require_once TELEPILOT_PATH . 'includes/class-command-router.php';
 require_once TELEPILOT_PATH . 'includes/class-telegram-service.php';
 require_once TELEPILOT_PATH . 'includes/class-rest-webhook-controller.php';

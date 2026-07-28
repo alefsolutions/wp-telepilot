@@ -21,13 +21,6 @@ class Telepilot_Linked_User_Resolver {
 			$chat_id          = isset( $update['callback_query']['message']['chat']['id'] ) ? (string) $update['callback_query']['message']['chat']['id'] : null;
 			$chat_type        = isset( $update['callback_query']['message']['chat']['type'] ) ? sanitize_key( $update['callback_query']['message']['chat']['type'] ) : '';
 			$username         = isset( $update['callback_query']['from']['username'] ) ? sanitize_text_field( $update['callback_query']['from']['username'] ) : '';
-		} elseif ( ! empty( $update['inline_query']['from']['id'] ) ) {
-			$telegram_user_id = (string) $update['inline_query']['from']['id'];
-			$chat_type        = isset( $update['inline_query']['chat_type'] ) ? sanitize_key( $update['inline_query']['chat_type'] ) : '';
-			$username         = isset( $update['inline_query']['from']['username'] ) ? sanitize_text_field( $update['inline_query']['from']['username'] ) : '';
-		} elseif ( ! empty( $update['chosen_inline_result']['from']['id'] ) ) {
-			$telegram_user_id = (string) $update['chosen_inline_result']['from']['id'];
-			$username         = isset( $update['chosen_inline_result']['from']['username'] ) ? sanitize_text_field( $update['chosen_inline_result']['from']['username'] ) : '';
 		}
 
 		if ( empty( $telegram_user_id ) ) {

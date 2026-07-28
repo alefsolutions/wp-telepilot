@@ -14,14 +14,6 @@ class Telepilot_Command_Grammar {
 			return trim( wp_strip_all_tags( (string) $update['callback_query']['data'] ) );
 		}
 
-		if ( array_key_exists( 'query', (array) ( ! empty( $update['inline_query'] ) ? $update['inline_query'] : array() ) ) ) {
-			return trim( wp_strip_all_tags( (string) $update['inline_query']['query'] ) );
-		}
-
-		if ( array_key_exists( 'query', (array) ( ! empty( $update['chosen_inline_result'] ) ? $update['chosen_inline_result'] : array() ) ) ) {
-			return trim( wp_strip_all_tags( (string) $update['chosen_inline_result']['query'] ) );
-		}
-
 		return '';
 	}
 

@@ -97,7 +97,7 @@ WP Telepilot stores Telegram linkage metadata such as Telegram user IDs, chat ID
 
 * add guided page creation flows with immediate title-based draft creation
 * expand command documentation for post creation and page creation flows
-* temporarily disable typing-time inline query suggestions pending UX redesign
+* remove Telegram inline query support to keep the release focused on command-first workflows
 * align plugin metadata and release docs to the 0.3.0-beta.5 line
 
 = 0.3.0-beta.3 =

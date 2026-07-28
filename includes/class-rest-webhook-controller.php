@@ -201,14 +201,6 @@ class Telepilot_REST_Webhook_Controller {
 			return sanitize_text_field( (string) $payload['callback_query']['data'] );
 		}
 
-		if ( array_key_exists( 'query', (array) ( ! empty( $payload['inline_query'] ) ? $payload['inline_query'] : array() ) ) ) {
-			return sanitize_text_field( (string) $payload['inline_query']['query'] );
-		}
-
-		if ( array_key_exists( 'query', (array) ( ! empty( $payload['chosen_inline_result'] ) ? $payload['chosen_inline_result'] : array() ) ) ) {
-			return sanitize_text_field( (string) $payload['chosen_inline_result']['query'] );
-		}
-
 		return '';
 	}
 
@@ -219,14 +211,6 @@ class Telepilot_REST_Webhook_Controller {
 
 		if ( ! empty( $payload['callback_query']['from']['id'] ) ) {
 			return (string) $payload['callback_query']['from']['id'];
-		}
-
-		if ( ! empty( $payload['inline_query']['from']['id'] ) ) {
-			return (string) $payload['inline_query']['from']['id'];
-		}
-
-		if ( ! empty( $payload['chosen_inline_result']['from']['id'] ) ) {
-			return (string) $payload['chosen_inline_result']['from']['id'];
 		}
 
 		return null;

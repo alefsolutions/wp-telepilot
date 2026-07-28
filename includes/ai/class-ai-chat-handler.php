@@ -9,12 +9,16 @@ class Telepilot_AI_Chat_Handler {
 	private $permission_manager;
 	private $provider;
 	private $audit_logger;
+	private $conversation_store;
+	private $orchestrator;
 
 	public function __construct() {
 		$this->session_manager    = new Telepilot_AI_Session_Manager();
 		$this->permission_manager = new Telepilot_AI_Permission_Manager();
 		$this->provider           = new Telepilot_OpenAI_Provider();
 		$this->audit_logger       = new Telepilot_AI_Audit_Logger();
+		$this->conversation_store = new Telepilot_AI_Conversation_Store();
+		$this->orchestrator       = new Telepilot_AI_Orchestrator();
 	}
 
 	public function start_chat_mode( $identity ) {
@@ -105,6 +109,9 @@ class Telepilot_AI_Chat_Handler {
 		);
 
 		$session = $this->session_manager->start_session( $identity, $this->provider->get_name(), Telepilot_AI_Settings::get_model() );
+		if ( ! empty( $session['session_id'] ) ) {
+			$this->conversation_store->clear( $session['session_id'] );
+		}
 
 		$this->audit_logger->log(
 			$identity,
@@ -146,6 +153,9 @@ class Telepilot_AI_Chat_Handler {
 		$this->session_manager->end_session( $identity );
 
 		if ( is_array( $session ) && empty( $session['expired'] ) ) {
+			if ( ! empty( $session['session_id'] ) ) {
+				$this->conversation_store->clear( $session['session_id'] );
+			}
 			$this->audit_logger->log(
 				$identity,
 				'ai_mode_ended',
@@ -190,6 +200,9 @@ class Telepilot_AI_Chat_Handler {
 		$session['last_activity_at']       = time();
 		$session['expires_at']             = time() + ( Telepilot_AI_Settings::get_timeout_minutes() * MINUTE_IN_SECONDS );
 		$this->session_manager->update_session( $identity, $session );
+		if ( ! empty( $session['session_id'] ) ) {
+			$this->conversation_store->clear( $session['session_id'] );
+		}
 
 		$this->audit_logger->log(
 			$identity,
@@ -316,20 +329,29 @@ class Telepilot_AI_Chat_Handler {
 			);
 		}
 
-		return Telepilot_Telegram_Response_Builder::success_html(
-			Telepilot_Telegram_Response_Builder::join_blocks(
+		if ( ! is_array( $session ) || empty( $session['ai_mode_active'] ) ) {
+			return Telepilot_Telegram_Response_Builder::error_html(
+				Telepilot_Telegram_Response_Builder::join_blocks(
+					array(
+						Telepilot_Telegram_Response_Builder::bold( __( 'AI Chat Not Active', 'wp-telepilot' ) ),
+						__( 'Use /chat to begin an AI session first.', 'wp-telepilot' ),
+					)
+				),
 				array(
-					Telepilot_Telegram_Response_Builder::bold( __( 'AI Chat Active', 'wp-telepilot' ) ),
-					__( 'AI mode is active and the message router is ready.', 'wp-telepilot' ),
-					__( 'Natural-language tool execution will be added in the next V4 phase.', 'wp-telepilot' ),
-					Telepilot_Telegram_Response_Builder::italic( __( 'For now, continue using /context, /newchat, /cancel, or /endchat.', 'wp-telepilot' ) ),
+					'command' => '/chat',
 				)
-			),
-			array(
-				'command'      => '/chat',
-				'reply_markup' => $this->build_ai_keyboard(),
-			)
-		);
+			);
+		}
+
+		$session = $this->session_manager->refresh_session( $identity, $session );
+		$text   = ! empty( $update['message']['text'] ) ? trim( wp_strip_all_tags( (string) $update['message']['text'] ) ) : '';
+		$result = $this->orchestrator->handle_message( $text, $identity, $session );
+
+		if ( is_array( $result ) && empty( $result['reply_markup'] ) ) {
+			$result['reply_markup'] = $this->build_ai_keyboard();
+		}
+
+		return $result;
 	}
 
 	public function render_help( $identity ) {

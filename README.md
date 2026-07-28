@@ -8,9 +8,9 @@
 
 ![WP Telepilot Header](assets/images/readme-header.png)
 
-WP Telepilot is a Telegram-first WordPress operations plugin for site owners, editors, and administrators who want a secure way to review site activity and perform structured actions from chat.
+WP Telepilot is a Telegram-first WordPress operations plugin for site owners and administrators who want a secure way to review site activity and perform structured actions from chat.
 
-It links an approved Telegram account to a WordPress user, shows capability-aware menus, and gives teams a practical command surface for day-to-day operations without trying to turn Telegram into a full replacement for `wp-admin`.
+It links an approved Telegram account to a WordPress user, shows capability-aware menus, and gives admins a practical command surface for day-to-day operations without trying to turn Telegram into a full replacement for `wp-admin`.
 
 ## Links
 
@@ -102,13 +102,14 @@ From the WP Telepilot settings page, administrators can:
 - choose webhook or polling transport
 - manage the webhook secret
 - restrict allowed chat IDs
-- enable or disable user linking
+- enable or disable user linking to Telegram
 - review webhook and worker diagnostics
 - inspect queue, cron, schema, and database readiness
 - refresh webhook status
 - poll Telegram manually when polling mode is enabled
 - process queued jobs
 - flush pending Telegram updates
+- select one or many types of notifications or alerts they want to receive via Telegram.
 
 ## Privacy And External Services
 

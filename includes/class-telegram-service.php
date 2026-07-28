@@ -142,6 +142,10 @@ class Telepilot_Telegram_Service {
 		return ! empty( $update['inline_query'] ) || ! empty( $update['chosen_inline_result'] );
 	}
 
+	private function inline_query_mode_enabled() {
+		return (bool) apply_filters( 'telepilot_enable_inline_query_mode', false );
+	}
+
 	private function should_queue_update( $command, $update, $transport ) {
 		if ( empty( $command['name'] ) || ! is_array( $command ) ) {
 			return false;
@@ -168,6 +172,10 @@ class Telepilot_Telegram_Service {
 
 		$this->record_transport_activity( $transport, $update );
 		$identity = $this->user_resolver->resolve_from_update( $update );
+
+		if ( ! $this->inline_query_mode_enabled() ) {
+			return $this->handle_disabled_inline_update( $update, $transport );
+		}
 
 		if ( ! empty( $update['chosen_inline_result'] ) ) {
 			$handoff_result = $this->maybe_handle_chosen_inline_result( $identity, $update );
@@ -296,6 +304,77 @@ class Telepilot_Telegram_Service {
 			array(
 				'command'       => 'inline_query',
 				'skip_dispatch' => true,
+			)
+		);
+	}
+
+	private function handle_disabled_inline_update( $update, $transport ) {
+		if ( ! empty( $update['chosen_inline_result'] ) ) {
+			$this->mark_update_processed( $update, $transport, 'inline_disabled_chosen' );
+
+			return Telepilot_Telegram_Response_Builder::success(
+				__( 'Inline query mode is disabled.', 'wp-telepilot' ),
+				array(
+					'command'         => 'chosen_inline_result',
+					'skip_dispatch'   => true,
+					'inline_disabled' => true,
+				)
+			);
+		}
+
+		if ( empty( $update['inline_query']['id'] ) ) {
+			$this->mark_update_processed( $update, $transport, 'inline_disabled_missing_id' );
+
+			return Telepilot_Telegram_Response_Builder::error(
+				__( 'Inline query payload was incomplete.', 'wp-telepilot' ),
+				array(
+					'command'       => 'inline_query',
+					'skip_dispatch' => true,
+					'code'          => 'telepilot_inline_query_invalid',
+				)
+			);
+		}
+
+		$response = $this->client->answer_inline_query(
+			(string) $update['inline_query']['id'],
+			array(),
+			array(
+				'cache_time'  => 300,
+				'is_personal' => true,
+			)
+		);
+
+		$this->update_diagnostics(
+			array(
+				'last_inline_query_at'        => time(),
+				'last_inline_query_status'    => is_wp_error( $response ) ? 'disabled_failed' : 'disabled',
+				'last_inline_query_error'     => is_wp_error( $response ) ? $response->get_error_message() : '',
+				'last_inline_query_transport' => $transport,
+				'last_inline_query_text'      => isset( $update['inline_query']['query'] ) ? sanitize_text_field( (string) $update['inline_query']['query'] ) : '',
+				'last_inline_query_results'   => 0,
+				'last_inline_query_context'   => 'disabled',
+			)
+		);
+
+		$this->mark_update_processed( $update, $transport, 'inline_disabled' );
+
+		if ( is_wp_error( $response ) ) {
+			return Telepilot_Telegram_Response_Builder::error(
+				__( 'WP Telepilot could not answer that inline query.', 'wp-telepilot' ),
+				array(
+					'command'       => 'inline_query',
+					'skip_dispatch' => true,
+					'code'          => 'telepilot_inline_query_failed',
+				)
+			);
+		}
+
+		return Telepilot_Telegram_Response_Builder::success(
+			__( 'Inline query mode is disabled.', 'wp-telepilot' ),
+			array(
+				'command'         => 'inline_query',
+				'skip_dispatch'   => true,
+				'inline_disabled' => true,
 			)
 		);
 	}

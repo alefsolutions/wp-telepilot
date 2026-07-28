@@ -18,22 +18,6 @@ Each command below includes:
 - Content: `/posts`, `/pages`, `/media`
 - Administration: `/users`, `/plugins`, `/categories`, `/tags`
 
-## Inline mode
-
-### `@YourBotUsername RESOURCE ...`
-
-- Scope: inline assistant
-- Syntax: `@YourBotUsername posts`
-- Example: `@YourBotUsername posts open`
-- Behavior: opens capability-aware inline suggestions for resources, actions, and ID-based targets in a private chat with the bot.
-
-### Runnable inline selections
-
-- Scope: inline execution handoff
-- Syntax: select a runnable inline result
-- Example: `@YourBotUsername pages new About us`
-- Behavior: if the selected inline result is runnable, WP Telepilot hands the matching slash command into the linked private chat and continues with the normal response flow there.
-
 ## Core commands
 
 ### `/start`
@@ -1026,7 +1010,7 @@ Each command below includes:
 
 - Commands only appear or work when the linked WordPress user has the required capability.
 - Sensitive actions are restricted to private Telegram chats.
-- Inline query assistance is intended for linked users in private chats and only suggests resources and actions the current user can access.
+- Use slash commands and the bot's reply buttons as the primary workflow in private chat.
 - Some destructive operations use inline confirmation buttons before they execute.
 - Pagination uses the `page:N` suffix pattern on supported list and search commands.
 - Media is read-only in Telegram for this release. Use `wp-admin` for uploads, then return to `/media` commands for review and browser access.

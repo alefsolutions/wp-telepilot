@@ -40,6 +40,7 @@ require_once TELEPILOT_PATH . 'includes/ai/class-ai-tool-registry.php';
 require_once TELEPILOT_PATH . 'includes/ai/class-ai-tool-executor.php';
 require_once TELEPILOT_PATH . 'includes/ai/class-ai-orchestrator.php';
 require_once TELEPILOT_PATH . 'includes/ai/class-ai-chat-handler.php';
+require_once TELEPILOT_PATH . 'includes/ai/class-mcp-integration-service.php';
 require_once TELEPILOT_PATH . 'includes/class-telegram-response-builder.php';
 require_once TELEPILOT_PATH . 'includes/class-telegram-client.php';
 require_once TELEPILOT_PATH . 'includes/class-command-grammar.php';

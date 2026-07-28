@@ -126,6 +126,7 @@ class Telepilot_Settings_Page {
 		$license_url              = 'https://www.gnu.org/licenses/gpl-2.0.html';
 		$ai_provider_status       = Telepilot_AI_Settings::get_provider_status();
 		$masked_ai_key            = Telepilot_AI_Settings::masked_api_key( $settings );
+		$mcp_status               = ( new Telepilot_MCP_Integration_Service() )->get_status();
 		?>
 		<div class="wrap telepilot-admin">
 			<div class="telepilot-shell">
@@ -360,6 +361,22 @@ class Telepilot_Settings_Page {
 									<?php echo esc_html( $ai_provider_status['message'] ); ?>
 									<?php if ( ! empty( $ai_provider_status['checked_at'] ) ) : ?>
 										<?php echo esc_html( ' ' . sprintf( __( '(checked %s)', 'wp-telepilot' ), $this->format_timestamp( (int) $ai_provider_status['checked_at'] ) ) ); ?>
+									<?php endif; ?>
+								</div>
+
+								<div class="telepilot-panel telepilot-panel-nested">
+									<div class="telepilot-panel-heading">
+										<div>
+											<p class="telepilot-section-label"><?php esc_html_e( 'MCP Integration', 'wp-telepilot' ); ?></p>
+											<h3><?php echo esc_html( $mcp_status['label'] ); ?></h3>
+										</div>
+									</div>
+									<p class="telepilot-inline-note"><?php echo esc_html( $mcp_status['description'] ); ?></p>
+									<?php if ( ! empty( $mcp_status['version'] ) ) : ?>
+										<p class="telepilot-inline-note">
+											<strong><?php esc_html_e( 'Adapter version:', 'wp-telepilot' ); ?></strong>
+											<?php echo esc_html( $mcp_status['version'] ); ?>
+										</p>
 									<?php endif; ?>
 								</div>
 							</div>

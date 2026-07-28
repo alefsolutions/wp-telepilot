@@ -13,6 +13,7 @@ class Telepilot_Bootstrap {
 	private $privacy_service;
 	private $users_service;
 	private $post_editor_service;
+	private $mcp_integration_service;
 
 	public function __construct() {
 		$this->settings_page        = new Telepilot_Settings_Page();
@@ -21,6 +22,7 @@ class Telepilot_Bootstrap {
 		$this->privacy_service      = new Telepilot_Privacy_Service();
 		$this->users_service        = new Telepilot_Users_Service( new Telepilot_Confirmation_Service() );
 		$this->post_editor_service  = new Telepilot_Post_Editor_Service();
+		$this->mcp_integration_service = new Telepilot_MCP_Integration_Service();
 	}
 
 	public function boot() {
@@ -32,6 +34,7 @@ class Telepilot_Bootstrap {
 
 		add_filter( 'cron_schedules', array( $this, 'register_cron_schedules' ) );
 		add_action( 'rest_api_init', array( $this->rest_controller, 'register_routes' ) );
+		add_action( 'init', array( $this->mcp_integration_service, 'maybe_register_adapter' ), 20 );
 		add_action( 'telepilot_daily_maintenance', array( $this, 'run_daily_maintenance' ) );
 		add_action( 'telepilot_poll_updates', array( $this, 'poll_updates' ) );
 		add_action( 'telepilot_process_jobs', array( $this, 'process_jobs' ) );

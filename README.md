@@ -189,6 +189,8 @@ MCP returns authorized WordPress data to the authenticated client you configure,
 
 The `v4` branch targets `0.4.0-beta.1` and incorporates the `0.3.1` maintenance repairs. It is a beta candidate, not a stable-readiness declaration. Isolated tests cover standard/custom roles, native commands, mocked OpenAI/Telegram, confirmed writes, native plugin upgrades, real concurrent workers/editor saves, privacy, migrations, and the official MCP Adapter HTTP transport. The compatibility matrix is WordPress 6.6.2/PHP 8.0 and WordPress 7.1/PHP 8.5. Local desktop/mobile admin fixture checks complement, but do not replace, testing in a real wp-admin installation. Live staging Telegram/OpenAI/MCP checks remain required before publication.
 
+Additional regressions cover real concurrent PHP workers and browser saves, command-menu reads across standard/custom roles, nested queue transactions, schedule dates, notification target access and polling persistence failures. The maintenance candidate does not include OpenAI or MCP; those remain on the separate V4 beta branch.
+
 ### Maintenance Upgrade
 
 Existing WordPress content, linked accounts and ordinary settings are preserved. Old pending operations are quarantined rather than replayed. Generate fresh browser-editor links and confirmations after upgrading. Notifications go only to authorized, active linked private chats; an allowed chat ID does not subscribe a recipient.

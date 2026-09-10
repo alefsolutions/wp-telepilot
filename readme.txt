@@ -128,6 +128,9 @@ Queued payloads and bounded AI context participate in privacy export/erasure. Se
 
 = 0.3.1 =
 
+* preserve draft schedule dates, nested transaction ownership and polling offsets when persistence fails
+* recheck notification targets and suppress stale private response data during delayed delivery
+* exercise real concurrent workers/browser saves and standard/custom-role command reads
 * enforce active, linked, authorized private-chat access and actor-scoped content queries
 * separate durable WordPress execution outcomes from retried Telegram delivery
 * quarantine interrupted actions instead of replaying mutations; add Queue Recovery controls

@@ -876,6 +876,7 @@ class Telepilot_Posts_Service {
 				'edit_date'     => true,
 				'post_date'     => $scheduled_at->format( 'Y-m-d H:i:s' ),
 				'post_date_gmt' => $gmt->format( 'Y-m-d H:i:s' ),
+				'edit_date'     => true,
 			),
 			true
 		);

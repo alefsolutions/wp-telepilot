@@ -61,6 +61,13 @@ class Telepilot_Command_Router {
 
 	private function route_authorized( $update, $identity ) {
 		$command = $this->parse_command( $update );
+		if ( '/cancel' === $command['name'] ) {
+			$flows = new Telepilot_Flow_State_Service();
+			$has_flow = $flows->get_pending_post( $identity['telegram_user_id'] ) || $flows->get_pending_page( $identity['telegram_user_id'] );
+			$flows->clear_pending_post( $identity['telegram_user_id'] );
+			$flows->clear_pending_page( $identity['telegram_user_id'] );
+			if ( $has_flow && ! $this->ai_chat_handler->is_active( $identity ) ) { return Telepilot_Telegram_Response_Builder::success( 'Creation flow cancelled. Existing saved content is unchanged.', array( 'command' => '/cancel', 'reply_markup' => $this->safe_home_keyboard( $identity ) ) ); }
+		}
 		if ( '/chat' === $command['name'] ) {
 			$flows = new Telepilot_Flow_State_Service();
 			if ( $flows->get_pending_post( $identity['telegram_user_id'] ) || $flows->get_pending_page( $identity['telegram_user_id'] ) ) { return Telepilot_Telegram_Response_Builder::error( 'Finish the current creation flow or use /cancel before entering AI mode.' ); }
@@ -258,7 +265,7 @@ class Telepilot_Command_Router {
 			$commands[] = Telepilot_Telegram_Response_Builder::code( '/site' ) . ' ' . __( 'Show site overview', 'wp-telepilot' );
 			$commands[] = Telepilot_Telegram_Response_Builder::code( '/chatid' ) . ' ' . __( 'Reveal the current chat ID', 'wp-telepilot' );
 			$commands[] = Telepilot_Telegram_Response_Builder::code( '/link CODE' ) . ' ' . __( 'Link Telegram to WordPress', 'wp-telepilot' );
-			if ( Telepilot_AI_Settings::is_enabled() ) {
+			if ( true === ( new Telepilot_AI_Permission_Manager() )->check( $identity ) ) {
 				$commands[] = Telepilot_Telegram_Response_Builder::code( '/chat' ) . ' ' . __( 'Enter AI chat mode', 'wp-telepilot' );
 			}
 
@@ -2732,7 +2739,7 @@ class Telepilot_Command_Router {
 				);
 			}
 
-			if ( Telepilot_AI_Settings::is_enabled() ) {
+			if ( true === ( new Telepilot_AI_Permission_Manager() )->check( $identity ) ) {
 				$rows[] = array(
 					array(
 						'text'          => Telepilot_Telegram_Response_Builder::label( 'chat', __( 'AI Chat', 'wp-telepilot' ) ),

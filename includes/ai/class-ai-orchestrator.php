@@ -15,7 +15,7 @@ class Telepilot_AI_Orchestrator {
 		foreach ( $store->get_message_history( $session['session_id'] ) as $message ) { $messages[] = array( 'role' => $message['role'], 'content' => $message['content'] ); }
 		$messages[] = array( 'role' => 'user', 'content' => Telepilot_AI_Data_Policy::clean( $text ) );
 		$store->add_message( $session['session_id'], 'user', $text );
-		return $this->resume( array( 'session_id' => $session['session_id'], 'request_id' => $session['request_id'], 'messages' => $messages, 'tool_count' => 0, 'retries' => 0 ), $identity );
+		return $this->resume( array( 'session_id' => $session['session_id'], 'request_id' => $session['request_id'], 'data_generation' => Telepilot_AI_Conversation_Store::data_generation(), 'messages' => $messages, 'tool_count' => 0, 'retries' => 0 ), $identity );
 	}
 
 	public function resume( $state, $identity ) {
@@ -25,6 +25,10 @@ class Telepilot_AI_Orchestrator {
 			return Telepilot_Telegram_Response_Builder::success( 'Cancelled or expired AI continuation.', array( 'skip_dispatch' => true ) );
 		}
 		$settings = Telepilot_AI_Settings::get_settings();
+		if ( (string) ( $state['data_generation'] ?? '' ) !== Telepilot_AI_Conversation_Store::data_generation() ) {
+			$this->finish( $identity, $session );
+			return $this->reply( 'WordPress data changed during this request. Please ask again for a fresh, authorized lookup.', true );
+		}
 		$max_tools = max( 1, min( 5, (int) $settings['ai_max_tool_calls'] ) );
 		$schemas = ( new Telepilot_AI_Tool_Registry() )->get_tool_schemas();
 		if ( $state['tool_count'] >= $max_tools ) { $schemas = array(); }
@@ -32,6 +36,10 @@ class Telepilot_AI_Orchestrator {
 		// Revalidate after network latency before any tool access or proposal creation.
 		$current = $sessions->get_session( $identity );
 		if ( ! $current || $current['session_id'] !== $session['session_id'] || $current['request_id'] !== $state['request_id'] ) { return Telepilot_Telegram_Response_Builder::success( '', array( 'skip_dispatch' => true ) ); }
+		if ( (string) $state['data_generation'] !== Telepilot_AI_Conversation_Store::data_generation() ) {
+			$this->finish( $identity, $session );
+			return $this->reply( 'WordPress data changed while the provider was responding. Please repeat the request.', true );
+		}
 		if ( is_wp_error( $response ) ) {
 			if ( ! empty( $response->get_error_data()['retryable'] ) && $state['retries'] < min( 2, (int) $settings['ai_max_retries'] ) ) {
 				$state['retries']++;

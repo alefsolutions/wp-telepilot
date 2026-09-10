@@ -1,5 +1,19 @@
 <?php
 class AbilitiesTest extends Telepilot_TestCase {
+    public function test_settings_and_notifications_share_the_domain_access_boundary() {
+        $settings = new Telepilot_Site_Settings_Command_Service();
+        $notifications = new Telepilot_Notifications_Command_Service();
+        $actor = $this->actor( 'subscriber' ); wp_set_current_user( $actor['wp_user']->ID );
+        $this->assertWPError( $settings->get_summary() );
+        $this->assertWPError( $settings->update_core_setting( 'title', 'Denied' ) );
+        $this->assertWPError( $notifications->list_page() );
+        $actor = $this->actor(); wp_set_current_user( $actor['wp_user']->ID );
+        $this->assertNotWPError( $settings->update_core_setting( 'title', 'Allowed' ) );
+        $this->assertNotWPError( $notifications->update_option_state( 'new_comment', true ) );
+        $this->assertSame( 'Allowed', get_option( 'blogname' ) );
+        $this->assertWPError( Telepilot_Operation_Context::run( 'mcp', array(), static function () use ( $settings ) { return $settings->update_core_setting( 'title', 'MCP denied' ); } ) );
+        $this->assertSame( 'Allowed', get_option( 'blogname' ) );
+    }
     public function test_shared_reads_combine_status_search_and_scope() {
         $author = $this->actor( 'author' );
         $own = self::factory()->post->create( array( 'post_author' => $author['wp_user']->ID, 'post_title' => 'Needle draft', 'post_status' => 'draft' ) );

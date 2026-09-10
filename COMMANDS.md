@@ -1,5 +1,7 @@
 # WP Telepilot
 
+![WP Telepilot Header](assets/images/readme-header.png)
+
 ## Command reference
 
 This document lists the functioning Telegram commands currently available in WP Telepilot.
@@ -17,6 +19,35 @@ Each command below includes:
 - Notifications and comments: `/notifications`, `/comments`
 - Content: `/posts`, `/pages`, `/media`
 - Administration: `/users`, `/plugins`, `/categories`, `/tags`
+- Optional AI chat: `/chat`, `/context`, `/newchat`, `/cancel`, `/endchat`
+
+## AI Chat Commands
+
+Available only when AI is configured and enabled, your role has an explicit grant, and you use your active linked private chat. Native WordPress capabilities and approved task settings apply to every operation. These are slash commands, not Telegram inline queries.
+
+| Command | Example | Behavior |
+| --- | --- | --- |
+| `/chat` | `/chat` | Enter AI mode. Finish or cancel any guided creation flow first. |
+| `/context` | `/context` | Show the current AI session and typed recent item references. |
+| `/newchat` | `/newchat` | Cancel pending AI actions and start a fresh conversation without old references. |
+| `/cancel` | `/cancel` | Cancel the pending request/proposals while keeping AI mode available; outside AI it also cancels guided flows. It does not undo a completed action. |
+| `/endchat` | `/endchat` | End AI mode, clear context, and invalidate pending proposals/continuations. |
+
+Once `/chat` is active, send ordinary text such as:
+
+| Task | Example | Result |
+| --- | --- | --- |
+| Find posts | `List my draft posts about travel` | Permission-scoped results with titles and `[ID]` references. |
+| Follow up | `Show the second post` | Resolves a typed reference from the current conversation; ask again after data changes. |
+| Find a category | `Find categories matching news` | Existing term names and IDs for an approved post workflow. |
+| Create a draft | `Create a draft titled Weekend update in category 12` | A proposal, not an immediate write. |
+| Edit a draft | `Change draft post 42 title to September news` | Exact changes shown for confirmation. Long content uses `/posts edit 42`. |
+| Schedule | `Schedule post 42 for 2026-12-15 09:00` | A proposal showing the site's scheduling timezone. |
+| Publish | `Publish post 42` | Two explicit confirmation steps before publishing. |
+| Moderate | `Approve comment 17` | Target-specific confirmation before moderation. |
+| Manage a plugin | `Update plugin akismet` | Exact plugin/version proposal and an additional warning before execution. |
+
+Natural-language examples are requests to interpret, not additional fixed command syntaxes. Ambiguous targets should be clarified. Write proposals expire after five minutes, allow at most three pending proposals by default, and cannot be replayed. AI cannot manage users, write pages, or change media in this beta. Ordinary slash commands/callbacks remain deterministic and work while AI mode is active. MCP is independently configured in wp-admin and has no Telegram command.
 
 ## Core commands
 

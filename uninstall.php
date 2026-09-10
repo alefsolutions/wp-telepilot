@@ -31,6 +31,12 @@ if ( '' !== $bot_token ) {
 }
 
 global $wpdb;
+$ai_sessions = $wpdb->get_results( $wpdb->prepare( "SELECT user_id,meta_value FROM $wpdb->usermeta WHERE meta_key=%s", '_telepilot_ai_session_' . get_current_blog_id() ), ARRAY_A );
+foreach ( $ai_sessions as $entry ) {
+	$session = maybe_unserialize( $entry['meta_value'] );
+	if ( ! empty( $session['session_id'] ) ) { delete_transient( 'telepilot_ai_context_' . md5( $session['session_id'] ) ); }
+	delete_user_meta( $entry['user_id'], '_telepilot_ai_session_' . get_current_blog_id() );
+}
 // Ephemeral request data is not a durable user setting, even in retain-data mode.
 foreach ( array( 'telepilot_jobs' => "payload='',status='cancelled',lease_token=NULL", 'telepilot_operations' => 'result=NULL', 'telepilot_security_records' => "payload='',state='consumed'" ) as $suffix => $assignment ) {
 	$table = $wpdb->prefix . $suffix;
@@ -67,6 +73,8 @@ foreach ( $options_to_delete as $option_name ) {
 	delete_option( $option_name );
 	delete_site_option( $option_name );
 }
+$ai_keys = $wpdb->get_col( $wpdb->prepare( "SELECT option_name FROM $wpdb->options WHERE option_name LIKE %s", $wpdb->esc_like( 'telepilot_ai_' ) . '%' ) );
+foreach ( $ai_keys as $key ) { delete_option( $key ); }
 
 $wpdb->query(
 	$wpdb->prepare(

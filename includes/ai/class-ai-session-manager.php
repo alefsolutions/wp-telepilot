@@ -6,6 +6,8 @@ class Telepilot_AI_Session_Manager {
 	private function key() { return self::SESSION_PREFIX . get_current_blog_id(); }
 	private function configuration_hash() {
 		$settings = array_intersect_key( Telepilot_AI_Settings::get_settings(), Telepilot_AI_Settings::defaults() );
+		$settings['_site_url'] = home_url();
+		$settings['_site_timezone'] = wp_timezone_string();
 		return hash( 'sha256', wp_json_encode( $settings ) );
 	}
 
@@ -73,5 +75,16 @@ class Telepilot_AI_Session_Manager {
 			do_action( 'telepilot_ai_session_ended', $session['session_id'], $id );
 		}
 		delete_user_meta( $id, $key );
+	}
+
+	public static function purge( $all = false ) {
+		global $wpdb;
+		$rows = $wpdb->get_results( $wpdb->prepare( "SELECT user_id,meta_value FROM $wpdb->usermeta WHERE meta_key=%s", self::SESSION_PREFIX . get_current_blog_id() ), ARRAY_A );
+		foreach ( $rows as $row ) {
+			$session = maybe_unserialize( $row['meta_value'] );
+			if ( $all || ! is_array( $session ) || time() >= (int) ( $session['expires_at'] ?? 0 ) ) { self::erase_actor( $row['user_id'] ); }
+		}
+		$keys = $wpdb->get_col( $wpdb->prepare( "SELECT option_name FROM $wpdb->options WHERE option_name LIKE %s", $wpdb->esc_like( 'telepilot_ai_' ) . '%' ) );
+		foreach ( $keys as $key ) { if ( preg_match( '/^telepilot_ai_(requests|tokens)_(\d{8})$/', $key, $match ) && $match[2] < gmdate( 'Ymd', time() - 7 * DAY_IN_SECONDS ) ) { delete_option( $key ); } }
 	}
 }

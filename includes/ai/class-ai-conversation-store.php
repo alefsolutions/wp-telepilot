@@ -18,6 +18,10 @@ class Telepilot_AI_Conversation_Store {
 		if ( ! is_array( $context ) ) {
 			return $this->default_context();
 		}
+		if ( (string) ( $context['data_generation'] ?? '' ) !== self::data_generation() ) {
+			$this->clear( $session_id );
+			return $this->default_context();
+		}
 
 		return wp_parse_args( $context, $this->default_context() );
 	}
@@ -137,6 +141,7 @@ class Telepilot_AI_Conversation_Store {
 	}
 
 	private function persist( $session_id, $context ) {
+		$context['data_generation'] = self::data_generation();
 		$key = $this->build_key( $session_id );
 
 		if ( '' === $key ) {
@@ -150,6 +155,10 @@ class Telepilot_AI_Conversation_Store {
 		$session_id = trim( (string) $session_id );
 
 		return '' === $session_id ? '' : self::STORE_PREFIX . md5( $session_id );
+	}
+
+	public static function data_generation() {
+		return (string) get_option( 'telepilot_posts_cache_version', '' );
 	}
 
 	private function default_context() {

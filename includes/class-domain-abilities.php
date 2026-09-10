@@ -12,6 +12,9 @@ class Telepilot_Domain_Abilities {
 			'plugins' => array( 'class' => 'Telepilot_Plugins_Service', 'cap' => 'activate_plugins', 'reads' => 'list_page,search_page,updates_page,get_plugin_details', 'writes' => 'refresh_updates,activate,deactivate,delete,update' ),
 			'terms' => array( 'class' => 'Telepilot_Taxonomies_Service', 'cap' => 'manage_categories', 'reads' => 'list_terms,get_term_details,get_term_usage_details', 'writes' => 'create_term,rename_term,update_slug,update_description,update_parent,delete_term,reassign_and_delete_term' ),
 			'media' => array( 'class' => 'Telepilot_Media_Service', 'cap' => 'upload_files', 'reads' => 'recent,recent_page,search,search_page,get_item_details', 'writes' => '' ),
+			'site' => array( 'class' => 'Telepilot_Dashboard_Service', 'cap' => 'read', 'reads' => 'get_summary', 'writes' => '' ),
+			'settings' => array( 'class' => 'Telepilot_Site_Settings_Command_Service', 'cap' => 'manage_options', 'reads' => 'get_summary', 'writes' => 'update_core_setting' ),
+			'notifications' => array( 'class' => 'Telepilot_Notifications_Command_Service', 'cap' => 'manage_options', 'reads' => 'list_page', 'writes' => 'update_option_state' ),
 		);
 	}
 
@@ -26,6 +29,7 @@ class Telepilot_Domain_Abilities {
 			elseif ( preg_match( '/_id$/', $name ) || in_array( $name, array( 'page', 'limit' ), true ) ) { $schema = array( 'type' => 'integer', 'minimum' => in_array( $name, array( 'parent_id', 'reassign_id' ), true ) ? 0 : 1 ); }
 			else { $schema = array( 'type' => 'string', 'maxLength' => in_array( $name, array( 'excerpt', 'content', 'description' ), true ) ? 10000 : 1000 ); }
 			if ( 'limit' === $name ) { $schema['maximum'] = 100; }
+			if ( 'enabled' === $name ) { $schema = array( 'type' => 'boolean' ); }
 			if ( 'wp_user' === $name ) { $schema = array( 'type' => 'integer', 'minimum' => 1 ); }
 			if ( 'taxonomy' === $name ) { $schema['enum'] = array( 'category', 'post_tag' ); }
 			if ( 'email' === $name ) { $schema['format'] = 'email'; }

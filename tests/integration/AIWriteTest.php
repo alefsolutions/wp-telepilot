@@ -18,6 +18,49 @@ class AIWriteTest extends Telepilot_TestCase {
         return Telepilot_Actor_Access::as_actor( $actor, static function () use ( $actor, $id, $final ) { return ( new Telepilot_AI_Confirmation_Manager() )->confirm( $id, $actor, $final ); }, 'ai' );
     }
 
+    public function test_confirmed_plugin_update_uses_the_native_upgrader_once() {
+        $this->assertTrue( class_exists( 'ZipArchive' ), 'Enable the ZIP extension for package and upgrader tests.' );
+        list( $actor, $session ) = $this->setup_actor();
+        $directory = WP_PLUGIN_DIR . '/telepilot-update-fixture';
+        $file = 'telepilot-update-fixture/plugin.php';
+        wp_mkdir_p( $directory );
+        copy( dirname( __DIR__ ) . '/fixtures/plugin.php', $directory . '/plugin.php' );
+        wp_clean_plugins_cache();
+        $archive = wp_tempnam( 'telepilot-update.zip' );
+        $zip = new ZipArchive();
+        $zip->open( $archive, ZipArchive::CREATE | ZipArchive::OVERWRITE );
+        $zip->addFile( dirname( __DIR__ ) . '/fixtures/plugin-updated.php', 'telepilot-update-fixture/plugin.php' );
+        $zip->close();
+        $this->mock_http( 'api.wordpress.org', array( 'plugins' => array(), 'themes' => array(), 'offers' => array(), 'no_update' => array(), 'translations' => array() ) );
+        add_filter( 'filesystem_method', static function () { return 'direct'; } );
+        add_filter( 'pre_site_transient_update_plugins', static function () use ( $file, $directory ) {
+            $version = get_file_data( $directory . '/plugin.php', array( 'Version' => 'Version' ) )['Version'];
+            return (object) array( 'last_checked' => time(), 'checked' => array( $file => $version ), 'no_update' => array(), 'response' => '1.0.0' === $version ? array( $file => (object) array( 'slug' => 'telepilot-update-fixture', 'plugin' => $file, 'new_version' => '2.0.0', 'package' => 'https://example.test/fixture.zip', 'url' => 'https://example.test/' ) ) : array() );
+        } );
+        $downloads = 0;
+        add_filter( 'upgrader_pre_download', static function ( $reply, $package ) use ( $archive, &$downloads ) {
+            if ( 'https://example.test/fixture.zip' !== $package ) { return new WP_Error( 'test_unexpected_package', 'Unexpected package.' ); }
+            $downloads++;
+            $copy = wp_tempnam( 'telepilot-download.zip' ); copy( $archive, $copy ); return $copy;
+        }, 10, 2 );
+        try {
+            $proposal = $this->proposal( $actor, $session, 'telepilot_update_plugin', array( 'identifier' => 'telepilot-update-fixture' ) );
+            $this->assertNotWPError( $proposal );
+            $warning = $this->confirm( $actor, $proposal['action_id'] );
+            $this->assertNotWPError( $warning );
+            $this->assertSame( 0, $downloads );
+            $result = $this->confirm( $actor, $warning['action_id'], true );
+            $this->assertNotWPError( $result );
+            $this->assertSame( '2.0.0', get_file_data( $directory . '/plugin.php', array( 'Version' => 'Version' ) )['Version'] );
+            $this->assertWPError( $this->confirm( $actor, $warning['action_id'], true ) );
+            $this->assertSame( 1, $downloads );
+        } finally {
+            wp_delete_file( $archive ); wp_delete_file( $directory . '/plugin.php' );
+            if ( is_dir( $directory ) ) { rmdir( $directory ); }
+            wp_clean_plugins_cache();
+        }
+    }
+
     public function test_draft_creation_is_confirmed_single_use_and_attributed() {
         list( $actor, $session ) = $this->setup_actor();
         $category = self::factory()->category->create();

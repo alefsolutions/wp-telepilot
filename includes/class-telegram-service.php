@@ -87,20 +87,34 @@ class Telepilot_Telegram_Service {
 		return Telepilot_Telegram_Response_Builder::success( __( 'Update accepted for background processing.', 'wp-telepilot' ), array( 'queued' => true, 'skip_dispatch' => true, 'operation_id' => $queued ) );
 	}
 
-	public function queue_notification( $chat_id, $message, $capability ) {
+	public function queue_notification( $chat_id, $message, $capability, $target = array() ) {
 		$users = get_users( array( 'meta_key' => Telepilot_User_Linking_Service::META_TELEGRAM_CHAT, 'meta_value' => (string) $chat_id, 'number' => 1 ) );
 		if ( ! $users ) { return new WP_Error( 'telepilot_notification_unlinked', 'Notification recipient is no longer linked.' ); }
 		$user = $users[0];
+		if ( ! self::notification_target_allowed( $user, $target ) ) { return new WP_Error( 'telepilot_notification_target_denied', 'Notification target is not accessible.' ); }
 		$update = array(
 			'message' => array( 'from' => array( 'id' => get_user_meta( $user->ID, Telepilot_User_Linking_Service::META_TELEGRAM_ID, true ) ), 'chat' => array( 'id' => (string) $chat_id, 'type' => 'private' ) ),
 			'_telepilot_actor' => array( 'user_id' => $user->ID, 'generation' => Telepilot_Actor_Access::generation( $user->ID ), 'site_id' => get_current_blog_id() ),
 			'_telepilot_notification_capability' => $capability,
+			'_telepilot_notification_target' => $target,
 		);
 		$id = Telepilot_Jobs_Repository::enqueue( null, 'notification', $update, 'notification', array( 'chat_id' => $chat_id ), array( 'priority' => 90, 'result' => Telepilot_Telegram_Response_Builder::success_html( $message ) ) );
 		if ( ! is_wp_error( $id ) && ! wp_next_scheduled( 'telepilot_process_jobs' ) ) {
 			wp_schedule_single_event( time() + 1, 'telepilot_process_jobs' );
 		}
 		return $id;
+	}
+
+	public static function notification_target_allowed( $user, $target ) {
+		if ( ! $target ) { return true; }
+		$id = (int) ( $target['id'] ?? 0 );
+		if ( 'comment' === ( $target['type'] ?? '' ) ) {
+			$comment = get_comment( $id );
+			if ( ! $comment || ! user_can( $user, 'edit_comment', $id ) ) { return false; }
+			$id = (int) $comment->comment_post_ID;
+		}
+		$post = get_post( $id );
+		return $post && user_can( $user, 'publish' === $post->post_status ? 'read_post' : 'edit_post', $id );
 	}
 
 	private function send_processing_placeholder( $update, $command ) {
@@ -237,6 +251,9 @@ class Telepilot_Telegram_Service {
 				$authorized = (int) $binding['site_id'] === get_current_blog_id() && (int) $binding['user_id'] === (int) ( $identity['wp_user']->ID ?? 0 ) && hash_equals( (string) $binding['generation'], (string) ( $identity['linkage_generation'] ?? '' ) );
 				if ( $authorized && ! empty( $binding['user_id'] ) ) {
 					$authorized = true === Telepilot_Actor_Access::check( $identity, $payload['_telepilot_notification_capability'] ?? '' );
+					if ( $authorized && isset( $payload['_telepilot_notification_capability'] ) ) {
+						$authorized = self::notification_target_allowed( $identity['wp_user'], $payload['_telepilot_notification_target'] ?? array() );
+					}
 				}
 				if ( ! $authorized ) {
 					Telepilot_Jobs_Repository::mark_complete( $id, $owner );
@@ -246,6 +263,10 @@ class Telepilot_Telegram_Service {
 				if ( 'completed' === $job['execution_state'] ) {
 					$result = json_decode( $job['outcome'], true );
 					if ( ! is_array( $result ) ) { Telepilot_Jobs_Repository::mark_complete( $id, $owner ); continue; }
+					if ( isset( $result['delivery_generation'] ) && (string) $result['delivery_generation'] !== (string) get_option( 'telepilot_posts_cache_version', '' ) ) {
+						// Never resend stale private data after ownership/content changed; never rerun the action.
+						$result = Telepilot_Telegram_Response_Builder::success( 'This operation finished, but WordPress data changed before its response could be delivered. Run a fresh read command to inspect the current state. The original action was not repeated.', array( 'operation_id' => $id ) );
+					}
 				} else {
 					$placeholder = 'ai_continuation' === $job['transport'] ? array( 'message_id' => $job['placeholder_message_id'] ) : $this->send_processing_placeholder( $payload, $this->command_router->parse_command( $payload ) );
 					Telepilot_Jobs_Repository::save_placeholder( $id, $owner, $placeholder );
@@ -265,6 +286,7 @@ class Telepilot_Telegram_Service {
 						continue;
 					}
 					$result['operation_id'] = $id;
+					$result['delivery_generation'] = (string) get_option( 'telepilot_posts_cache_version', '' );
 					if ( ! Telepilot_Jobs_Repository::save_outcome( $id, $owner, $result ) ) {
 						Telepilot_Jobs_Repository::mark_uncertain( $id, $owner, 'Outcome persistence failed; inspect WordPress before retrying.' );
 						continue;

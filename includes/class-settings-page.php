@@ -83,6 +83,7 @@ class Telepilot_Settings_Page {
 			? array_map( 'sanitize_text_field', $input['default_notifications'] )
 			: array();
 		$output                            = array_merge( $output, Telepilot_AI_Settings::sanitize_into_settings( $input, $existing ) );
+		$output                            = array_merge( $output, Telepilot_MCP_Integration_Service::sanitize( $input ) );
 
 		return $output;
 	}
@@ -268,7 +269,6 @@ class Telepilot_Settings_Page {
 							</div>
 
 							<div class="telepilot-tab-panel" data-panel="ai">
-								<?php Telepilot_AI_Admin_Fields::render( $settings ); ?>
 								<div class="telepilot-field-grid">
 									<label class="telepilot-check telepilot-check-inline telepilot-field-full">
 										<input type="checkbox" name="telepilot_settings[ai_enabled]" value="1" <?php checked( ! empty( $settings['ai_enabled'] ) ); ?> />
@@ -379,6 +379,7 @@ class Telepilot_Settings_Page {
 										</p>
 									<?php endif; ?>
 								</div>
+								<?php Telepilot_AI_Admin_Fields::render( $settings ); ?>
 							</div>
 
 							<div class="telepilot-tab-panel" data-panel="notifications">

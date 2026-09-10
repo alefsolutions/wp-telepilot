@@ -47,6 +47,12 @@ jobs:
           fi
           echo "version=$WP_VERSION" >> "$GITHUB_OUTPUT"
       - run: php scripts/install-test-wordpress.php '${{ steps.wordpress.outputs.version }}'
+      - name: Install the pinned official MCP Adapter for current WordPress tests
+        if: matrix.wordpress == 'latest'
+        run: |
+          git clone --depth 1 --branch v0.6.1 https://github.com/WordPress/mcp-adapter.git .test-env/mcp-adapter
+          composer install --working-dir=.test-env/mcp-adapter --no-dev --no-interaction --prefer-dist
+          echo "TELEPILOT_TEST_MCP_PLUGIN=$PWD/.test-env/mcp-adapter/mcp-adapter.php" >> "$GITHUB_ENV"
       - name: PHP compatibility and syntax
         run: find includes tests scripts -name '*.php' -print0 | xargs -0 -n 1 php -l && php -l wp-telepilot.php && php -l uninstall.php
       - run: composer test

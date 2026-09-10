@@ -5,7 +5,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 class Telepilot_Bootstrap {
-	const SCHEMA_VERSION = '0.3.1';
+	const SCHEMA_VERSION = '0.4.0-beta.1';
 
 	private $settings_page;
 	private $rest_controller;
@@ -39,10 +39,10 @@ class Telepilot_Bootstrap {
 
 		add_filter( 'cron_schedules', array( $this, 'register_cron_schedules' ) );
 		add_action( 'rest_api_init', array( $this->rest_controller, 'register_routes' ) );
-		add_action( 'init', array( $this->mcp_integration_service, 'maybe_register_adapter' ), 20 );
 		add_action( 'telepilot_daily_maintenance', array( $this, 'run_daily_maintenance' ) );
 		add_action( 'telepilot_hourly_maintenance', array( 'Telepilot_Jobs_Repository', 'purge_payloads' ) );
 		add_action( 'telepilot_hourly_maintenance', array( 'Telepilot_Security_Records', 'purge' ) );
+		add_action( 'telepilot_hourly_maintenance', array( 'Telepilot_AI_Session_Manager', 'purge' ) );
 		add_action( 'telepilot_poll_updates', array( $this, 'poll_updates' ) );
 		add_action( 'telepilot_process_jobs', array( $this, 'process_jobs' ) );
 		add_action( 'admin_post_' . Telepilot_Post_Editor_Service::HANDLER_ACTION, array( $this->post_editor_service, 'handle_request' ) );
@@ -143,6 +143,17 @@ class Telepilot_Bootstrap {
 			foreach ( array( 'telepilot_transport_diagnostics', 'telepilot_command_diagnostics', 'telepilot_webhook_status' ) as $option ) {
 				update_option( $option, Telepilot_Data_Redactor::redact( get_option( $option, array() ) ), false );
 			}
+		}
+		if ( version_compare( $current_version ?: '0', '0.4.0-beta.1', '<' ) ) {
+			global $wpdb;
+			Telepilot_AI_Session_Manager::purge( true );
+			$legacy = $wpdb->get_col( $wpdb->prepare( "SELECT option_name FROM $wpdb->options WHERE option_name LIKE %s", $wpdb->esc_like( '_transient_telepilot_ai_action' ) . '%' ) );
+			foreach ( $legacy as $name ) { delete_transient( substr( $name, strlen( '_transient_' ) ) ); }
+			$settings = get_option( 'telepilot_settings', array() );
+			unset( $settings['ai_allow_manage_users'] );
+			if ( ! empty( $settings['ai_openai_api_key_encrypted'] ) && 0 !== strpos( $settings['ai_openai_api_key_encrypted'], 'gcm1:' ) ) { $settings['ai_enabled'] = 0; }
+			update_option( 'telepilot_settings', $settings, false );
+			Telepilot_Domain_Cache::invalidate();
 		}
 		Telepilot_Processed_Updates_Repository::create_table();
 		update_option( 'telepilot_schema_version', self::SCHEMA_VERSION, false );

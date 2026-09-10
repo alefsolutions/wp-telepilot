@@ -6,24 +6,62 @@ document.addEventListener('DOMContentLoaded', function () {
   var copyButton = document.querySelector('[data-telepilot-copy-secret]');
 
   if (tabs.length && panels.length) {
-    tabs.forEach(function (tab) {
+    tabs[0].parentElement.setAttribute('role', 'tablist');
+    tabs[0].parentElement.setAttribute('aria-label', 'WP Telepilot settings');
+    tabs.forEach(function (tab, index) {
+      var name = tab.getAttribute('data-tab');
+      tab.id = 'telepilot-tab-' + name;
+      tab.setAttribute('role', 'tab');
+      tab.setAttribute('aria-controls', 'telepilot-panel-' + name);
+      tab.setAttribute('aria-selected', tab.classList.contains('is-active') ? 'true' : 'false');
+      tab.tabIndex = tab.classList.contains('is-active') ? 0 : -1;
+      tab.addEventListener('keydown', function (event) {
+        var next;
+        if (event.key === 'ArrowRight') next = (index + 1) % tabs.length;
+        if (event.key === 'ArrowLeft') next = (index + tabs.length - 1) % tabs.length;
+        if (event.key === 'Home') next = 0;
+        if (event.key === 'End') next = tabs.length - 1;
+        if (next !== undefined) { event.preventDefault(); tabs[next].click(); tabs[next].focus(); }
+      });
       tab.addEventListener('click', function () {
         var target = tab.getAttribute('data-tab');
 
         tabs.forEach(function (item) {
           item.classList.toggle('is-active', item === tab);
+          item.setAttribute('aria-selected', item === tab ? 'true' : 'false');
+          item.tabIndex = item === tab ? 0 : -1;
         });
 
         panels.forEach(function (panel) {
           panel.classList.toggle('is-active', panel.getAttribute('data-panel') === target);
+          panel.hidden = panel.getAttribute('data-panel') !== target;
         });
       });
+    });
+    panels.forEach(function (panel) {
+      var name = panel.getAttribute('data-panel');
+      panel.id = 'telepilot-panel-' + name;
+      panel.setAttribute('role', 'tabpanel');
+      panel.setAttribute('aria-labelledby', 'telepilot-tab-' + name);
+      panel.hidden = !panel.classList.contains('is-active');
     });
   }
 
   if (secretInput && generateButton) {
     generateButton.addEventListener('click', function () {
-      secretInput.value = generateSecret(32);
+      try {
+        secretInput.value = generateSecret(32);
+      } catch (error) {
+        var notice = document.getElementById('telepilot-secret-error');
+        if (!notice) {
+          notice = document.createElement('p');
+          notice.id = 'telepilot-secret-error';
+          notice.setAttribute('role', 'alert');
+          generateButton.parentElement.appendChild(notice);
+        }
+        notice.textContent = error.message;
+        return;
+      }
       secretInput.focus();
       secretInput.select();
     });
@@ -67,11 +105,7 @@ function generateSecret(length) {
     return output;
   }
 
-  for (index = 0; index < length; index += 1) {
-    output += alphabet.charAt(Math.floor(Math.random() * alphabet.length));
-  }
-
-  return output;
+  throw new Error('Secure randomness requires a supported browser and HTTPS.');
 }
 
 function copyText(value) {

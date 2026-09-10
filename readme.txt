@@ -2,9 +2,9 @@
 Contributors: alefsolutions
 Tags: telegram, bot, notifications, moderation, remote management
 Requires at least: 6.6
-Tested up to: 7.0
+Tested up to: 7.1
 Requires PHP: 8.0
-Stable tag: 0.3.1
+Stable tag: 0.4.0-beta.1
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -24,11 +24,13 @@ WP Telepilot currently includes:
 * secure browser handoff for long-form post editing
 * transport diagnostics, queue processing, and webhook/polling health controls
 * personal-data export and erasure hooks for linked Telegram account data
+* optional OpenAI chat with administrator-configured keys, task/role grants, usage limits, and confirmed writes
+* independently optional read-only MCP through the official WordPress MCP Adapter and Abilities API
 
-WP Telepilot 0.3.0 is the first stable release line. It focuses on secure Telegram linking, structured operational workflows, transport resilience, and practical WordPress administration from chat.
+WP Telepilot 0.4.0-beta.1 is a beta candidate incorporating the 0.3.1 maintenance repairs. Live staging checks are required before publication. Normal commands do not require OpenAI or MCP.
 
 Full command reference:
-https://github.com/alefsolutions/wp-telepilot/blob/main/COMMANDS.md
+https://github.com/alefsolutions/wp-telepilot/blob/v4/COMMANDS.md
 
 == Installation ==
 
@@ -47,6 +49,16 @@ https://github.com/alefsolutions/wp-telepilot/blob/main/COMMANDS.md
 = Does this plugin require Telegram? =
 
 Yes. WP Telepilot is built around the Telegram Bot API and requires a Telegram bot token before the messaging features can work.
+
+The independently optional MCP endpoint does not require Telegram linkage or an OpenAI key.
+
+= How do I enable AI chat? =
+
+Open the AI Assistant settings, enter an OpenAI API key, choose a model (default gpt-4.1-mini), approve tasks and role grants, enable AI, and save. Test the saved configuration, then use /chat in your linked private chat. Use /context, /newchat, /cancel, and /endchat to control the session. Ordinary commands remain deterministic. AI writes require confirmation; publishing and plugin changes require a second warning. OpenSSL AES-256-GCM is required for key storage; unsupported legacy keys must be replaced.
+
+= How do I enable MCP? =
+
+MCP is off by default and independent of AI. Use WordPress 6.9+ with the Abilities API and the official WordPress MCP Adapter (tested with 0.6.1). Enable MCP, grant roles and explicitly approve reads in settings. Connect an authenticated client over HTTPS using a WordPress application password to /wp-json/wp-telepilot-mcp/v1/server. No Telepilot write abilities are exposed. Missing dependencies leave ordinary commands and AI usable.
 
 = Does it support both webhooks and polling? =
 
@@ -81,9 +93,20 @@ Service provider: Telegram
 Terms of service: https://telegram.org/tos
 Privacy policy: https://telegram.org/privacy
 
+Optional service provider: OpenAI
+Endpoint: https://api.openai.com/v1/chat/completions
+Terms: https://openai.com/policies/terms-of-use/
+Privacy: https://openai.com/policies/privacy-policy/
+
+Only when AI is enabled/configured, requests send user text, bounded conversation context, approved tool schemas and minimized authorized results to OpenAI. The saved-configuration test also makes a billable request. Credentials, IP addresses and security links are excluded; supported email fields require separate administrator opt-in. The plugin requests store=false, which does not override provider retention policies. An API key and provider charges are separate from this plugin.
+
+Optional MCP returns approved read results to the authenticated client you configure. It does not automatically send data to OpenAI. Review that client's policies separately. Official Adapter: https://github.com/WordPress/mcp-adapter
+
 == Privacy ==
 
 WP Telepilot stores Telegram linkage metadata such as Telegram user IDs, chat IDs, usernames, link timestamps, and audit-log events related to bot activity and privileged actions. WordPress privacy export and erasure tools are supported for linked user data.
+
+Queued payloads and bounded AI context participate in privacy export/erasure. Sessions expire after 60 minutes of inactivity by default; proposals expire after five minutes. Terminal queue payloads are removed within 24 hours and failed-delivery payloads within seven days under hourly maintenance. Redacted audits follow the configured retention. Reliable WordPress cron is required. Erasing local data cannot erase copies already delivered externally.
 
 == Screenshots ==
 
@@ -92,6 +115,16 @@ WP Telepilot stores Telegram linkage metadata such as Telegram user IDs, chat ID
 3. User profile tools for one-time linking and unlinking.
 
 == Changelog ==
+
+= 0.4.0-beta.1 =
+
+* share authorization, input validation, execution, audit and cache policies across domain commands and AI/MCP abilities
+* configure authenticated-encrypted OpenAI keys, task and role grants, usage limits and provider diagnostics
+* run bounded natural-language reads and follow-ups through durable continuation jobs
+* bind single-use write proposals to actor, chat, site, session, linkage generation and target revision
+* add independent read-only MCP with actual Adapter HTTP transport, explicit allowlists and per-call native permissions
+* improve keyboard-accessible admin tabs, mobile sizing, local Site Health checks and lifecycle/privacy cleanup
+* test native plugin upgrades, real concurrent queue claims and browser saves, and packaged installation
 
 = 0.3.1 =
 
@@ -119,6 +152,10 @@ WP Telepilot stores Telegram linkage metadata such as Telegram user IDs, chat ID
 * add linked-data and audit-log privacy anonymization flows
 
 == Upgrade Notice ==
+
+= 0.4.0-beta.1 =
+
+Back up before installing this beta. Content, ordinary settings and linked accounts are preserved. Unsafe legacy AI actions and sessions are invalidated; unsupported legacy keys require replacement. AI and MCP are separate opt-ins with administrator-only default grants. Recheck saved settings and complete live staging checks before release. The metadata version does not imply a published stable release.
 
 = 0.3.1 =
 

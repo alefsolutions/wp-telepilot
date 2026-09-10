@@ -8,6 +8,10 @@ class Telepilot_Notifications_Command_Service {
 	const PER_PAGE = 5;
 
 	public function list_page( $page = 1, $limit = self::PER_PAGE ) {
+		return Telepilot_Domain_Abilities::run( 'notifications', 'list_page', get_defined_vars(), function () use ( $page, $limit ) { return $this->operation_list_page( $page, $limit ); } );
+	}
+
+	private function operation_list_page( $page = 1, $limit = self::PER_PAGE ) {
 		$page   = max( 1, absint( $page ) );
 		$limit  = max( 1, absint( $limit ) );
 		$items  = array();
@@ -91,6 +95,10 @@ class Telepilot_Notifications_Command_Service {
 	}
 
 	public function update_option_state( $key, $enabled ) {
+		return Telepilot_Domain_Abilities::run( 'notifications', 'update_option_state', get_defined_vars(), function () use ( $key, $enabled ) { return $this->operation_update_option_state( $key, $enabled ); } );
+	}
+
+	private function operation_update_option_state( $key, $enabled ) {
 		$key    = $this->normalize_key( $key );
 		$labels = Telepilot_Notification_Service::option_labels();
 

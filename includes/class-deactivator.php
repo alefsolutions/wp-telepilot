@@ -6,6 +6,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 class Telepilot_Deactivator {
 	public static function deactivate() {
+		Telepilot_AI_Session_Manager::purge( true );
 		update_option( 'telepilot_access_epoch', wp_generate_uuid4(), false );
 		Telepilot_Jobs_Repository::stop_pending();
 		wp_clear_scheduled_hook( 'telepilot_hourly_maintenance' );

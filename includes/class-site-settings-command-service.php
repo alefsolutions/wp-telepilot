@@ -6,6 +6,10 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 class Telepilot_Site_Settings_Command_Service {
 	public function get_summary() {
+		return Telepilot_Domain_Abilities::run( 'settings', 'get_summary', array(), function () { return $this->operation_get_summary(); } );
+	}
+
+	private function operation_get_summary() {
 		$settings = get_option( 'telepilot_settings', array() );
 
 		return array(
@@ -137,6 +141,10 @@ class Telepilot_Site_Settings_Command_Service {
 	}
 
 	public function update_core_setting( $field, $value ) {
+		return Telepilot_Domain_Abilities::run( 'settings', 'update_core_setting', get_defined_vars(), function () use ( $field, $value ) { return $this->operation_update_core_setting( $field, $value ); } );
+	}
+
+	private function operation_update_core_setting( $field, $value ) {
 		$field = sanitize_key( (string) $field );
 		$value = (string) $value;
 

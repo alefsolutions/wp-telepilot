@@ -3,7 +3,7 @@
  * Plugin Name: WP Telepilot
  * Plugin URI: https://alefdigitalsolutions.com
  * Description: Manage key WordPress operations from Telegram with secure remote workflows, audit logging, and WP Telepilot guidance.
- * Version: 0.3.1
+ * Version: 0.4.0-beta.1
  * Author: Alef Digital Solutions
  * Requires at least: 6.6
  * Requires PHP: 8.0
@@ -17,7 +17,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'TELEPILOT_VERSION', '0.3.1' );
+define( 'TELEPILOT_VERSION', '0.4.0-beta.1' );
 define( 'TELEPILOT_FILE', __FILE__ );
 define( 'TELEPILOT_PATH', plugin_dir_path( __FILE__ ) );
 define( 'TELEPILOT_URL', plugin_dir_url( __FILE__ ) );
@@ -83,6 +83,7 @@ require_once TELEPILOT_PATH . 'includes/class-command-router.php';
 require_once TELEPILOT_PATH . 'includes/class-telegram-service.php';
 require_once TELEPILOT_PATH . 'includes/class-rest-webhook-controller.php';
 require_once TELEPILOT_PATH . 'includes/class-settings-page.php';
+require_once TELEPILOT_PATH . 'includes/class-site-health.php';
 require_once TELEPILOT_PATH . 'includes/class-bootstrap.php';
 
 register_activation_hook( __FILE__, array( 'Telepilot_Activator', 'activate' ) );
@@ -90,6 +91,8 @@ register_deactivation_hook( __FILE__, array( 'Telepilot_Deactivator', 'deactivat
 add_action( 'telepilot_actor_revoked', array( 'Telepilot_AI_Session_Manager', 'erase_actor' ) );
 add_action( 'telepilot_erase_actor_data', array( 'Telepilot_AI_Session_Manager', 'erase_actor' ) );
 add_action( 'telepilot_ai_session_ended', array( 'Telepilot_AI_Confirmation_Manager', 'cancel_session_actions' ), 10, 2 );
+( new Telepilot_MCP_Integration_Service() )->maybe_register_adapter();
+add_filter( 'site_status_tests', array( 'Telepilot_Site_Health', 'register' ) );
 
 function telepilot() {
 	static $plugin = null;

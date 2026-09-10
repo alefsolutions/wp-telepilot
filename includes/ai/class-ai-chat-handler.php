@@ -30,7 +30,18 @@ class Telepilot_AI_Chat_Handler {
 		$session = $this->sessions->refresh_session( $identity );
 		if ( ! $session ) { return $this->inactive(); }
 		$context = ( new Telepilot_AI_Conversation_Store() )->get_context( $session['session_id'] );
-		return $this->reply( 'AI context', 'Site: ' . home_url() . "\nAccount: [" . $identity['wp_user']->ID . '] ' . $identity['wp_user']->display_name . "\nModel: " . Telepilot_AI_Settings::get_model() . "\nRecent references: " . count( $context['entities'] ) . "\nRequest: " . ( empty( $session['request_id'] ) ? 'Idle' : 'Processing' ) . "\nPending proposal: " . ( empty( $session['pending_action_id'] ) ? 'None' : 'Awaiting confirmation' ) );
+		if ( ! empty( $session['pending_action_id'] ) ) {
+			$manager = new Telepilot_AI_Confirmation_Manager();
+			if ( ! $manager->get_pending_action( $session['pending_action_id'], $identity ) && ! $manager->get_pending_action( $session['pending_action_id'], $identity, true ) ) {
+				$session['pending_action_id'] = '';
+				$this->sessions->update_session( $identity, $session );
+			}
+		}
+		$references = array();
+		foreach ( $context['entities'] as $item ) {
+			$references[] = 'Reference ' . (int) ( $item['position'] ?? 0 ) . ': ' . ( $item['type'] ?? 'item' ) . ' [' . ( $item['id'] ?? $item['identifier'] ?? '' ) . '] ' . mb_substr( $item['title'] ?? '', 0, 120 );
+		}
+		return $this->reply( 'AI context', 'Site: ' . home_url() . "\nAccount: [" . $identity['wp_user']->ID . '] ' . $identity['wp_user']->display_name . "\nModel: " . Telepilot_AI_Settings::get_model() . "\nRecent references: " . count( $context['entities'] ) . "\nRequest: " . ( empty( $session['request_id'] ) ? 'Idle' : 'Processing' ) . "\nPending proposal: " . ( empty( $session['pending_action_id'] ) ? 'None' : 'Awaiting confirmation' ) . ( $references ? "\n\n" . implode( "\n", $references ) : '' ) );
 	}
 
 	public function cancel_pending_action( $identity ) {

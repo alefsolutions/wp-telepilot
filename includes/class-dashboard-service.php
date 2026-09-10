@@ -8,6 +8,10 @@ class Telepilot_Dashboard_Service {
 	const CACHE_KEY = 'telepilot_dashboard_summary';
 
 	public function get_summary() {
+		return Telepilot_Domain_Abilities::run( 'site', 'get_summary', array(), function () { return $this->operation_get_summary(); } );
+	}
+
+	private function operation_get_summary() {
 		$cached = get_transient( self::CACHE_KEY );
 
 		if ( is_array( $cached ) ) {
@@ -181,15 +185,10 @@ class Telepilot_Dashboard_Service {
 	}
 
 	private function get_health_label() {
-		if ( class_exists( 'WP_Site_Health' ) ) {
-			$tests = WP_Site_Health::get_instance()->get_tests();
-
-			if ( ! empty( $tests['direct'] ) ) {
-				return __( 'Checks available', 'wp-telepilot' );
-			}
-		}
-
-		return __( 'Not evaluated', 'wp-telepilot' );
+		$counts = get_transient( 'health-check-site-status-result' );
+		if ( is_string( $counts ) ) { $counts = json_decode( $counts, true ); }
+		if ( ! is_array( $counts ) || ! isset( $counts['critical'], $counts['recommended'] ) ) { return __( 'Not evaluated: open Tools > Site Health in WordPress.', 'wp-telepilot' ); }
+		return sprintf( __( 'Last Site Health results: %1$d critical, %2$d recommended improvements.', 'wp-telepilot' ), (int) $counts['critical'], (int) $counts['recommended'] );
 	}
 
 	private function get_plugin_counts() {

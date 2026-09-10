@@ -34,6 +34,25 @@ class AIReadTest extends Telepilot_TestCase {
         $this->assertNull( $manager->get_session( $actor ) );
     }
 
+    public function test_timezone_changes_revoke_sessions_and_their_proposals() {
+        $this->enable(); $actor = $this->actor();
+        $manager = new Telepilot_AI_Session_Manager();
+        $this->assertNotNull( $manager->start_session( $actor, 'openai', 'gpt-4.1-mini' ) );
+        update_option( 'timezone_string', 'Pacific/Port_Moresby' );
+        $this->assertNull( $manager->get_session( $actor ) );
+    }
+
+    public function test_context_shows_typed_references_and_clears_expired_proposal_status() {
+        $this->enable(); $actor = $this->actor();
+        $manager = new Telepilot_AI_Session_Manager();
+        $session = $manager->start_session( $actor, 'openai', 'gpt-4.1-mini' );
+        $session['pending_action_id'] = 'missing-proposal'; $manager->update_session( $actor, $session );
+        ( new Telepilot_AI_Conversation_Store() )->remember_result( $session['session_id'], 'list_posts', array( array( 'position' => 1, 'type' => 'post', 'id' => 42, 'title' => 'Example title' ) ), '' );
+        $result = ( new Telepilot_AI_Chat_Handler() )->render_context( $actor );
+        $this->assertStringContainsString( 'post [42] Example title', $result['message'] );
+        $this->assertStringContainsString( 'Pending proposal: None', $result['message'] );
+    }
+
     public function test_provider_limits_strict_tools_and_untrusted_context() {
         $this->enable();
         $actor = $this->actor();
@@ -72,6 +91,21 @@ class AIReadTest extends Telepilot_TestCase {
         ( new Telepilot_AI_Chat_Handler() )->cancel_pending_action( $actor );
         $result = ( new Telepilot_AI_Orchestrator() )->resume( $payload['_telepilot_ai_state'], $actor );
         $this->assertTrue( $result['skip_dispatch'] );
+    }
+
+    public function test_content_changes_invalidate_history_and_queued_tool_results() {
+        global $wpdb;
+        $this->enable(); $actor = $this->actor();
+        $session = ( new Telepilot_AI_Session_Manager() )->start_session( $actor, 'openai', 'gpt-4.1-mini' );
+        $this->mock_http( 'api.openai.com', array( 'choices' => array( array( 'message' => array( 'tool_calls' => array( array( 'id' => 'fixture_call', 'type' => 'function', 'function' => array( 'name' => 'telepilot_search_posts', 'arguments' => '{}' ) ) ) ) ) ) ) );
+        Telepilot_Actor_Access::as_actor( $actor, static function () use ( $actor, $session ) { return ( new Telepilot_AI_Orchestrator() )->handle_message( 'List posts', $actor, $session ); }, 'ai' );
+        $payload = json_decode( $wpdb->get_var( "SELECT payload FROM " . Telepilot_Jobs_Repository::table_name() . " WHERE transport='ai_continuation' ORDER BY id DESC LIMIT 1" ), true );
+        $store = new Telepilot_AI_Conversation_Store();
+        $this->assertNotEmpty( $store->get_message_history( $session['session_id'] ) );
+        Telepilot_Domain_Cache::invalidate();
+        $this->assertEmpty( $store->get_message_history( $session['session_id'] ) );
+        $result = ( new Telepilot_AI_Orchestrator() )->resume( $payload['_telepilot_ai_state'], $actor );
+        $this->assertStringContainsString( 'data changed', $result['message'] );
     }
 
     public function test_malformed_arguments_do_not_become_empty_valid_requests() {

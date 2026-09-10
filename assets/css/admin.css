@@ -33,6 +33,25 @@
   box-sizing: border-box;
 }
 
+.telepilot-panel,
+.telepilot-field,
+.telepilot-check,
+.telepilot-tab-panel {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.telepilot-field input,
+.telepilot-field select,
+.telepilot-field textarea {
+  max-width: 100%;
+}
+
+.telepilot-tab:focus-visible {
+  outline: 3px solid var(--telepilot-accent-strong);
+  outline-offset: 3px;
+}
+
 .telepilot-hero {
   display: grid;
   grid-template-columns: minmax(0, 1.4fr) minmax(280px, 0.8fr);

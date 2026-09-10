@@ -409,7 +409,7 @@ class Telepilot_Plugins_Service {
 			return $result;
 		}
 
-		if ( false === $result ) {
+		if ( true !== $result ) {
 			return new WP_Error( 'telepilot_plugin_update_failed', __( 'WordPress could not update that plugin.', 'wp-telepilot' ) );
 		}
 

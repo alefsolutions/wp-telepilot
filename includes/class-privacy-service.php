@@ -25,6 +25,8 @@ class Telepilot_Privacy_Service {
 		$content .= '<p>' . esc_html__( 'WP Telepilot stores Telegram linkage metadata such as Telegram user IDs, chat IDs, usernames, link timestamps, audit-log records, and limited diagnostics needed to secure and operate the integration.', 'wp-telepilot' ) . '</p>';
 		$content .= '<p>' . esc_html__( 'Accepted requests and outcomes are temporarily stored in a background queue. Scheduled maintenance removes terminal payloads within 24 hours and failed delivery payloads within seven days. Configure reliable WordPress cron to enforce retention. Security links expire within one hour and are single-use. Logs redact credentials, security links and message payloads.', 'wp-telepilot' ) . '</p>';
 		$content .= '<p>' . esc_html__( 'The plugin includes WordPress personal-data export and erasure hooks for linked Telegram account data. When an erasure request is processed, WP Telepilot removes linked Telegram metadata and anonymizes matching audit-log payloads while preserving basic operational event records.', 'wp-telepilot' ) . '</p>';
+		$content .= '<p>' . esc_html__( 'Optional AI mode sends the current request, bounded conversation history and permission-approved tool results to OpenAI. It is disabled by default, requires an administrator-supplied key and explicit role grants, and does not handle ordinary slash commands. Email fields are excluded unless an administrator explicitly enables supported user-email fields; credentials, security links and IP addresses are excluded. Saved-configuration tests also contact OpenAI. OpenAI processing is subject to its terms and privacy policy: https://openai.com/policies/privacy-policy/ and https://openai.com/policies/terms-of-use/.', 'wp-telepilot' ) . '</p>';
+		$content .= '<p>' . esc_html__( 'Independently optional read-only MCP sends only selected authorized WordPress data to the authenticated MCP client you connect. That client may use its own AI provider and privacy policy. MCP does not require an OpenAI key or Telegram linkage. Chat sessions expire after inactivity and pending write proposals expire after five minutes. Personal-data erasure also clears AI sessions, proposals and queued continuations.', 'wp-telepilot' ) . '</p>';
 		$content .= '<p>' . sprintf(
 			wp_kses(
 				/* translators: 1: Telegram privacy policy link, 2: Telegram terms link. */
@@ -78,6 +80,11 @@ class Telepilot_Privacy_Service {
 		$chat_id          = (string) get_user_meta( $user->ID, Telepilot_User_Linking_Service::META_TELEGRAM_CHAT, true );
 
 		if ( 1 === $page ) {
+			$session = get_user_meta( $user->ID, Telepilot_AI_Session_Manager::SESSION_PREFIX . get_current_blog_id(), true );
+			if ( is_array( $session ) && ! empty( $session['session_id'] ) ) {
+				$context = ( new Telepilot_AI_Conversation_Store() )->get_context( $session['session_id'] );
+				$data_to_export[] = array( 'group_id' => 'wp-telepilot-ai', 'group_label' => __( 'WP Telepilot AI conversation', 'wp-telepilot' ), 'item_id' => 'telepilot-ai-' . $user->ID, 'data' => array( array( 'name' => __( 'Conversation (sensitive fields excluded)', 'wp-telepilot' ), 'value' => wp_json_encode( Telepilot_AI_Data_Policy::clean( $context ) ) ), array( 'name' => __( 'Expires', 'wp-telepilot' ), 'value' => gmdate( 'c', $session['expires_at'] ) ) ) );
+			}
 			$linkage_item = $this->build_linkage_export_item( $user );
 
 			if ( ! empty( $linkage_item ) ) {

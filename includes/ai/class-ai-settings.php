@@ -32,7 +32,9 @@ class Telepilot_AI_Settings {
 			'ai_allow_manage_comments'      => 0,
 			'ai_allow_activate_plugins'     => 0,
 			'ai_allow_update_plugins'       => 0,
-			'ai_allow_manage_users'         => 0,
+			'ai_allowed_roles' => array( 'administrator' ),
+			'ai_include_email_fields' => 0,
+			'ai_daily_request_limit' => 100,
 		);
 	}
 
@@ -61,12 +63,12 @@ class Telepilot_AI_Settings {
 		$output['ai_model']                     = isset( $input['ai_model'] ) ? sanitize_text_field( (string) $input['ai_model'] ) : (string) $existing['ai_model'];
 		$output['ai_timeout_minutes']           = isset( $input['ai_timeout_minutes'] ) ? max( 5, absint( $input['ai_timeout_minutes'] ) ) : (int) $existing['ai_timeout_minutes'];
 		$output['ai_preserve_context']          = ! empty( $input['ai_preserve_context'] ) ? 1 : 0;
-		$output['ai_confirm_writes']            = ! empty( $input['ai_confirm_writes'] ) ? 1 : 0;
+		$output['ai_confirm_writes']            = 1;
 		$output['ai_log_activity']              = ! empty( $input['ai_log_activity'] ) ? 1 : 0;
-		$output['ai_mask_sensitive']            = ! empty( $input['ai_mask_sensitive'] ) ? 1 : 0;
-		$output['ai_max_tool_calls']            = isset( $input['ai_max_tool_calls'] ) ? max( 1, min( 10, absint( $input['ai_max_tool_calls'] ) ) ) : (int) $existing['ai_max_tool_calls'];
-		$output['ai_max_retries']               = isset( $input['ai_max_retries'] ) ? max( 0, min( 5, absint( $input['ai_max_retries'] ) ) ) : (int) $existing['ai_max_retries'];
-		$output['ai_max_pending_confirmations'] = isset( $input['ai_max_pending_confirmations'] ) ? max( 1, min( 20, absint( $input['ai_max_pending_confirmations'] ) ) ) : (int) $existing['ai_max_pending_confirmations'];
+		$output['ai_mask_sensitive']            = 1;
+		$output['ai_max_tool_calls']            = isset( $input['ai_max_tool_calls'] ) ? max( 1, min( 5, absint( $input['ai_max_tool_calls'] ) ) ) : (int) $existing['ai_max_tool_calls'];
+		$output['ai_max_retries']               = isset( $input['ai_max_retries'] ) ? max( 0, min( 2, absint( $input['ai_max_retries'] ) ) ) : (int) $existing['ai_max_retries'];
+		$output['ai_max_pending_confirmations'] = isset( $input['ai_max_pending_confirmations'] ) ? max( 1, min( 3, absint( $input['ai_max_pending_confirmations'] ) ) ) : (int) $existing['ai_max_pending_confirmations'];
 
 		foreach ( self::permission_fields() as $field ) {
 			$output[ $field ] = ! empty( $input[ $field ] ) ? 1 : 0;
@@ -79,6 +81,10 @@ class Telepilot_AI_Settings {
 			$output['ai_openai_api_key_encrypted'] = self::encrypt_secret( $api_key );
 		}
 
+		if ( ! empty( $input['ai_remove_api_key'] ) ) { $output['ai_openai_api_key_encrypted'] = ''; }
+		$output['ai_allowed_roles'] = array_values( array_intersect( array_keys( wp_roles()->roles ), array_map( 'sanitize_key', (array) ( $input['ai_allowed_roles'] ?? array( 'administrator' ) ) ) ) );
+		$output['ai_include_email_fields'] = empty( $input['ai_include_email_fields'] ) ? 0 : 1;
+		$output['ai_daily_request_limit'] = max( 1, min( 10000, absint( $input['ai_daily_request_limit'] ?? 100 ) ) );
 		return $output;
 	}
 
@@ -95,7 +101,6 @@ class Telepilot_AI_Settings {
 			'ai_allow_manage_comments',
 			'ai_allow_activate_plugins',
 			'ai_allow_update_plugins',
-			'ai_allow_manage_users',
 		);
 	}
 
@@ -183,56 +188,21 @@ class Telepilot_AI_Settings {
 	}
 
 	private static function encrypt_secret( $secret ) {
-		$secret = trim( (string) $secret );
-
-		if ( '' === $secret ) {
+		if ( ! function_exists( 'openssl_encrypt' ) || ! in_array( 'aes-256-gcm', openssl_get_cipher_methods(), true ) ) {
+			add_settings_error( 'telepilot_settings', 'telepilot_encryption_missing', 'Authenticated encryption is unavailable. No API key was stored.' );
 			return '';
 		}
-
-		if ( function_exists( 'openssl_encrypt' ) ) {
-			$key    = hash( 'sha256', wp_salt( 'auth' ), true );
-			$iv     = random_bytes( 16 );
-			$cipher = openssl_encrypt( $secret, 'AES-256-CBC', $key, OPENSSL_RAW_DATA, $iv );
-
-			if ( false !== $cipher ) {
-				return 'enc:' . base64_encode( $iv . $cipher );
-			}
-		}
-
-		return 'plain:' . base64_encode( $secret );
+		$iv = random_bytes( 12 );
+		$tag = '';
+		$cipher = openssl_encrypt( trim( (string) $secret ), 'aes-256-gcm', hash( 'sha256', wp_salt( 'auth' ), true ), OPENSSL_RAW_DATA, $iv, $tag, 'wp-telepilot-openai-v1', 16 );
+		return false === $cipher ? '' : 'gcm1:' . base64_encode( $iv . $tag . $cipher );
 	}
 
 	private static function decrypt_secret( $payload ) {
-		$payload = (string) $payload;
-
-		if ( '' === $payload ) {
-			return '';
-		}
-
-		if ( 0 === strpos( $payload, 'enc:' ) ) {
-			$decoded = base64_decode( substr( $payload, 4 ), true );
-			if ( false === $decoded || strlen( $decoded ) <= 16 ) {
-				return '';
-			}
-
-			if ( ! function_exists( 'openssl_decrypt' ) ) {
-				return '';
-			}
-
-			$key    = hash( 'sha256', wp_salt( 'auth' ), true );
-			$iv     = substr( $decoded, 0, 16 );
-			$cipher = substr( $decoded, 16 );
-			$result = openssl_decrypt( $cipher, 'AES-256-CBC', $key, OPENSSL_RAW_DATA, $iv );
-
-			return false === $result ? '' : trim( (string) $result );
-		}
-
-		if ( 0 === strpos( $payload, 'plain:' ) ) {
-			$decoded = base64_decode( substr( $payload, 6 ), true );
-
-			return false === $decoded ? '' : trim( (string) $decoded );
-		}
-
-		return '';
+		if ( 0 !== strpos( (string) $payload, 'gcm1:' ) || ! function_exists( 'openssl_decrypt' ) ) { return ''; }
+		$decoded = base64_decode( substr( $payload, 5 ), true );
+		if ( false === $decoded || strlen( $decoded ) <= 28 ) { return ''; }
+		$result = openssl_decrypt( substr( $decoded, 28 ), 'aes-256-gcm', hash( 'sha256', wp_salt( 'auth' ), true ), OPENSSL_RAW_DATA, substr( $decoded, 0, 12 ), substr( $decoded, 12, 16 ), 'wp-telepilot-openai-v1' );
+		return false === $result ? '' : $result;
 	}
 }

@@ -80,7 +80,7 @@ class Telepilot_Jobs_Repository {
 			'stale_after' => $options['stale_after'] ?? null,
 			'job_group' => $options['job_group'] ?? null,
 			'is_replaceable' => empty( $options['is_replaceable'] ) ? 0 : 1,
-			'available_at' => $now, 'created_at' => $now, 'updated_at' => $now,
+			'available_at' => gmdate( 'Y-m-d H:i:s', time() + max( 0, min( 60, (int) ( $options['delay'] ?? 0 ) ) ) ), 'created_at' => $now, 'updated_at' => $now,
 		) );
 		if ( false === $inserted ) {
 			$duplicate = $update_id && $wpdb->get_var( $wpdb->prepare( 'SELECT id FROM ' . self::table_name() . ' WHERE update_id=%d', $update_id ) );

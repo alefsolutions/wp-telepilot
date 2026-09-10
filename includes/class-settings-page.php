@@ -268,6 +268,7 @@ class Telepilot_Settings_Page {
 							</div>
 
 							<div class="telepilot-tab-panel" data-panel="ai">
+								<?php Telepilot_AI_Admin_Fields::render( $settings ); ?>
 								<div class="telepilot-field-grid">
 									<label class="telepilot-check telepilot-check-inline telepilot-field-full">
 										<input type="checkbox" name="telepilot_settings[ai_enabled]" value="1" <?php checked( ! empty( $settings['ai_enabled'] ) ); ?> />
@@ -302,15 +303,15 @@ class Telepilot_Settings_Page {
 									</label>
 									<label class="telepilot-field">
 										<span><?php esc_html_e( 'Max Tool Calls per Request', 'wp-telepilot' ); ?></span>
-										<input type="number" min="1" max="10" name="telepilot_settings[ai_max_tool_calls]" value="<?php echo esc_attr( (string) $settings['ai_max_tool_calls'] ); ?>" />
+										<input type="number" min="1" max="5" name="telepilot_settings[ai_max_tool_calls]" value="<?php echo esc_attr( (string) $settings['ai_max_tool_calls'] ); ?>" />
 									</label>
 									<label class="telepilot-field">
 										<span><?php esc_html_e( 'Max Provider Retries', 'wp-telepilot' ); ?></span>
-										<input type="number" min="0" max="5" name="telepilot_settings[ai_max_retries]" value="<?php echo esc_attr( (string) $settings['ai_max_retries'] ); ?>" />
+										<input type="number" min="0" max="2" name="telepilot_settings[ai_max_retries]" value="<?php echo esc_attr( (string) $settings['ai_max_retries'] ); ?>" />
 									</label>
 									<label class="telepilot-field">
 										<span><?php esc_html_e( 'Max Pending Confirmations', 'wp-telepilot' ); ?></span>
-										<input type="number" min="1" max="20" name="telepilot_settings[ai_max_pending_confirmations]" value="<?php echo esc_attr( (string) $settings['ai_max_pending_confirmations'] ); ?>" />
+										<input type="number" min="1" max="3" name="telepilot_settings[ai_max_pending_confirmations]" value="<?php echo esc_attr( (string) $settings['ai_max_pending_confirmations'] ); ?>" />
 									</label>
 								</div>
 
@@ -320,7 +321,7 @@ class Telepilot_Settings_Page {
 										<span><?php esc_html_e( 'Preserve short-term conversation context', 'wp-telepilot' ); ?></span>
 									</label>
 									<label class="telepilot-check">
-										<input type="checkbox" name="telepilot_settings[ai_confirm_writes]" value="1" <?php checked( ! empty( $settings['ai_confirm_writes'] ) ); ?> />
+										<input type="checkbox" name="telepilot_settings[ai_confirm_writes]" value="1" checked disabled />
 										<span><?php esc_html_e( 'Require confirmation for AI write operations', 'wp-telepilot' ); ?></span>
 									</label>
 									<label class="telepilot-check">
@@ -328,7 +329,7 @@ class Telepilot_Settings_Page {
 										<span><?php esc_html_e( 'Log AI activity', 'wp-telepilot' ); ?></span>
 									</label>
 									<label class="telepilot-check">
-										<input type="checkbox" name="telepilot_settings[ai_mask_sensitive]" value="1" <?php checked( ! empty( $settings['ai_mask_sensitive'] ) ); ?> />
+										<input type="checkbox" name="telepilot_settings[ai_mask_sensitive]" value="1" checked disabled />
 										<span><?php esc_html_e( 'Mask sensitive information in AI logs and responses', 'wp-telepilot' ); ?></span>
 									</label>
 								</div>
@@ -352,7 +353,6 @@ class Telepilot_Settings_Page {
 										<label class="telepilot-check"><input type="checkbox" name="telepilot_settings[ai_allow_manage_comments]" value="1" <?php checked( ! empty( $settings['ai_allow_manage_comments'] ) ); ?> /><span><?php esc_html_e( 'Manage comments', 'wp-telepilot' ); ?></span></label>
 										<label class="telepilot-check"><input type="checkbox" name="telepilot_settings[ai_allow_activate_plugins]" value="1" <?php checked( ! empty( $settings['ai_allow_activate_plugins'] ) ); ?> /><span><?php esc_html_e( 'Activate and deactivate plugins', 'wp-telepilot' ); ?></span></label>
 										<label class="telepilot-check"><input type="checkbox" name="telepilot_settings[ai_allow_update_plugins]" value="1" <?php checked( ! empty( $settings['ai_allow_update_plugins'] ) ); ?> /><span><?php esc_html_e( 'Update plugins', 'wp-telepilot' ); ?></span></label>
-										<label class="telepilot-check"><input type="checkbox" name="telepilot_settings[ai_allow_manage_users]" value="1" <?php checked( ! empty( $settings['ai_allow_manage_users'] ) ); ?> /><span><?php esc_html_e( 'Manage users', 'wp-telepilot' ); ?></span></label>
 									</div>
 								</div>
 

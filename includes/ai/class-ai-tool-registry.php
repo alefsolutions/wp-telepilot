@@ -15,17 +15,35 @@ class Telepilot_AI_Tool_Registry {
 		$schemas = array();
 
 		foreach ( $this->get_tools() as $tool_name => $definition ) {
+			if ( ! ( new Telepilot_AI_Permission_Manager() )->is_tool_enabled( $definition['ability'] ) || is_wp_error( Telepilot_Ability_Executor::permission( $definition['ability'] ) ) ) { continue; }
 			$schemas[] = array(
 				'type'     => 'function',
 				'function' => array(
 					'name'        => $tool_name,
 					'description' => $definition['description'],
-					'parameters'  => $definition['input_schema'],
+					'parameters'  => self::strict_schema( $definition['input_schema'] ),
+					'strict'      => true,
 				),
 			);
 		}
 
 		return $schemas;
+	}
+
+	public static function strict_schema( $schema ) {
+		$required = $schema['required'] ?? array();
+		$properties = (array) ( $schema['properties'] ?? array() );
+		foreach ( $properties as $key => &$property ) {
+			if ( ! in_array( $key, $required, true ) ) {
+				$property['type'] = array( $property['type'], 'null' );
+				if ( isset( $property['enum'] ) ) { $property['enum'][] = null; }
+			}
+		}
+		unset( $property );
+		$schema['properties'] = $properties ? $properties : (object) array();
+		$schema['required'] = array_keys( $properties );
+		$schema['additionalProperties'] = false;
+		return $schema;
 	}
 
 	public function get_tool( $tool_name ) {

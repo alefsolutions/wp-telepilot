@@ -5,6 +5,14 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 class Telepilot_AI_Permission_Manager {
+	public function check( $identity ) {
+		$access = Telepilot_Actor_Access::check( $identity, 'read' );
+		if ( is_wp_error( $access ) ) { return $access; }
+		$settings = Telepilot_AI_Settings::get_settings();
+		$user = get_user_by( 'id', $identity['wp_user']->ID );
+		if ( empty( $settings['ai_enabled'] ) || ! array_intersect( (array) $settings['ai_allowed_roles'], $user->roles ) ) { return new WP_Error( 'telepilot_ai_access_denied', 'AI is disabled or your role has not been granted AI access.' ); }
+		return true;
+	}
 	private $permission_service;
 
 	public function __construct() {
@@ -12,6 +20,8 @@ class Telepilot_AI_Permission_Manager {
 	}
 
 	public function require_ai_mode_access( $identity ) {
+		$access = $this->check( $identity );
+		if ( is_wp_error( $access ) ) { return Telepilot_Telegram_Response_Builder::error_html( Telepilot_Telegram_Response_Builder::escape( $access->get_error_message() ) ); }
 		$link_result = $this->permission_service->require_linked_user( $identity );
 		if ( true !== $link_result ) {
 			return $link_result;

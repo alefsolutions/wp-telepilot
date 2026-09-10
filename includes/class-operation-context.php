@@ -8,6 +8,7 @@ final class Telepilot_Operation_Context {
 	public $source;
 	public $operation_id;
 	public $identity;
+	public $reply_message_id = 0;
 	public $confirmed = false;
 
 	private function __construct( $source, $identity = array() ) {
@@ -15,7 +16,8 @@ final class Telepilot_Operation_Context {
 		$this->site_id = get_current_blog_id();
 		$this->source = $source;
 		$this->identity = $identity;
-		$this->operation_id = (string) ( $identity['operation_id'] ?? wp_generate_uuid4() );
+		$this->operation_id = (string) ( $identity['operation_id'] ?? ( self::$active->operation_id ?? wp_generate_uuid4() ) );
+		$this->reply_message_id = (int) ( $identity['reply_message_id'] ?? ( self::$active->reply_message_id ?? 0 ) );
 	}
 
 	public static function current() { return self::$active ?: new self( 'wordpress' ); }

@@ -304,6 +304,7 @@ class Telepilot_Core_Ability_Handlers {
 				'id'       => $user->ID,
 				'title'    => $user->display_name ? $user->display_name : $user->user_login,
 			);
+			if ( ! empty( Telepilot_AI_Settings::get_settings()['ai_include_email_fields'] ) && 'ai' === Telepilot_Operation_Context::current()->source ) { $items[ count( $items ) - 1 ]['email'] = $user->user_email; }
 			$position++;
 		}
 

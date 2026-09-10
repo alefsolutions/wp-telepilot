@@ -33,7 +33,7 @@ class Telepilot_AI_Conversation_Store {
 	public function add_message( $session_id, $role, $content ) {
 		$context = $this->get_context( $session_id );
 		$role    = in_array( $role, array( 'user', 'assistant' ), true ) ? $role : 'assistant';
-		$content = trim( (string) $content );
+		$content = mb_substr( trim( (string) Telepilot_AI_Data_Policy::clean( $content ) ), 0, 4000 );
 
 		if ( '' === $content ) {
 			return $context;
@@ -57,8 +57,8 @@ class Telepilot_AI_Conversation_Store {
 	public function remember_result( $session_id, $intent, $entities, $summary ) {
 		$context                 = $this->get_context( $session_id );
 		$context['last_intent']  = sanitize_key( (string) $intent );
-		$context['entities']     = is_array( $entities ) ? array_values( $entities ) : array();
-		$context['last_summary'] = trim( (string) $summary );
+		if ( ! empty( $entities ) && is_array( $entities ) ) { $context['entities'] = Telepilot_AI_Data_Policy::clean( array_slice( array_values( $entities ), 0, 10 ) ); }
+		$context['last_summary'] = mb_substr( (string) Telepilot_AI_Data_Policy::clean( $summary ), 0, 1000 );
 		$context['updated_at']   = time();
 
 		$this->persist( $session_id, $context );

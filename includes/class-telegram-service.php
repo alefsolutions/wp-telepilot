@@ -73,6 +73,7 @@ class Telepilot_Telegram_Service {
 		}
 		$identity = $this->user_resolver->resolve_from_update( $update );
 		// Never trust a caller-supplied actor snapshot.
+		unset( $update['_telepilot_ai_state'] );
 		$update['_telepilot_actor'] = array( 'user_id' => (int) ( $identity['wp_user']->ID ?? 0 ), 'generation' => $identity['linkage_generation'] ?? '', 'site_id' => get_current_blog_id() );
 		$queued = Telepilot_Jobs_Repository::enqueue( $update['update_id'], $transport, $update, $command['name'] ?? '', array( 'chat_id' => $identity['chat_id'] ?? '' ), array( 'priority' => $this->get_job_priority( $command, $update ), 'stale_after' => $this->get_job_stale_after( $command, $update ) ) );
 		if ( is_wp_error( $queued ) ) {
@@ -246,13 +247,18 @@ class Telepilot_Telegram_Service {
 					$result = json_decode( $job['outcome'], true );
 					if ( ! is_array( $result ) ) { Telepilot_Jobs_Repository::mark_complete( $id, $owner ); continue; }
 				} else {
-					$placeholder = $this->send_processing_placeholder( $payload, $this->command_router->parse_command( $payload ) );
+					$placeholder = 'ai_continuation' === $job['transport'] ? array( 'message_id' => $job['placeholder_message_id'] ) : $this->send_processing_placeholder( $payload, $this->command_router->parse_command( $payload ) );
 					Telepilot_Jobs_Repository::save_placeholder( $id, $owner, $placeholder );
 					$job['placeholder_message_id'] = $placeholder['message_id'] ?? 0;
 					if ( ! Telepilot_Jobs_Repository::begin_execution( $id, $owner ) ) { continue; }
 					$this->defer_delivery = true;
 					try {
-						$result = $this->process_update( $payload, $job['transport'], array( 'skip_duplicate_check' => true, 'callback_already_answered' => true, 'edit_message_id' => $job['placeholder_message_id'] ) );
+						$result = Telepilot_Operation_Context::run( 'worker', array( 'operation_id' => $id, 'reply_message_id' => $job['placeholder_message_id'] ), function () use ( $payload, $job, $identity ) {
+							if ( 'ai_continuation' === $job['transport'] ) {
+								return Telepilot_Actor_Access::as_actor( $identity, static function () use ( $payload, $identity ) { return ( new Telepilot_AI_Orchestrator() )->resume( $payload['_telepilot_ai_state'] ?? array(), $identity ); }, 'ai' );
+							}
+							return $this->process_update( $payload, $job['transport'], array( 'skip_duplicate_check' => true, 'callback_already_answered' => true, 'edit_message_id' => $job['placeholder_message_id'] ) );
+						} );
 					} finally { $this->defer_delivery = false; }
 					if ( 'telepilot_command_exception' === ( $result['code'] ?? '' ) ) {
 						Telepilot_Jobs_Repository::mark_uncertain( $id, $owner );
@@ -452,11 +458,7 @@ class Telepilot_Telegram_Service {
 				$result = $this->handle_media_upload( $update, $identity, $command );
 
 				if ( null === $result ) {
-					if ( empty( $command['name'] ) && $this->ai_chat_handler->is_active( $identity ) ) {
-						$result = $this->ai_chat_handler->handle_text_message( $update, $identity );
-					} else {
-						$result = $this->command_router->route( $update, $identity );
-					}
+					$result = $this->command_router->route( $update, $identity );
 				}
 
 				$this->maybe_cache_command_response( $identity, $command, $update, $result );

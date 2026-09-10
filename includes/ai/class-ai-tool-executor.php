@@ -30,6 +30,8 @@ class Telepilot_AI_Tool_Executor {
 	}
 
 	private function dispatch( $tool_name, $arguments, $identity, $session, $confirmed ) {
+		$current = ( new Telepilot_AI_Session_Manager() )->get_session( $identity );
+		if ( ! $current || ( $session['session_id'] ?? '' ) !== $current['session_id'] ) { return new WP_Error( 'telepilot_ai_session_invalid', 'This AI session has expired or changed.' ); }
 		$permissions = new Telepilot_AI_Permission_Manager();
 		if ( true !== $permissions->require_ai_mode_access( $identity ) ) { return new WP_Error( 'telepilot_ai_access_denied', 'AI access is no longer available.' ); }
 		$definition = ( new Telepilot_Ability_Registry() )->get_ability_by_tool( $tool_name );

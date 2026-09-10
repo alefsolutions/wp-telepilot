@@ -61,6 +61,10 @@ class Telepilot_Command_Router {
 
 	private function route_authorized( $update, $identity ) {
 		$command = $this->parse_command( $update );
+		if ( '/chat' === $command['name'] ) {
+			$flows = new Telepilot_Flow_State_Service();
+			if ( $flows->get_pending_post( $identity['telegram_user_id'] ) || $flows->get_pending_page( $identity['telegram_user_id'] ) ) { return Telepilot_Telegram_Response_Builder::error( 'Finish the current creation flow or use /cancel before entering AI mode.' ); }
+		}
 		$pending = $this->maybe_handle_pending_post_creation( $command, $update, $identity );
 
 		if ( is_array( $pending ) ) {
@@ -73,6 +77,9 @@ class Telepilot_Command_Router {
 			return $pending;
 		}
 
+		if ( empty( $update['callback_query'] ) && ! empty( $update['message']['text'] ) && '/' !== substr( ltrim( $update['message']['text'] ), 0, 1 ) && $this->ai_chat_handler->is_active( $identity ) ) {
+			return $this->ai_chat_handler->handle_text_message( $update, $identity );
+		}
 		if ( empty( $command['name'] ) ) {
 			return Telepilot_Telegram_Response_Builder::success(
 				__( 'Webhook received. No supported command was detected yet.', 'wp-telepilot' ),

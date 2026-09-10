@@ -1,90 +1,77 @@
 name: Release Plugin
-
 on:
   push:
-    branches:
-      - main
-
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      beta:
+        description: Explicitly allow a beta release from v4
+        type: boolean
+        default: false
 permissions:
-  contents: write
-
+  contents: read
+concurrency:
+  group: telepilot-release
+  cancel-in-progress: false
 jobs:
+  validate:
+    uses: ./.github/workflows/tests.yml
   release:
+    needs: validate
+    if: github.ref == 'refs/heads/main' || (github.event_name == 'workflow_dispatch' && inputs.beta && github.ref == 'refs/heads/v4')
     runs-on: ubuntu-latest
-
+    permissions:
+      contents: write
     steps:
-      - name: Check out repository
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-
-      - name: Read plugin version
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.0'
+          extensions: zip
+      - name: Validate metadata and build allowlisted package
+        run: php scripts/package.php
+      - name: Check immutable version
         id: version
+        env:
+          ALLOW_BETA: ${{ inputs.beta || false }}
+        shell: bash
         run: |
-          VERSION="$(sed -n 's/^ \* Version: //p' wp-telepilot.php | head -n 1)"
-          if [ -z "$VERSION" ]; then
-            echo "Could not determine plugin version from wp-telepilot.php" >&2
-            exit 1
+          set -euo pipefail
+          VERSION="$(sed -n 's/^ \* Version: //p' wp-telepilot.php | tr -d '\r')"
+          TAG="v$VERSION"
+          BETA=false
+          if [[ "$VERSION" == *-beta.* ]]; then
+            BETA=true
+            [[ "$ALLOW_BETA" == true ]] || { echo 'Beta publication requires explicit opt-in'; exit 1; }
+          elif [[ "$GITHUB_REF" != refs/heads/main ]]; then
+            echo 'Stable releases must come from main'; exit 1
           fi
-          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
-          echo "tag=v$VERSION" >> "$GITHUB_OUTPUT"
-
-      - name: Lint PHP sources
-        run: |
-          set -euo pipefail
-          php -l wp-telepilot.php
-          find includes -name '*.php' -print0 | xargs -0 -n 1 php -l
-          php -l uninstall.php
-
-      - name: Build plugin package
-        id: package
-        run: |
-          set -euo pipefail
-          STAGING_DIR="$RUNNER_TEMP/package"
-          PLUGIN_DIR="$STAGING_DIR/wp-telepilot"
-          ZIP_PATH="$RUNNER_TEMP/wp-telepilot-${{ steps.version.outputs.version }}.zip"
-
-          rm -rf "$STAGING_DIR" "$ZIP_PATH"
-          mkdir -p "$PLUGIN_DIR"
-
-          rsync -a assets/ "$PLUGIN_DIR/assets/"
-          rsync -a includes/ "$PLUGIN_DIR/includes/"
-          rsync -a languages/ "$PLUGIN_DIR/languages/"
-          cp wp-telepilot.php "$PLUGIN_DIR/"
-          cp uninstall.php "$PLUGIN_DIR/"
-          cp readme.txt "$PLUGIN_DIR/"
-          cp LICENSE "$PLUGIN_DIR/"
-
-          cd "$STAGING_DIR"
-          zip -r "$ZIP_PATH" "wp-telepilot"
-
-          echo "Created package at $ZIP_PATH"
-          echo "zip_path=$ZIP_PATH" >> "$GITHUB_OUTPUT"
-
-      - name: Validate package contents
-        run: |
-          set -euo pipefail
-          ZIP_PATH="${{ steps.package.outputs.zip_path }}"
-          unzip -l "$ZIP_PATH"
-
-          if unzip -l "$ZIP_PATH" | grep -E 'README\.md|COMMANDS\.md|QA-|BETA-|LANDING-|\.github/|docs/|\.gitignore'; then
-            echo "Package contains unexpected development files." >&2
-            exit 1
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+          echo "beta=$BETA" >> "$GITHUB_OUTPUT"
+          if git show-ref --verify --quiet "refs/tags/$TAG"; then
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+            echo "Version $TAG already exists; it will not be replaced."
+          else
+            echo "exists=false" >> "$GITHUB_OUTPUT"
           fi
-
-      - name: Sync release tag
+      - name: Create immutable tag
+        if: steps.version.outputs.exists == 'false'
+        env:
+          TAG: ${{ steps.version.outputs.tag }}
         run: |
-          git tag -f "${{ steps.version.outputs.tag }}" "${GITHUB_SHA}"
-          git push origin "refs/tags/${{ steps.version.outputs.tag }}" --force
-
-      - name: Publish GitHub release
+          git tag "$TAG" "$GITHUB_SHA"
+          git push origin "refs/tags/$TAG"
+      - name: Publish new release only
+        if: steps.version.outputs.exists == 'false'
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ steps.version.outputs.tag }}
-          name: WP Telepilot ${{ steps.version.outputs.version }}
+          name: WP Telepilot ${{ steps.version.outputs.tag }}
           target_commitish: ${{ github.sha }}
           generate_release_notes: true
-          make_latest: true
-          files: |
-            ${{ steps.package.outputs.zip_path }}
-          overwrite_files: true
+          prerelease: ${{ steps.version.outputs.beta == 'true' }}
+          make_latest: ${{ steps.version.outputs.beta == 'true' && 'false' || 'true' }}
+          files: dist/wp-telepilot-*.zip
+          overwrite_files: false

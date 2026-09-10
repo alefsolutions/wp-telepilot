@@ -1,0 +1,18 @@
+{
+  "name": "alefsolutions/wp-telepilot",
+  "description": "WP Telepilot development and test tools",
+  "type": "wordpress-plugin",
+  "license": "GPL-2.0-or-later",
+  "require": {"php": ">=8.0"},
+  "require-dev": {
+    "phpunit/phpunit": "^9.6",
+    "yoast/phpunit-polyfills": "^1.1",
+    "wp-phpunit/wp-phpunit": "6.6.2"
+  },
+  "scripts": {
+    "test": "phpunit",
+    "test:regressions": "phpunit --group stabilization",
+    "package": "@php scripts/package.php"
+  },
+  "config": {"sort-packages": true, "platform": {"php": "8.0.30"}}
+}

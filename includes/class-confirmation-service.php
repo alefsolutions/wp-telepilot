@@ -8,26 +8,19 @@ class Telepilot_Confirmation_Service {
 	const TOKEN_PREFIX = 'telepilot_confirm_';
 
 	public function create_token( $payload, $expiration = 600 ) {
-		$token = $this->normalize_token( wp_generate_password( 20, false, false ) );
-
-		set_transient(
-			self::TOKEN_PREFIX . $token,
-			$payload,
-			max( 60, absint( $expiration ) )
-		);
-
-		return $token;
+		$payload = Telepilot_Actor_Access::bind_payload( $payload );
+		return Telepilot_Security_Records::issue( 'confirmation', $payload, get_current_user_id(), max( 60, absint( $expiration ) ) );
 	}
 
 	public function consume_token( $token ) {
-		$key     = self::TOKEN_PREFIX . $this->normalize_token( $token );
-		$payload = get_transient( $key );
+		$token = $this->normalize_token( $token );
+		$payload = Telepilot_Security_Records::read( $token, 'confirmation' );
 
-		if ( false === $payload ) {
+		if ( ! is_array( $payload ) || ! Telepilot_Actor_Access::valid_payload( $payload ) ) {
 			return null;
 		}
 
-		delete_transient( $key );
+		if ( ! Telepilot_Security_Records::claim( $token, 'confirmation' ) ) { return null; }
 
 		return $payload;
 	}

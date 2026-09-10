@@ -4,7 +4,7 @@ Tags: telegram, bot, notifications, moderation, remote management
 Requires at least: 6.6
 Tested up to: 7.0
 Requires PHP: 8.0
-Stable tag: 0.3.0
+Stable tag: 0.3.1
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -93,6 +93,15 @@ WP Telepilot stores Telegram linkage metadata such as Telegram user IDs, chat ID
 
 == Changelog ==
 
+= 0.3.1 =
+
+* enforce active, linked, authorized private-chat access and actor-scoped content queries
+* separate durable WordPress execution outcomes from retried Telegram delivery
+* quarantine interrupted actions instead of replaying mutations; add Queue Recovery controls
+* make post-editor links atomically single-use, revision-checked and limited to one hour
+* redact sensitive logs and add queued-data retention, privacy erasure and lifecycle cleanup
+* add isolated WordPress regression tests, compatibility CI and immutable release packaging
+
 = 0.3.0 =
 
 * first stable WP Telepilot release
@@ -110,6 +119,10 @@ WP Telepilot stores Telegram linkage metadata such as Telegram user IDs, chat ID
 * add linked-data and audit-log privacy anonymization flows
 
 == Upgrade Notice ==
+
+= 0.3.1 =
+
+Existing content, normal settings and linked accounts are preserved. Legacy pending operations are quarantined; legacy editor links and confirmations must be regenerated. Notifications now require an active linked private chat, not just an allowlisted ID. Review Queue Recovery and configure reliable WordPress cron for background delivery and retention.
 
 = 0.3.0 =
 

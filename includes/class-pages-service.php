@@ -13,16 +13,7 @@ class Telepilot_Pages_Service {
 	}
 
 	public function latest( $limit = 5 ) {
-		return get_posts(
-			array(
-				'post_type'        => 'page',
-				'post_status'      => array( 'publish', 'draft', 'private' ),
-				'posts_per_page'   => max( 1, absint( $limit ) ),
-				'orderby'          => 'modified',
-				'order'            => 'DESC',
-				'suppress_filters' => false,
-			)
-		);
+		return $this->latest_page( 1, $limit )['items'];
 	}
 
 	public function latest_page( $page = 1, $limit = self::PER_PAGE ) {
@@ -203,11 +194,15 @@ class Telepilot_Pages_Service {
 	}
 
 	public function create_page( $title ) {
+		if ( ! current_user_can( 'edit_pages' ) ) {
+			return new WP_Error( 'telepilot_capability_denied', __( 'You cannot create pages.', 'wp-telepilot' ) );
+		}
 		$page_id = wp_insert_post(
 			array(
 				'post_type'   => 'page',
 				'post_status' => 'draft',
 				'post_title'  => sanitize_text_field( $title ),
+				'post_author' => get_current_user_id(),
 			),
 			true
 		);
@@ -667,9 +662,10 @@ class Telepilot_Pages_Service {
 	}
 
 	private function query_pages_page( $args, $page, $limit ) {
+		$args = Telepilot_Actor_Access::content_query( $args );
 		$page      = max( 1, absint( $page ) );
 		$limit     = max( 1, absint( $limit ) );
-		$cache_key = 'telepilot_pages_' . $this->get_cache_version() . '_' . md5( wp_json_encode( array( $args, $page, $limit ) ) );
+		$cache_key = 'telepilot_pages_' . $this->get_cache_version() . '_' . md5( wp_json_encode( array( $args, $page, $limit, get_current_user_id(), wp_get_current_user()->allcaps ) ) );
 		$cached    = get_transient( $cache_key );
 
 		if ( is_array( $cached ) ) {

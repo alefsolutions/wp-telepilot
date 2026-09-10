@@ -819,6 +819,7 @@ class Telepilot_Settings_Page {
 							</div>
 						<?php endif; ?>
 					</section>
+					<?php Telepilot_Job_Recovery_Page::render(); ?>
 				</div>
 			</div>
 		</div>
@@ -1083,6 +1084,9 @@ class Telepilot_Settings_Page {
 		$tables = array(
 			Telepilot_Audit_Log_Repository::table_name(),
 			Telepilot_Jobs_Repository::table_name(),
+			Telepilot_Jobs_Repository::operations_table(),
+			Telepilot_Jobs_Repository::locks_table(),
+			Telepilot_Security_Records::table_name(),
 			Telepilot_Processed_Updates_Repository::table_name(),
 		);
 

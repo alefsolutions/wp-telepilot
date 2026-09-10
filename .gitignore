@@ -1,4 +1,10 @@
 docs/
+*.local.md
+*.local.txt
+vendor/
+.test-env/
+dist/
+.phpunit.result.cache
 QA-RUNBOOK.local.txt
 QA-IMPROVEMENT-PLAN.local.txt
 LANDING-PAGE-BRIEF.local.md

@@ -574,12 +574,10 @@ class Telepilot_Notification_Service {
 			$recipients = $this->get_recipient_chat_ids( $capability );
 
 			foreach ( $recipients as $chat_id ) {
-				$response = $this->client->send_message(
+				$response = ( new Telepilot_Telegram_Service() )->queue_notification(
 					$chat_id,
 					$message,
-					array(
-						'parse_mode' => 'HTML',
-					)
+					$capability
 				);
 
 				if ( is_wp_error( $response ) ) {
@@ -606,7 +604,7 @@ class Telepilot_Notification_Service {
 				Telepilot_Audit_Log_Repository::log(
 					array(
 						'chat_id'       => $chat_id,
-						'action_name'   => 'telegram_notification_sent',
+						'action_name'   => 'telegram_notification_queued',
 						'resource_type' => $resource_type,
 						'resource_id'   => $resource_id ? $resource_id : $action_name,
 						'context'       => wp_parse_args(
@@ -616,7 +614,7 @@ class Telepilot_Notification_Service {
 								'action_name'  => $action_name,
 							)
 						),
-						'after_state'   => isset( $response['result'] ) ? $response['result'] : null,
+						'after_state'   => array( 'job_id' => $response ),
 					)
 				);
 			}
@@ -920,21 +918,14 @@ class Telepilot_Notification_Service {
 		);
 
 		foreach ( $users as $user ) {
-			if ( ! user_can( $user, $capability ) ) {
-				continue;
-			}
-
 			$chat_id = get_user_meta( $user->ID, Telepilot_User_Linking_Service::META_TELEGRAM_CHAT, true );
-			if ( $chat_id ) {
+			$identity = array( 'wp_user' => $user, 'chat_id' => (string) $chat_id, 'telegram_user_id' => (string) get_user_meta( $user->ID, Telepilot_User_Linking_Service::META_TELEGRAM_ID, true ), 'chat_type' => 'private' );
+			if ( true === Telepilot_Actor_Access::check( $identity, $capability ) ) {
 				$recipients[] = (string) $chat_id;
 			}
 		}
 
-		$settings = get_option( 'telepilot_settings', array() );
-		$allowed  = isset( $settings['allowed_chat_ids'] ) ? (string) $settings['allowed_chat_ids'] : '';
-		$extra    = array_filter( array_map( 'trim', explode( "\n", str_replace( ',', "\n", $allowed ) ) ) );
-
-		return array_values( array_unique( array_merge( $recipients, $extra ) ) );
+		return array_values( array_unique( $recipients ) );
 	}
 
 	private function is_notification_enabled( $key ) {

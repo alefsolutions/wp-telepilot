@@ -41,6 +41,22 @@ class Telepilot_Command_Router {
 
 	public function route( $update, $identity ) {
 		$command = $this->parse_command( $update );
+		if ( '/chatid' === $command['name'] ) {
+			return $this->handle_chat_id( $identity );
+		}
+		if ( 'private' !== ( $identity['chat_type'] ?? '' ) || ! Telepilot_Actor_Access::chat_allowed( $identity['chat_id'] ?? '' ) ) {
+			return Telepilot_Telegram_Response_Builder::error( __( 'Use an authorized private chat with this bot.', 'wp-telepilot' ) );
+		}
+		if ( in_array( $command['name'], array( '/link', '/start', '/help', '/menu' ), true ) && empty( $identity['wp_user'] ) ) {
+			return $this->route_authorized( $update, $identity );
+		}
+		return Telepilot_Actor_Access::as_actor( $identity, function () use ( $update, $identity ) {
+			return $this->route_authorized( $update, $identity );
+		} );
+	}
+
+	private function route_authorized( $update, $identity ) {
+		$command = $this->parse_command( $update );
 		$pending = $this->maybe_handle_pending_post_creation( $command, $update, $identity );
 
 		if ( is_array( $pending ) ) {

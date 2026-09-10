@@ -5,6 +5,7 @@ if ( ! defined( 'WP_UNINSTALL_PLUGIN' ) ) {
 }
 
 wp_clear_scheduled_hook( 'telepilot_daily_maintenance' );
+wp_clear_scheduled_hook( 'telepilot_hourly_maintenance' );
 wp_clear_scheduled_hook( 'telepilot_poll_updates' );
 wp_clear_scheduled_hook( 'telepilot_process_jobs' );
 delete_transient( 'telepilot_poll_lock' );
@@ -29,11 +30,19 @@ if ( '' !== $bot_token ) {
 	);
 }
 
-if ( ! $cleanup_enabled ) {
-	return;
+global $wpdb;
+// Ephemeral request data is not a durable user setting, even in retain-data mode.
+foreach ( array( 'telepilot_jobs' => "payload='',status='cancelled',lease_token=NULL", 'telepilot_operations' => 'result=NULL', 'telepilot_security_records' => "payload='',state='consumed'" ) as $suffix => $assignment ) {
+	$table = $wpdb->prefix . $suffix;
+	if ( $wpdb->get_var( $wpdb->prepare( 'SHOW TABLES LIKE %s', $wpdb->esc_like( $table ) ) ) === $table ) {
+		$wpdb->query( "UPDATE $table SET $assignment" );
+	}
 }
 
-global $wpdb;
+if ( ! $cleanup_enabled ) {
+		update_option( 'telepilot_access_epoch', wp_generate_uuid4(), false );
+	return;
+}
 
 $options_to_delete = array(
 	'telepilot_settings',
@@ -50,6 +59,8 @@ $options_to_delete = array(
 	'telepilot_plugins_cache_version',
 	'telepilot_terms_cache_version',
 	'telepilot_admin_notice',
+	'telepilot_access_epoch',
+	'telepilot_ai_provider_status',
 );
 
 foreach ( $options_to_delete as $option_name ) {
@@ -60,8 +71,8 @@ foreach ( $options_to_delete as $option_name ) {
 $wpdb->query(
 	$wpdb->prepare(
 		"DELETE FROM {$wpdb->options} WHERE option_name LIKE %s OR option_name LIKE %s",
-		'_transient_telepilot_%',
-		'_transient_timeout_telepilot_%'
+		$wpdb->esc_like( '_transient_telepilot_' ) . '%',
+		$wpdb->esc_like( '_transient_timeout_telepilot_' ) . '%'
 	)
 );
 
@@ -83,3 +94,7 @@ $wpdb->query(
 $wpdb->query( 'DROP TABLE IF EXISTS ' . $wpdb->prefix . 'telepilot_audit_logs' );
 $wpdb->query( 'DROP TABLE IF EXISTS ' . $wpdb->prefix . 'telepilot_jobs' );
 $wpdb->query( 'DROP TABLE IF EXISTS ' . $wpdb->prefix . 'telepilot_processed_updates' );
+$wpdb->query( 'DROP TABLE IF EXISTS ' . $wpdb->prefix . 'telepilot_operations' );
+$wpdb->query( 'DROP TABLE IF EXISTS ' . $wpdb->prefix . 'telepilot_job_locks' );
+$wpdb->query( 'DROP TABLE IF EXISTS ' . $wpdb->prefix . 'telepilot_security_records' );
+delete_metadata( 'user', 0, '_telepilot_link_generation', '', true );

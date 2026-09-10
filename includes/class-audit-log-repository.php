@@ -58,11 +58,12 @@ class Telepilot_Audit_Log_Repository {
 			'after_state'      => null,
 			'was_successful'   => 1,
 			'failure_reason'   => null,
-			'ip_address'       => self::detect_ip_address(),
+			'ip_address'       => null,
 			'context'          => null,
 		);
 
-		$record = wp_parse_args( $data, $defaults );
+		$record = Telepilot_Data_Redactor::redact( wp_parse_args( $data, $defaults ) );
+		$record['ip_address'] = null;
 
 		$wpdb->insert(
 			self::table_name(),

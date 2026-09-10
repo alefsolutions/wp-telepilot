@@ -1,0 +1,61 @@
+name: Plugin Tests
+on:
+  pull_request:
+  push:
+    branches: [main, v4, 'maintenance/**']
+  workflow_call:
+permissions:
+  contents: read
+jobs:
+  wordpress:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - php: '8.0'
+            wordpress: '6.6.2'
+          - php: '8.5'
+            wordpress: 'latest'
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: test-only
+          MYSQL_DATABASE: telepilot_tests
+        ports: ['3306:3306']
+        options: --health-cmd="mysqladmin ping -ptest-only" --health-interval=10s --health-timeout=5s --health-retries=10
+    env:
+      TELEPILOT_TEST_DB_HOST: 127.0.0.1:3306
+      TELEPILOT_TEST_DB_PASSWORD: test-only
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ matrix.php }}
+          extensions: mysqli, mbstring, zip, openssl, curl
+          tools: composer:v2
+      - run: composer install --no-interaction --prefer-dist
+      - name: Select current stable WordPress when requested
+        id: wordpress
+        env:
+          WP_VERSION: ${{ matrix.wordpress }}
+        run: |
+          if [ "$WP_VERSION" = latest ]; then
+            WP_VERSION=$(curl -fsSL https://api.wordpress.org/core/version-check/1.7/ | php -r '$v=json_decode(stream_get_contents(STDIN),true); foreach($v["offers"] as $o){if($o["response"]==="upgrade"){echo $o["version"];break;}}')
+            composer require --dev "wp-phpunit/wp-phpunit:$WP_VERSION" --no-interaction --with-all-dependencies
+          fi
+          echo "version=$WP_VERSION" >> "$GITHUB_OUTPUT"
+      - run: php scripts/install-test-wordpress.php '${{ steps.wordpress.outputs.version }}'
+      - name: PHP compatibility and syntax
+        run: find includes tests scripts -name '*.php' -print0 | xargs -0 -n 1 php -l && php -l wp-telepilot.php && php -l uninstall.php
+      - run: composer test
+      - run: composer package
+      - name: Test the packaged plugin, without development files
+        run: |
+          unzip dist/wp-telepilot-*.zip -d .test-env/package
+          TELEPILOT_TEST_PLUGIN_FILE="$PWD/.test-env/package/wp-telepilot/wp-telepilot.php" composer test
+      - uses: actions/upload-artifact@v4
+        with:
+          name: validated-plugin-php-${{ matrix.php }}
+          path: dist/*.zip

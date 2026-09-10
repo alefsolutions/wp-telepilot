@@ -14,6 +14,7 @@ class Telepilot_Telegram_Service {
 	const JOB_LOCK_TIMEOUT           = 180;
 	const RESPONSE_CACHE_TTL         = 30;
 	private $client;
+	private $defer_delivery = false;
 	private $user_resolver;
 	private $permission_service;
 	private $rate_limiter;
@@ -64,86 +65,41 @@ class Telepilot_Telegram_Service {
 
 	private function queue_or_process_update( $update, $transport ) {
 		$command = $this->command_router->parse_command( $update );
-
-		if ( ! $this->should_queue_update( $command, $update, $transport ) ) {
-			return $this->process_update( $update, $transport );
+		if ( empty( $update['message'] ) && empty( $update['callback_query'] ) ) {
+			return Telepilot_Telegram_Response_Builder::success( 'No supported update.', array( 'skip_dispatch' => true ) );
 		}
-
-		$placeholder  = $this->send_processing_placeholder( $update, $command );
-		$is_callback  = ! empty( $update['callback_query'] );
-		$is_replaceable = $this->is_replaceable_command( $command, $update );
-		$job_group    = $this->build_job_group( $command, $placeholder, $is_replaceable );
-		$queue_result = Telepilot_Jobs_Repository::enqueue(
-			isset( $update['update_id'] ) ? (int) $update['update_id'] : 0,
-			$transport,
-			$update,
-			! empty( $command['name'] ) ? $command['name'] : '',
-			$placeholder,
-			array(
-				'priority'       => $this->get_job_priority( $command, $update ),
-				'stale_after'    => $this->get_job_stale_after( $command, $update ),
-				'job_group'      => $job_group,
-				'is_replaceable' => $is_replaceable,
-			)
-		);
-
-		if ( is_wp_error( $queue_result ) ) {
-			return $this->process_update(
-				$update,
-				$transport,
-				array(
-					'callback_already_answered' => $is_callback,
-					'edit_message_id'           => ! empty( $placeholder['message_id'] ) ? (int) $placeholder['message_id'] : 0,
-					'forced_chat_id'            => ! empty( $placeholder['chat_id'] ) ? (string) $placeholder['chat_id'] : '',
-				)
-			);
+		if ( empty( $update['update_id'] ) ) {
+			return Telepilot_Telegram_Response_Builder::error( 'Missing update ID.', array( 'retryable' => true ) );
 		}
-
-		if ( $is_replaceable && is_int( $queue_result ) ) {
-			$this->maybe_cleanup_superseded_jobs(
-				Telepilot_Jobs_Repository::supersede_replaceable_jobs(
-					$queue_result,
-					! empty( $placeholder['chat_id'] ) ? (string) $placeholder['chat_id'] : '',
-					$job_group,
-					! empty( $placeholder['message_id'] ) ? (int) $placeholder['message_id'] : 0
-				),
-				$placeholder
-			);
+		$identity = $this->user_resolver->resolve_from_update( $update );
+		// Never trust a caller-supplied actor snapshot.
+		$update['_telepilot_actor'] = array( 'user_id' => (int) ( $identity['wp_user']->ID ?? 0 ), 'generation' => $identity['linkage_generation'] ?? '', 'site_id' => get_current_blog_id() );
+		$queued = Telepilot_Jobs_Repository::enqueue( $update['update_id'], $transport, $update, $command['name'] ?? '', array( 'chat_id' => $identity['chat_id'] ?? '' ), array( 'priority' => $this->get_job_priority( $command, $update ), 'stale_after' => $this->get_job_stale_after( $command, $update ) ) );
+		if ( is_wp_error( $queued ) ) {
+			return Telepilot_Telegram_Response_Builder::error( $queued->get_error_message(), array( 'retryable' => true, 'skip_dispatch' => true ) );
 		}
-
-		$this->update_diagnostics(
-			array(
-				'last_queued_at'       => time(),
-				'last_queued_command'  => ! empty( $command['name'] ) ? $command['name'] : '',
-				'last_queue_transport' => (string) $transport,
-			)
-		);
+		if ( ! empty( $update['callback_query']['id'] ) ) {
+			$this->client->answer_callback_query( (string) $update['callback_query']['id'], __( 'Queued', 'wp-telepilot' ) );
+		}
+		if ( 'duplicate' !== $queued ) { $this->schedule_job_processing(); }
 		$this->refresh_queue_diagnostics();
-
-		if ( 'duplicate' !== $queue_result ) {
-			$this->schedule_job_processing();
-		}
-
-		return Telepilot_Telegram_Response_Builder::success(
-			__( 'Update queued for background processing.', 'wp-telepilot' ),
-			array(
-				'command'       => ! empty( $command['name'] ) ? $command['name'] : '',
-				'skip_dispatch' => true,
-				'queued'        => true,
-			)
-		);
+		return Telepilot_Telegram_Response_Builder::success( __( 'Update accepted for background processing.', 'wp-telepilot' ), array( 'queued' => true, 'skip_dispatch' => true, 'operation_id' => $queued ) );
 	}
 
-	private function should_queue_update( $command, $update, $transport ) {
-		if ( empty( $command['name'] ) || ! is_array( $command ) ) {
-			return false;
+	public function queue_notification( $chat_id, $message, $capability ) {
+		$users = get_users( array( 'meta_key' => Telepilot_User_Linking_Service::META_TELEGRAM_CHAT, 'meta_value' => (string) $chat_id, 'number' => 1 ) );
+		if ( ! $users ) { return new WP_Error( 'telepilot_notification_unlinked', 'Notification recipient is no longer linked.' ); }
+		$user = $users[0];
+		$update = array(
+			'message' => array( 'from' => array( 'id' => get_user_meta( $user->ID, Telepilot_User_Linking_Service::META_TELEGRAM_ID, true ) ), 'chat' => array( 'id' => (string) $chat_id, 'type' => 'private' ) ),
+			'_telepilot_actor' => array( 'user_id' => $user->ID, 'generation' => Telepilot_Actor_Access::generation( $user->ID ), 'site_id' => get_current_blog_id() ),
+			'_telepilot_notification_capability' => $capability,
+		);
+		$id = Telepilot_Jobs_Repository::enqueue( null, 'notification', $update, 'notification', array( 'chat_id' => $chat_id ), array( 'priority' => 90, 'result' => Telepilot_Telegram_Response_Builder::success_html( $message ) ) );
+		if ( ! is_wp_error( $id ) && ! wp_next_scheduled( 'telepilot_process_jobs' ) ) {
+			wp_schedule_single_event( time() + 1, 'telepilot_process_jobs' );
 		}
-
-		if ( ! empty( $transport ) && 'worker' === $transport ) {
-			return false;
-		}
-
-		return ! empty( $update['callback_query'] ) || ! empty( $update['message']['text'] );
+		return $id;
 	}
 
 	private function send_processing_placeholder( $update, $command ) {
@@ -155,13 +111,9 @@ class Telepilot_Telegram_Service {
 		}
 
 		$message = $this->get_processing_message( $command );
-		$args    = array( 'parse_mode' => 'HTML' );
+		$args    = array( 'parse_mode' => 'HTML', 'reply_markup' => Telepilot_Telegram_Response_Builder::empty_keyboard() );
 
 		if ( ! empty( $update['callback_query'] ) ) {
-			if ( ! empty( $update['callback_query']['id'] ) ) {
-				$this->client->answer_callback_query( (string) $update['callback_query']['id'], __( 'Processing…', 'wp-telepilot' ) );
-			}
-
 			if ( ! empty( $update['callback_query']['message']['message_id'] ) ) {
 				$message_id = (int) $update['callback_query']['message']['message_id'];
 				$result     = $this->client->edit_message_text( $chat_id, $message_id, $message, $args );
@@ -264,72 +216,67 @@ class Telepilot_Telegram_Service {
 	}
 
 	public function process_jobs( $limit = 5 ) {
-		$jobs = Telepilot_Jobs_Repository::claim_pending_jobs( $limit, self::JOB_LOCK_TIMEOUT );
-
-		if ( empty( $jobs ) ) {
-			$this->refresh_queue_diagnostics();
-			return array();
+		$processed = array();
+		$started = microtime( true );
+		for ( $index = 0; $index < max( 1, min( 20, (int) $limit ) ) && microtime( true ) - $started < 45; $index++ ) {
+			$jobs = Telepilot_Jobs_Repository::claim_pending_jobs( 1, self::JOB_LOCK_TIMEOUT );
+			if ( ! $jobs ) { break; }
+			$job = $jobs[0];
+			$id = (int) $job['id'];
+			$owner = $job['lease_token'];
+			$payload = json_decode( $job['payload'], true );
+			$processed[] = $id;
+			try {
+				if ( ! is_array( $payload ) || ! isset( $payload['_telepilot_actor'] ) ) {
+					Telepilot_Jobs_Repository::mark_uncertain( $id, $owner, 'Invalid or legacy job payload.' );
+					continue;
+				}
+				$identity = $this->user_resolver->resolve_from_update( $payload );
+				$binding = $payload['_telepilot_actor'];
+				$authorized = (int) $binding['site_id'] === get_current_blog_id() && (int) $binding['user_id'] === (int) ( $identity['wp_user']->ID ?? 0 ) && hash_equals( (string) $binding['generation'], (string) ( $identity['linkage_generation'] ?? '' ) );
+				if ( $authorized && ! empty( $binding['user_id'] ) ) {
+					$authorized = true === Telepilot_Actor_Access::check( $identity, $payload['_telepilot_notification_capability'] ?? '' );
+				}
+				if ( ! $authorized ) {
+					Telepilot_Jobs_Repository::mark_complete( $id, $owner );
+					Telepilot_Audit_Log_Repository::log( array( 'action_name' => 'job_access_revoked', 'resource_id' => (string) $id, 'was_successful' => 0 ) );
+					continue;
+				}
+				if ( 'completed' === $job['execution_state'] ) {
+					$result = json_decode( $job['outcome'], true );
+					if ( ! is_array( $result ) ) { Telepilot_Jobs_Repository::mark_complete( $id, $owner ); continue; }
+				} else {
+					$placeholder = $this->send_processing_placeholder( $payload, $this->command_router->parse_command( $payload ) );
+					Telepilot_Jobs_Repository::save_placeholder( $id, $owner, $placeholder );
+					$job['placeholder_message_id'] = $placeholder['message_id'] ?? 0;
+					if ( ! Telepilot_Jobs_Repository::begin_execution( $id, $owner ) ) { continue; }
+					$this->defer_delivery = true;
+					try {
+						$result = $this->process_update( $payload, $job['transport'], array( 'skip_duplicate_check' => true, 'callback_already_answered' => true, 'edit_message_id' => $job['placeholder_message_id'] ) );
+					} finally { $this->defer_delivery = false; }
+					if ( 'telepilot_command_exception' === ( $result['code'] ?? '' ) ) {
+						Telepilot_Jobs_Repository::mark_uncertain( $id, $owner );
+						continue;
+					}
+					$result['operation_id'] = $id;
+					if ( ! Telepilot_Jobs_Repository::save_outcome( $id, $owner, $result ) ) {
+						Telepilot_Jobs_Repository::mark_uncertain( $id, $owner, 'Outcome persistence failed; inspect WordPress before retrying.' );
+						continue;
+					}
+				}
+				$error = $this->dispatch_response( $identity, $payload, $result, $job['transport'], array( 'callback_already_answered' => true, 'edit_message_id' => $job['placeholder_message_id'], 'forced_chat_id' => $job['placeholder_chat_id'] ) );
+				if ( $error ) { Telepilot_Jobs_Repository::mark_failed( $id, $error, $owner ); }
+				else { Telepilot_Jobs_Repository::mark_complete( $id, $owner ); }
+			} catch ( Throwable $error ) {
+				$this->defer_delivery = false;
+				Telepilot_Jobs_Repository::mark_failed( $id, 'Worker interrupted.', $owner );
+			}
 		}
-
-		foreach ( $jobs as $job ) {
-			$payload = ! empty( $job['payload'] ) ? json_decode( $job['payload'], true ) : array();
-
-			if ( empty( $payload ) || ! is_array( $payload ) ) {
-				Telepilot_Jobs_Repository::mark_failed( (int) $job['id'], __( 'Queued payload could not be decoded.', 'wp-telepilot' ) );
-				$this->update_diagnostics(
-					array(
-						'last_background_job_at'     => time(),
-						'last_background_job_status' => 'failed',
-					)
-				);
-				continue;
-			}
-
-			$chat_id = ! empty( $job['placeholder_chat_id'] ) ? (string) $job['placeholder_chat_id'] : '';
-			if ( '' !== $chat_id ) {
-				$this->client->send_chat_action( $chat_id, 'typing' );
-			}
-
-			$result = $this->process_update(
-				$payload,
-				! empty( $job['transport'] ) ? (string) $job['transport'] : 'webhook',
-				array(
-					'skip_duplicate_check'      => true,
-					'edit_message_id'           => ! empty( $job['placeholder_message_id'] ) ? (int) $job['placeholder_message_id'] : 0,
-					'forced_chat_id'            => $chat_id,
-					'callback_already_answered' => ! empty( $payload['callback_query']['id'] ),
-				)
-			);
-
-			if ( ! empty( $result['dispatch_error'] ) ) {
-				Telepilot_Jobs_Repository::mark_failed( (int) $job['id'], (string) $result['dispatch_error'] );
-				$this->update_diagnostics(
-					array(
-						'last_background_job_at'     => time(),
-						'last_background_job_status' => 'failed',
-						'last_background_job_error'  => (string) $result['dispatch_error'],
-					)
-				);
-				continue;
-			}
-
-			Telepilot_Jobs_Repository::mark_complete( (int) $job['id'] );
-			$this->update_diagnostics(
-				array(
-					'last_background_job_at'     => time(),
-					'last_background_job_status' => 'success',
-					'last_background_job_error'  => '',
-				)
-			);
-		}
-
 		$this->refresh_queue_diagnostics();
-
-		if ( Telepilot_Jobs_Repository::pending_count() > 0 ) {
-			$this->schedule_job_processing();
+		if ( Telepilot_Jobs_Repository::pending_count() > 0 && ! wp_next_scheduled( 'telepilot_process_jobs' ) ) {
+			wp_schedule_single_event( time() + self::QUEUE_FALLBACK_DELAY, 'telepilot_process_jobs' );
 		}
-
-		return $jobs;
+		return $processed;
 	}
 
 	public function run_transport_self_test() {
@@ -740,6 +687,7 @@ class Telepilot_Telegram_Service {
 	}
 
 	private function dispatch_response( $identity, $update, $result, $transport, $options = array() ) {
+		if ( $this->defer_delivery ) { return ''; }
 		$chat_id = ! empty( $options['forced_chat_id'] ) ? $options['forced_chat_id'] : ( ! empty( $identity['chat_id'] ) ? $identity['chat_id'] : null );
 
 		if ( ! empty( $result['skip_dispatch'] ) || empty( $chat_id ) || empty( $result['message'] ) ) {
@@ -831,6 +779,7 @@ class Telepilot_Telegram_Service {
 	}
 
 	private function maybe_send_chat_action( $identity, $command, $update, $options = array() ) {
+		if ( $this->defer_delivery ) { return; }
 		if ( ! empty( $update['callback_query'] ) ) {
 			return;
 		}
@@ -1158,7 +1107,8 @@ class Telepilot_Telegram_Service {
 	}
 
 	private function should_cache_command( $command, $update ) {
-		return $this->is_read_only_command( $command, $update );
+		// Rendered responses contain actor-specific controls; only domain data is cached.
+		return false;
 	}
 
 	private function build_response_cache_key( $identity, $command ) {
@@ -1257,6 +1207,7 @@ class Telepilot_Telegram_Service {
 	}
 
 	private function update_diagnostics( $data, $increments = array() ) {
+		$data = Telepilot_Data_Redactor::redact( $data );
 		$diagnostics = get_option( self::DIAGNOSTICS_OPTION, array() );
 
 		foreach ( $increments as $key => $amount ) {

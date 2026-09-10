@@ -20,21 +20,25 @@ class Telepilot_Post_Editor_Service {
 			return new WP_Error( 'telepilot_post_edit_denied', __( 'You do not have permission to edit that post.', 'wp-telepilot' ) );
 		}
 
-		$expiration = max( 300, absint( $expiration ) );
+		$identity = array( 'wp_user' => $wp_user, 'telegram_user_id' => (string) $telegram_user_id, 'chat_id' => (string) get_user_meta( $wp_user->ID, Telepilot_User_Linking_Service::META_TELEGRAM_CHAT, true ), 'chat_type' => 'private' );
+		$access = Telepilot_Actor_Access::check( $identity, 'edit_post', $post_id );
+		if ( is_wp_error( $access ) ) { return $access; }
+		$expiration = min( self::DEFAULT_EXPIRY, max( 300, absint( $expiration ) ) );
 		$expires_at = time() + $expiration;
-		$token      = $this->generate_token();
-
-		set_transient(
-			self::TOKEN_PREFIX . $token,
+		$token = Telepilot_Security_Records::issue(
+			'post_editor',
 			array(
 				'post_id'          => (int) $post_id,
 				'wp_user_id'       => (int) $wp_user->ID,
 				'telegram_user_id' => (string) $telegram_user_id,
 				'created_at'       => time(),
 				'expires_at'       => $expires_at,
+				'revision'         => self::revision( $post ),
 			),
+			$wp_user->ID,
 			$expiration
 		);
+		if ( ! $token ) { return new WP_Error( 'telepilot_editor_storage_failed', __( 'Unable to create a secure editor link.', 'wp-telepilot' ) ); }
 
 		return array(
 			'token'      => $token,
@@ -46,6 +50,10 @@ class Telepilot_Post_Editor_Service {
 
 	public function handle_request() {
 		nocache_headers();
+		header( 'Referrer-Policy: no-referrer' );
+		header( 'X-Frame-Options: DENY' );
+		header( 'X-Content-Type-Options: nosniff' );
+		header( "Content-Security-Policy: frame-ancestors 'none'; form-action 'self'; base-uri 'none'" );
 
 		$token   = $this->get_request_token();
 		$session = $this->get_session( $token );
@@ -104,23 +112,13 @@ class Telepilot_Post_Editor_Service {
 			'status'         => (string) $post->post_status,
 		);
 
-		wp_set_current_user( $user->ID );
-
-		$result = wp_update_post(
-			array(
-				'ID'           => (int) $post->ID,
-				'post_title'   => $title,
-				'post_excerpt' => $excerpt,
-				'post_content' => $content,
-			),
-			true
-		);
+		$result = $this->save( $token, array( 'post_title' => $title, 'post_excerpt' => $excerpt, 'post_content' => $content ) );
 
 		if ( is_wp_error( $result ) ) {
 			$post->post_title   = $title;
 			$post->post_excerpt = $excerpt;
 			$post->post_content = $content;
-			$this->render_editor_page( $post, $token, $result->get_error_message(), 'error' );
+			$this->render_error_page( __( 'Save Not Completed', 'wp-telepilot' ), $result->get_error_message(), 409 );
 		}
 
 		$updated_post = get_post( $post->ID );
@@ -390,7 +388,11 @@ class Telepilot_Post_Editor_Service {
 			return array();
 		}
 
-		$session = get_transient( self::TOKEN_PREFIX . $token );
+		$session = Telepilot_Security_Records::read( $token, 'post_editor' );
+		if ( is_array( $session ) ) {
+			$identity = $this->session_identity( $session );
+			if ( true !== Telepilot_Actor_Access::check( $identity, 'edit_post', (int) $session['post_id'] ) ) { return array(); }
+		}
 
 		return is_array( $session ) ? $session : array();
 	}
@@ -400,7 +402,7 @@ class Telepilot_Post_Editor_Service {
 			return;
 		}
 
-		delete_transient( self::TOKEN_PREFIX . $token );
+		Telepilot_Security_Records::claim( $token, 'post_editor' );
 	}
 
 	private function get_handler_url( $token ) {
@@ -445,5 +447,59 @@ class Telepilot_Post_Editor_Service {
 		}
 
 		return TELEPILOT_URL . 'assets/images/telepilot-logo.png';
+	}
+
+	public static function revision( $post ) {
+		return hash( 'sha256', wp_json_encode( array( $post->post_title, $post->post_content, $post->post_excerpt, $post->post_status, $post->post_modified_gmt, $post->post_author ) ) );
+	}
+
+	private function session_identity( $session ) {
+		$user = get_user_by( 'id', (int) $session['wp_user_id'] );
+		return array( 'wp_user' => $user, 'telegram_user_id' => (string) $session['telegram_user_id'], 'chat_id' => (string) get_user_meta( $session['wp_user_id'], Telepilot_User_Linking_Service::META_TELEGRAM_CHAT, true ), 'chat_type' => 'private', 'linkage_generation' => $session['_security_binding']['generation'] ?? '' );
+	}
+
+	/** The HTTP handler verifies the nonce; the bearer token authorizes this operation. */
+	public function save( $token, $fields ) {
+		global $wpdb;
+		$session = $this->get_session( $token );
+		if ( ! $session || $this->is_session_expired( $session ) ) {
+			return new WP_Error( 'telepilot_editor_expired', __( 'This link is expired, revoked, or already used. Request a new link.', 'wp-telepilot' ) );
+		}
+		if ( ! Telepilot_Security_Records::claim( $token, 'post_editor' ) ) {
+			return new WP_Error( 'telepilot_editor_used', __( 'This link is already being used. Do not submit again.', 'wp-telepilot' ) );
+		}
+		$identity = $this->session_identity( $session );
+		$check = Telepilot_Actor_Access::check( $identity, 'edit_post', (int) $session['post_id'] );
+		if ( is_wp_error( $check ) ) { return $check; }
+		$wpdb->query( 'START TRANSACTION' );
+		try {
+			// Lock the actual row, not a possibly stale object-cache snapshot.
+			$row = $wpdb->get_row( $wpdb->prepare( "SELECT * FROM {$wpdb->posts} WHERE ID=%d FOR UPDATE", $session['post_id'] ) );
+			if ( ! $row || 'post' !== $row->post_type || ! hash_equals( (string) $session['revision'], self::revision( $row ) ) ) {
+				$wpdb->query( 'ROLLBACK' );
+				return new WP_Error( 'telepilot_editor_conflict', __( 'This post changed after the link was created. Your changes were not saved. Request a fresh link to review the latest version.', 'wp-telepilot' ) );
+			}
+			$values = array( 'ID' => (int) $row->ID );
+			foreach ( array( 'post_title', 'post_excerpt', 'post_content' ) as $key ) {
+				if ( ! isset( $fields[ $key ] ) || ! is_string( $fields[ $key ] ) ) { continue; }
+				$value = $fields[ $key ];
+				if ( 'post_title' === $key ) { $value = sanitize_text_field( $value ); }
+				elseif ( 'post_excerpt' === $key ) { $value = sanitize_textarea_field( $value ); }
+				elseif ( ! user_can( $identity['wp_user'], 'unfiltered_html' ) ) { $value = wp_kses_post( $value ); }
+				$values[ $key ] = $value;
+			}
+			$result = Telepilot_Actor_Access::as_actor( $identity, static function () use ( $values ) { return wp_update_post( wp_slash( $values ), true ); } );
+			if ( is_wp_error( $result ) || ! is_int( $result ) ) {
+				$wpdb->query( 'ROLLBACK' );
+				clean_post_cache( $row->ID );
+				return is_wp_error( $result ) ? $result : new WP_Error( 'telepilot_editor_denied', __( 'Access changed before saving. Request a new link.', 'wp-telepilot' ) );
+			}
+			$wpdb->query( 'COMMIT' );
+			return $result;
+		} catch ( Throwable $error ) {
+			$wpdb->query( 'ROLLBACK' );
+			clean_post_cache( (int) $session['post_id'] );
+			throw $error;
+		}
 	}
 }

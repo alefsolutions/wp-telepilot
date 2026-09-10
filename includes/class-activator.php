@@ -8,6 +8,7 @@ class Telepilot_Activator {
 	public static function activate() {
 		Telepilot_Audit_Log_Repository::create_table();
 		Telepilot_Jobs_Repository::create_table();
+		Telepilot_Security_Records::create_table();
 		Telepilot_Processed_Updates_Repository::create_table();
 
 		$defaults = array(
@@ -37,6 +38,6 @@ class Telepilot_Activator {
 			);
 		}
 
-		update_option( 'telepilot_schema_version', Telepilot_Bootstrap::SCHEMA_VERSION, false );
+		( new Telepilot_Bootstrap() )->maybe_upgrade_schema();
 	}
 }

@@ -6,7 +6,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 class Telepilot_Permission_Service {
 	public function user_can( $wp_user, $capability, $object_id = null ) {
-		if ( ! ( $wp_user instanceof WP_User ) ) {
+		if ( ! Telepilot_Actor_Access::active_user( $wp_user ) ) {
 			return false;
 		}
 
@@ -19,7 +19,8 @@ class Telepilot_Permission_Service {
 
 	public function require_linked_user( $identity ) {
 		if ( ! empty( $identity['wp_user'] ) && $identity['wp_user'] instanceof WP_User ) {
-			return true;
+			$check = Telepilot_Actor_Access::check( $identity );
+			return true === $check ? true : Telepilot_Telegram_Response_Builder::error( $check->get_error_message(), array( 'code' => $check->get_error_code() ) );
 		}
 
 		return Telepilot_Telegram_Response_Builder::error_html(

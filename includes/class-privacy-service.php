@@ -23,6 +23,7 @@ class Telepilot_Privacy_Service {
 		$content  = '<p>' . esc_html__( 'WP Telepilot lets approved WordPress users link a Telegram account to a site account and then send or receive operational bot messages through Telegram.', 'wp-telepilot' ) . '</p>';
 		$content .= '<p>' . esc_html__( 'Once configured, WP Telepilot sends requests to the Telegram Bot API to receive webhook or polling updates and to deliver bot responses back to linked chats. No Telegram traffic is sent until a site administrator adds a bot token.', 'wp-telepilot' ) . '</p>';
 		$content .= '<p>' . esc_html__( 'WP Telepilot stores Telegram linkage metadata such as Telegram user IDs, chat IDs, usernames, link timestamps, audit-log records, and limited diagnostics needed to secure and operate the integration.', 'wp-telepilot' ) . '</p>';
+		$content .= '<p>' . esc_html__( 'Accepted requests and outcomes are temporarily stored in a background queue. Scheduled maintenance removes terminal payloads within 24 hours and failed delivery payloads within seven days. Configure reliable WordPress cron to enforce retention. Security links expire within one hour and are single-use. Logs redact credentials, security links and message payloads.', 'wp-telepilot' ) . '</p>';
 		$content .= '<p>' . esc_html__( 'The plugin includes WordPress personal-data export and erasure hooks for linked Telegram account data. When an erasure request is processed, WP Telepilot removes linked Telegram metadata and anonymizes matching audit-log payloads while preserving basic operational event records.', 'wp-telepilot' ) . '</p>';
 		$content .= '<p>' . sprintf(
 			wp_kses(
@@ -85,6 +86,16 @@ class Telepilot_Privacy_Service {
 		}
 
 		$logs = Telepilot_Audit_Log_Repository::find_personal_logs( $user->ID, $telegram_user_id, $chat_id, $page, self::PAGE_SIZE );
+		$jobs = Telepilot_Jobs_Repository::personal_jobs( $user->ID, $page, self::PAGE_SIZE );
+		foreach ( $jobs as $job ) {
+			$data_to_export[] = array( 'group_id' => 'wp-telepilot-jobs', 'group_label' => __( 'WP Telepilot queued requests', 'wp-telepilot' ), 'item_id' => 'telepilot-job-' . $job['id'], 'data' => array(
+				array( 'name' => __( 'Operation ID', 'wp-telepilot' ), 'value' => (string) $job['id'] ),
+				array( 'name' => __( 'Status', 'wp-telepilot' ), 'value' => $job['status'] ),
+				array( 'name' => __( 'Command', 'wp-telepilot' ), 'value' => $job['command_name'] ),
+				array( 'name' => __( 'Accepted', 'wp-telepilot' ), 'value' => $job['created_at'] ),
+				array( 'name' => __( 'Request (security fields redacted)', 'wp-telepilot' ), 'value' => wp_json_encode( Telepilot_Data_Redactor::redact( json_decode( $job['payload'], true ) ) ) ),
+			) );
+		}
 
 		foreach ( $logs as $log ) {
 			$data_to_export[] = $this->build_log_export_item( $log );
@@ -92,7 +103,7 @@ class Telepilot_Privacy_Service {
 
 		return array(
 			'data' => $data_to_export,
-			'done' => count( $logs ) < self::PAGE_SIZE,
+			'done' => count( $logs ) < self::PAGE_SIZE && count( $jobs ) < self::PAGE_SIZE,
 		);
 	}
 
@@ -108,7 +119,14 @@ class Telepilot_Privacy_Service {
 			);
 		}
 
-		$items_removed    = false;
+		Telepilot_Actor_Access::revoke( $user->ID );
+		$items_removed = (bool) Telepilot_Jobs_Repository::erase_actor( $user->ID );
+		$items_removed = (bool) Telepilot_Security_Records::erase_actor( $user->ID ) || $items_removed;
+		$flows = new Telepilot_Flow_State_Service();
+		$telegram_id = get_user_meta( $user->ID, Telepilot_User_Linking_Service::META_TELEGRAM_ID, true );
+		$flows->clear_pending_post( $telegram_id );
+		$flows->clear_pending_page( $telegram_id );
+		do_action( 'telepilot_erase_actor_data', $user->ID );
 		$items_retained   = false;
 		$messages         = array();
 		$telegram_user_id = (string) get_user_meta( $user->ID, Telepilot_User_Linking_Service::META_TELEGRAM_ID, true );

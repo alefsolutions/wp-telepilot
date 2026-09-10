@@ -56,7 +56,7 @@ class Telepilot_REST_Webhook_Controller {
 			);
 		}
 
-		if ( '' !== $secret && ! hash_equals( $secret, $header ) ) {
+		if ( '' === $secret || '' === $header || ! hash_equals( $secret, $header ) ) {
 			$this->update_diagnostics(
 				array(
 					'last_webhook_auth_at'     => time(),
@@ -111,7 +111,7 @@ class Telepilot_REST_Webhook_Controller {
 			)
 		);
 
-		return new WP_REST_Response( $result, 200 );
+		return new WP_REST_Response( $result, ! empty( $result['retryable'] ) ? 503 : 200 );
 	}
 
 	public function handle_process_jobs( WP_REST_Request $request ) {

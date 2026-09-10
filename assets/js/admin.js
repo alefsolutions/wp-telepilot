@@ -45,6 +45,12 @@ document.addEventListener('DOMContentLoaded', function () {
       panel.setAttribute('aria-labelledby', 'telepilot-tab-' + name);
       panel.hidden = !panel.classList.contains('is-active');
     });
+    // Return to the provider controls after submitting the separate test form.
+    tabs.forEach(function (tab) {
+      if (window.location.hash === '#telepilot-panel-' + tab.getAttribute('data-tab')) {
+        tab.click();
+      }
+    });
   }
 
   if (secretInput && generateButton) {

@@ -49,16 +49,22 @@ class Telepilot_Settings_Page {
 			'telepilot-admin',
 			TELEPILOT_URL . 'assets/css/admin.css',
 			array(),
-			TELEPILOT_VERSION
+			$this->asset_version( 'assets/css/admin.css' )
 		);
 
 		wp_enqueue_script(
 			'telepilot-admin',
 			TELEPILOT_URL . 'assets/js/admin.js',
 			array(),
-			TELEPILOT_VERSION,
+			$this->asset_version( 'assets/js/admin.js' ),
 			true
 		);
+	}
+
+	private function asset_version( $relative_path ) {
+		$path = TELEPILOT_PATH . $relative_path;
+		// Same-beta UI patches must not reuse a browser's older stylesheet or script.
+		return TELEPILOT_VERSION . ( file_exists( $path ) ? '.' . (string) filemtime( $path ) : '' );
 	}
 
 	public function sanitize_settings( $input ) {
@@ -226,9 +232,10 @@ class Telepilot_Settings_Page {
 
 							<div class="telepilot-tab-panel" data-panel="security">
 								<div class="telepilot-field-grid">
-									<label class="telepilot-field">
-										<span><?php esc_html_e( 'Webhook Secret', 'wp-telepilot' ); ?></span>
+										<div class="telepilot-field">
+										<label for="telepilot-webhook-secret"><span><?php esc_html_e( 'Webhook Secret', 'wp-telepilot' ); ?></span></label>
 										<input
+											id="telepilot-webhook-secret"
 											type="text"
 											name="telepilot_settings[webhook_secret]"
 											value="<?php echo esc_attr( $settings['webhook_secret'] ); ?>"
@@ -241,7 +248,7 @@ class Telepilot_Settings_Page {
 											<button type="button" class="button" data-telepilot-copy-secret data-copy-label="<?php esc_attr_e( 'Copy Secret', 'wp-telepilot' ); ?>" data-copied-label="<?php esc_attr_e( 'Copied', 'wp-telepilot' ); ?>"><?php esc_html_e( 'Copy Secret', 'wp-telepilot' ); ?></button>
 										</div>
 										<small><?php esc_html_e( 'WP Telepilot validates Telegram using the X-Telegram-Bot-Api-Secret-Token header. Saving this screen in webhook mode re-syncs Telegram with the current secret.', 'wp-telepilot' ); ?></small>
-									</label>
+									</div>
 									<label class="telepilot-field telepilot-field-full">
 										<span><?php esc_html_e( 'Async Worker Endpoint', 'wp-telepilot' ); ?></span>
 										<input type="text" readonly value="<?php echo esc_attr( $worker_url ); ?>" class="regular-text code" />
@@ -364,6 +371,13 @@ class Telepilot_Settings_Page {
 									<?php endif; ?>
 								</div>
 
+								<div>
+									<p id="telepilot-ai-test-help" class="telepilot-inline-note"><?php esc_html_e( 'Save your settings first. This test uses the saved OpenAI key and model, not unsaved changes.', 'wp-telepilot' ); ?></p>
+									<div class="telepilot-button-row">
+										<button type="submit" class="button button-secondary" form="telepilot-ai-test-form" name="telepilot_test_ai_connection" value="1" aria-describedby="telepilot-ai-test-help"><?php esc_html_e( 'Test AI Connection', 'wp-telepilot' ); ?></button>
+									</div>
+								</div>
+
 								<div class="telepilot-panel telepilot-panel-nested">
 									<div class="telepilot-panel-heading">
 										<div>
@@ -418,13 +432,12 @@ class Telepilot_Settings_Page {
 							</div>
 
 							<div class="telepilot-actions">
-								<?php submit_button( __( 'Save WP Telepilot Settings', 'wp-telepilot' ), 'primary', 'submit', false ); ?>
+								<button type="submit" class="button button-primary" name="submit" id="submit" value="1"><?php esc_html_e( 'Save WP Telepilot Settings', 'wp-telepilot' ); ?></button>
 							</div>
 						</form>
 
-						<form method="post" class="telepilot-inline-tools">
+						<form method="post" id="telepilot-ai-test-form" action="<?php echo esc_url( admin_url( 'admin.php?page=telepilot#telepilot-panel-ai' ) ); ?>" hidden>
 							<?php wp_nonce_field( 'telepilot_tools_actions', 'telepilot_tools_nonce' ); ?>
-							<button type="submit" class="button" name="telepilot_test_ai_connection" value="1"><?php esc_html_e( 'Test AI Connection', 'wp-telepilot' ); ?></button>
 						</form>
 					</section>
 
@@ -695,7 +708,7 @@ class Telepilot_Settings_Page {
 							</p>
 						<?php endif; ?>
 						<div class="telepilot-actions">
-							<form method="post">
+							<form method="post" class="telepilot-button-row">
 								<?php wp_nonce_field( 'telepilot_tools_actions', 'telepilot_tools_nonce' ); ?>
 								<button class="button button-secondary" type="submit" name="telepilot_poll_now" value="1"><?php esc_html_e( 'Poll Now', 'wp-telepilot' ); ?></button>
 								<button class="button button-secondary" type="submit" name="telepilot_process_jobs_now" value="1"><?php esc_html_e( 'Process Queue', 'wp-telepilot' ); ?></button>
@@ -716,7 +729,7 @@ class Telepilot_Settings_Page {
 						<?php if ( empty( $command_diagnostics ) || ! is_array( $command_diagnostics ) ) : ?>
 							<p class="telepilot-empty-state"><?php esc_html_e( 'No command timings recorded yet. Use Telegram commands and WP Telepilot will log recent execution times here.', 'wp-telepilot' ); ?></p>
 						<?php else : ?>
-							<div class="telepilot-table-scroll">
+							<div class="telepilot-table-scroll" tabindex="0" role="region" aria-label="<?php esc_attr_e( 'Recent command timings', 'wp-telepilot' ); ?>">
 								<table class="widefat fixed striped telepilot-table">
 									<thead>
 										<tr>
@@ -788,7 +801,7 @@ class Telepilot_Settings_Page {
 						<?php if ( empty( $recent_logs ) ) : ?>
 							<p class="telepilot-empty-state"><?php esc_html_e( 'No audit records yet. Webhook activity and account linking events will appear here.', 'wp-telepilot' ); ?></p>
 						<?php else : ?>
-							<div class="telepilot-table-scroll">
+							<div class="telepilot-table-scroll" tabindex="0" role="region" aria-label="<?php esc_attr_e( 'Recent audit activity', 'wp-telepilot' ); ?>">
 								<table class="widefat fixed striped telepilot-table">
 									<thead>
 										<tr>

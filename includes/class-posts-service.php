@@ -13,17 +13,7 @@ class Telepilot_Posts_Service {
 	}
 
 	public function latest( $limit = 5 ) {
-		return get_posts(
-			array(
-				'post_type'           => 'post',
-				'post_status'         => array( 'publish', 'draft', 'pending', 'future' ),
-				'posts_per_page'      => max( 1, absint( $limit ) ),
-				'orderby'             => 'modified',
-				'order'               => 'DESC',
-				'suppress_filters'    => false,
-				'ignore_sticky_posts' => true,
-			)
-		);
+		return $this->latest_page( 1, $limit )['items'];
 	}
 
 	public function latest_page( $page = 1, $limit = self::PER_PAGE ) {
@@ -39,17 +29,7 @@ class Telepilot_Posts_Service {
 	}
 
 	public function drafts( $limit = 5 ) {
-		return get_posts(
-			array(
-				'post_type'           => 'post',
-				'post_status'         => 'draft',
-				'posts_per_page'      => max( 1, absint( $limit ) ),
-				'orderby'             => 'modified',
-				'order'               => 'DESC',
-				'suppress_filters'    => false,
-				'ignore_sticky_posts' => true,
-			)
-		);
+		return $this->drafts_page( 1, $limit )['items'];
 	}
 
 	public function drafts_page( $page = 1, $limit = self::PER_PAGE ) {
@@ -393,9 +373,10 @@ class Telepilot_Posts_Service {
 	}
 
 	private function query_posts_page( $args, $page, $limit ) {
+		$args = Telepilot_Actor_Access::content_query( $args );
 		$page      = max( 1, absint( $page ) );
 		$limit     = max( 1, absint( $limit ) );
-		$cache_key = 'telepilot_posts_' . $this->get_cache_version() . '_' . md5( wp_json_encode( array( $args, $page, $limit ) ) );
+		$cache_key = 'telepilot_posts_' . $this->get_cache_version() . '_' . md5( wp_json_encode( array( $args, $page, $limit, get_current_user_id(), wp_get_current_user()->allcaps ) ) );
 		$cached    = get_transient( $cache_key );
 
 		if ( is_array( $cached ) ) {
@@ -464,12 +445,16 @@ class Telepilot_Posts_Service {
 	}
 
 	public function create_draft( $title, $category_ids = array() ) {
+		if ( ! current_user_can( 'edit_posts' ) ) {
+			return new WP_Error( 'telepilot_capability_denied', __( 'You cannot create posts.', 'wp-telepilot' ) );
+		}
 		$title  = sanitize_text_field( $title );
 		$post_id = wp_insert_post(
 			array(
 				'post_type'   => 'post',
 				'post_status' => 'draft',
 				'post_title'  => $title,
+				'post_author' => get_current_user_id(),
 			),
 			true
 		);

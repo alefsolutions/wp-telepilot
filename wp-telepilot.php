@@ -33,6 +33,7 @@ require_once TELEPILOT_PATH . 'includes/class-command-grammar.php';
 require_once TELEPILOT_PATH . 'includes/class-user-linking-service.php';
 require_once TELEPILOT_PATH . 'includes/class-linked-user-resolver.php';
 require_once TELEPILOT_PATH . 'includes/class-permission-service.php';
+require_once TELEPILOT_PATH . 'includes/class-actor-access.php';
 require_once TELEPILOT_PATH . 'includes/class-rate-limiter.php';
 require_once TELEPILOT_PATH . 'includes/class-confirmation-service.php';
 require_once TELEPILOT_PATH . 'includes/class-flow-state-service.php';

@@ -10,6 +10,7 @@ class Telepilot_Flow_State_Service {
 	const PENDING_PAGE_PREFIX = 'telepilot_pending_page_';
 
 	public function create_flow( $payload, $expiration = 900, $token = '' ) {
+		$payload = Telepilot_Actor_Access::bind_payload( (array) $payload );
 		$token = '' !== (string) $token ? $this->normalize_token( $token ) : $this->generate_token();
 
 		if ( '' === $token ) {
@@ -33,10 +34,14 @@ class Telepilot_Flow_State_Service {
 
 		$payload = get_transient( self::FLOW_PREFIX . $token );
 
-		return is_array( $payload ) ? $payload : null;
+		return is_array( $payload ) && Telepilot_Actor_Access::valid_payload( $payload ) ? $payload : null;
 	}
 
 	public function update_flow( $token, $payload, $expiration = 900 ) {
+		if ( ! $this->get_flow( $token ) ) {
+			return false;
+		}
+		$payload = Telepilot_Actor_Access::bind_payload( (array) $payload );
 		$token = $this->normalize_token( $token );
 		if ( '' === $token ) {
 			return false;
@@ -61,6 +66,7 @@ class Telepilot_Flow_State_Service {
 	}
 
 	public function start_pending_post( $telegram_user_id, $payload, $expiration = 900 ) {
+		$payload = Telepilot_Actor_Access::bind_payload( (array) $payload );
 		$user_key = $this->normalize_user_key( $telegram_user_id );
 		if ( '' === $user_key ) {
 			return false;
@@ -83,7 +89,7 @@ class Telepilot_Flow_State_Service {
 
 		$payload = get_transient( self::PENDING_POST_PREFIX . $user_key );
 
-		return is_array( $payload ) ? $payload : null;
+		return is_array( $payload ) && Telepilot_Actor_Access::valid_payload( $payload ) ? $payload : null;
 	}
 
 	public function clear_pending_post( $telegram_user_id ) {
@@ -96,6 +102,7 @@ class Telepilot_Flow_State_Service {
 	}
 
 	public function start_pending_page( $telegram_user_id, $payload, $expiration = 900 ) {
+		$payload = Telepilot_Actor_Access::bind_payload( (array) $payload );
 		$user_key = $this->normalize_user_key( $telegram_user_id );
 		if ( '' === $user_key ) {
 			return false;
@@ -118,7 +125,7 @@ class Telepilot_Flow_State_Service {
 
 		$payload = get_transient( self::PENDING_PAGE_PREFIX . $user_key );
 
-		return is_array( $payload ) ? $payload : null;
+		return is_array( $payload ) && Telepilot_Actor_Access::valid_payload( $payload ) ? $payload : null;
 	}
 
 	public function clear_pending_page( $telegram_user_id ) {

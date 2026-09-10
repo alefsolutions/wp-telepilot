@@ -920,21 +920,14 @@ class Telepilot_Notification_Service {
 		);
 
 		foreach ( $users as $user ) {
-			if ( ! user_can( $user, $capability ) ) {
-				continue;
-			}
-
 			$chat_id = get_user_meta( $user->ID, Telepilot_User_Linking_Service::META_TELEGRAM_CHAT, true );
-			if ( $chat_id ) {
+			$identity = array( 'wp_user' => $user, 'chat_id' => (string) $chat_id, 'telegram_user_id' => (string) get_user_meta( $user->ID, Telepilot_User_Linking_Service::META_TELEGRAM_ID, true ), 'chat_type' => 'private' );
+			if ( true === Telepilot_Actor_Access::check( $identity, $capability ) ) {
 				$recipients[] = (string) $chat_id;
 			}
 		}
 
-		$settings = get_option( 'telepilot_settings', array() );
-		$allowed  = isset( $settings['allowed_chat_ids'] ) ? (string) $settings['allowed_chat_ids'] : '';
-		$extra    = array_filter( array_map( 'trim', explode( "\n", str_replace( ',', "\n", $allowed ) ) ) );
-
-		return array_values( array_unique( array_merge( $recipients, $extra ) ) );
+		return array_values( array_unique( $recipients ) );
 	}
 
 	private function is_notification_enabled( $key ) {

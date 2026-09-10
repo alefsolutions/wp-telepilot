@@ -48,6 +48,7 @@ class Telepilot_Linked_User_Resolver {
 			'chat_type'        => $chat_type,
 			'telegram_username'=> $username,
 			'wp_user'          => empty( $users ) ? null : $users[0],
+			'linkage_generation' => empty( $users ) ? '' : Telepilot_Actor_Access::generation( $users[0]->ID ),
 		);
 	}
 }

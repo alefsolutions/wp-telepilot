@@ -1148,7 +1148,8 @@ class Telepilot_Telegram_Service {
 	}
 
 	private function should_cache_command( $command, $update ) {
-		return $this->is_read_only_command( $command, $update );
+		// Rendered responses contain actor-specific controls; only domain data is cached.
+		return false;
 	}
 
 	private function build_response_cache_key( $identity, $command ) {

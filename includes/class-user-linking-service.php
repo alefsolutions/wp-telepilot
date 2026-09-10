@@ -60,6 +60,16 @@ class Telepilot_User_Linking_Service {
 		$telegram_user_id = isset( $message['from']['id'] ) ? (string) $message['from']['id'] : '';
 		$chat_id          = isset( $message['chat']['id'] ) ? (string) $message['chat']['id'] : '';
 		$username         = isset( $message['from']['username'] ) ? sanitize_text_field( $message['from']['username'] ) : '';
+		if ( ! Telepilot_Actor_Access::active_user( $user ) || 'private' !== ( $message['chat']['type'] ?? '' ) || '' === $telegram_user_id || $telegram_user_id !== $chat_id || ! Telepilot_Actor_Access::chat_allowed( $chat_id ) ) {
+			return Telepilot_Telegram_Response_Builder::error( __( 'Linking requires an active site account and an authorized private chat.', 'wp-telepilot' ) );
+		}
+		$existing = get_users( array( 'meta_key' => self::META_TELEGRAM_ID, 'meta_value' => $telegram_user_id, 'fields' => 'ID' ) );
+		foreach ( $existing as $existing_id ) {
+			if ( (int) $existing_id !== (int) $user->ID ) {
+				return Telepilot_Telegram_Response_Builder::error( __( 'Unlink the existing WordPress account before linking a different account.', 'wp-telepilot' ) );
+			}
+		}
+		Telepilot_Actor_Access::revoke( $user->ID );
 
 		update_user_meta( $user->ID, self::META_TELEGRAM_ID, $telegram_user_id );
 		update_user_meta( $user->ID, self::META_TELEGRAM_CHAT, $chat_id );
@@ -122,6 +132,7 @@ class Telepilot_User_Linking_Service {
 		}
 
 		delete_user_meta( $user_id, self::META_TELEGRAM_ID );
+		Telepilot_Actor_Access::revoke( $user_id );
 		delete_user_meta( $user_id, self::META_TELEGRAM_CHAT );
 		delete_user_meta( $user_id, self::META_TELEGRAM_NAME );
 		delete_user_meta( $user_id, self::META_LINKED_AT );

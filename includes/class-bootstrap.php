@@ -29,6 +29,9 @@ class Telepilot_Bootstrap {
 		$this->ensure_settings_defaults();
 		$this->settings_page->register();
 		$this->privacy_service->register();
+		foreach ( array( 'added_user_meta', 'updated_user_meta', 'deleted_user_meta' ) as $hook ) {
+			add_action( $hook, array( 'Telepilot_Actor_Access', 'changed_user_meta' ), 10, 3 );
+		}
 
 		add_filter( 'cron_schedules', array( $this, 'register_cron_schedules' ) );
 		add_action( 'rest_api_init', array( $this->rest_controller, 'register_routes' ) );

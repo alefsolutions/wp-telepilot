@@ -8,6 +8,7 @@ class Telepilot_Confirmation_Service {
 	const TOKEN_PREFIX = 'telepilot_confirm_';
 
 	public function create_token( $payload, $expiration = 600 ) {
+		$payload = Telepilot_Actor_Access::bind_payload( $payload );
 		$token = $this->normalize_token( wp_generate_password( 20, false, false ) );
 
 		set_transient(
@@ -23,7 +24,7 @@ class Telepilot_Confirmation_Service {
 		$key     = self::TOKEN_PREFIX . $this->normalize_token( $token );
 		$payload = get_transient( $key );
 
-		if ( false === $payload ) {
+		if ( ! is_array( $payload ) || ! Telepilot_Actor_Access::valid_payload( $payload ) ) {
 			return null;
 		}
 

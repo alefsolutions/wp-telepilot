@@ -1,4 +1,6 @@
 docs/
+*.local.md
+*.local.txt
 vendor/
 .test-env/
 dist/

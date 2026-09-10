@@ -9,7 +9,7 @@ class Telepilot_Actor_Access {
 	const GENERATION_META = '_telepilot_link_generation';
 
 	public static function generation( $user_id ) {
-		return (string) get_user_meta( $user_id, self::GENERATION_META, true );
+		return (string) get_user_meta( $user_id, self::GENERATION_META, true ) . ':' . (string) get_option( 'telepilot_access_epoch', '' );
 	}
 
 	public static function revoke( $user_id ) {

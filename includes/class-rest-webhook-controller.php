@@ -56,7 +56,7 @@ class Telepilot_REST_Webhook_Controller {
 			);
 		}
 
-		if ( '' !== $secret && ! hash_equals( $secret, $header ) ) {
+		if ( '' === $secret || '' === $header || ! hash_equals( $secret, $header ) ) {
 			$this->update_diagnostics(
 				array(
 					'last_webhook_auth_at'     => time(),

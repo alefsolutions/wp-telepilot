@@ -51,6 +51,10 @@ jobs:
         run: find includes tests scripts -name '*.php' -print0 | xargs -0 -n 1 php -l && php -l wp-telepilot.php && php -l uninstall.php
       - run: composer test
       - run: composer package
+      - name: Test the packaged plugin, without development files
+        run: |
+          unzip dist/wp-telepilot-*.zip -d .test-env/package
+          TELEPILOT_TEST_PLUGIN_FILE="$PWD/.test-env/package/wp-telepilot/wp-telepilot.php" composer test
       - uses: actions/upload-artifact@v4
         with:
           name: validated-plugin-php-${{ matrix.php }}

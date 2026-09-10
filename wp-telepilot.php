@@ -3,7 +3,7 @@
  * Plugin Name: WP Telepilot
  * Plugin URI: https://alefdigitalsolutions.com
  * Description: Manage key WordPress operations from Telegram with secure remote workflows, audit logging, and WP Telepilot guidance.
- * Version: 0.3.0
+ * Version: 0.3.1
  * Author: Alef Digital Solutions
  * Requires at least: 6.6
  * Requires PHP: 8.0
@@ -17,7 +17,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'TELEPILOT_VERSION', '0.3.0' );
+define( 'TELEPILOT_VERSION', '0.3.1' );
 define( 'TELEPILOT_FILE', __FILE__ );
 define( 'TELEPILOT_PATH', plugin_dir_path( __FILE__ ) );
 define( 'TELEPILOT_URL', plugin_dir_url( __FILE__ ) );
@@ -35,6 +35,9 @@ require_once TELEPILOT_PATH . 'includes/class-linked-user-resolver.php';
 require_once TELEPILOT_PATH . 'includes/class-permission-service.php';
 require_once TELEPILOT_PATH . 'includes/class-actor-access.php';
 require_once TELEPILOT_PATH . 'includes/class-domain-cache.php';
+require_once TELEPILOT_PATH . 'includes/class-security-records.php';
+require_once TELEPILOT_PATH . 'includes/class-data-redactor.php';
+require_once TELEPILOT_PATH . 'includes/class-job-recovery-page.php';
 require_once TELEPILOT_PATH . 'includes/class-rate-limiter.php';
 require_once TELEPILOT_PATH . 'includes/class-confirmation-service.php';
 require_once TELEPILOT_PATH . 'includes/class-flow-state-service.php';
@@ -71,7 +74,7 @@ function telepilot() {
 }
 
 add_action(
-	'plugins_loaded',
+	'init',
 	function() {
 		telepilot()->boot();
 	}

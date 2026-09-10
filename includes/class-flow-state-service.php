@@ -11,19 +11,8 @@ class Telepilot_Flow_State_Service {
 
 	public function create_flow( $payload, $expiration = 900, $token = '' ) {
 		$payload = Telepilot_Actor_Access::bind_payload( (array) $payload );
-		$token = '' !== (string) $token ? $this->normalize_token( $token ) : $this->generate_token();
-
-		if ( '' === $token ) {
-			return '';
-		}
-
-		set_transient(
-			self::FLOW_PREFIX . $token,
-			(array) $payload,
-			max( 60, absint( $expiration ) )
-		);
-
-		return $token;
+		if ( '' !== $token ) { return $this->update_flow( $token, $payload, $expiration ) ? $token : ''; }
+		return Telepilot_Security_Records::issue( 'flow', $payload, get_current_user_id(), max( 60, absint( $expiration ) ) );
 	}
 
 	public function get_flow( $token ) {
@@ -32,7 +21,7 @@ class Telepilot_Flow_State_Service {
 			return null;
 		}
 
-		$payload = get_transient( self::FLOW_PREFIX . $token );
+		$payload = Telepilot_Security_Records::read( $token, 'flow' );
 
 		return is_array( $payload ) && Telepilot_Actor_Access::valid_payload( $payload ) ? $payload : null;
 	}
@@ -47,13 +36,10 @@ class Telepilot_Flow_State_Service {
 			return false;
 		}
 
-		set_transient(
-			self::FLOW_PREFIX . $token,
-			(array) $payload,
-			max( 60, absint( $expiration ) )
-		);
-
-		return true;
+		global $wpdb;
+		$existing = Telepilot_Security_Records::read( $token, 'flow' );
+		$payload['_security_binding'] = $existing['_security_binding'];
+		return false !== $wpdb->update( Telepilot_Security_Records::table_name(), array( 'payload' => wp_json_encode( $payload ) ), array( 'token_hash' => hash( 'sha256', $token ), 'purpose' => 'flow', 'state' => 'ready' ) );
 	}
 
 	public function delete_flow( $token ) {
@@ -62,7 +48,7 @@ class Telepilot_Flow_State_Service {
 			return false;
 		}
 
-		return delete_transient( self::FLOW_PREFIX . $token );
+		return $this->get_flow( $token ) ? Telepilot_Security_Records::claim( $token, 'flow' ) : false;
 	}
 
 	public function start_pending_post( $telegram_user_id, $payload, $expiration = 900 ) {

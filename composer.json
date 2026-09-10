@@ -6,8 +6,8 @@
   "require": {"php": ">=8.0"},
   "require-dev": {
     "phpunit/phpunit": "^9.6",
-    "yoast/phpunit-polyfills": "^1.1",
-    "wp-phpunit/wp-phpunit": "6.6.2"
+    "wp-phpunit/wp-phpunit": "6.6.2",
+    "yoast/phpunit-polyfills": "^1.1"
   },
   "scripts": {
     "test": "phpunit",

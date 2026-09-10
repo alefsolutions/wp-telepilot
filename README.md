@@ -134,11 +134,19 @@ Telegram is a third-party service:
 - WordPress 6.6 or newer
 - PHP 8.0 or newer
 - HTTPS for webhook mode
-- Current plugin line: `0.3.0`
+- Current maintenance version: `0.3.1`
 
 ## Project Status
 
-WP Telepilot is currently in the `0.3.0` stable release line. The focus now is operational reliability, clear Telegram workflows, and incremental refinement toward the next feature cycle.
+This maintenance branch targets `0.3.1`. Automated regression tests cover access controls, author attribution, durable execution, delivery failures, revoked links, browser editing and privacy. Live Telegram transport and visual staging checks remain release gates; a passing test suite is not a claim that every hosting configuration has been verified.
+
+### Maintenance Upgrade
+
+Existing WordPress content, linked accounts and ordinary settings are preserved. Old pending operations are quarantined rather than replayed. Generate fresh browser-editor links and confirmations after upgrading. Notifications go only to authorized, active linked private chats; an allowed chat ID does not subscribe a recipient.
+
+Queue Recovery in settings lets administrators inspect and cancel uncertain jobs without repeating their actions. A failed Telegram delivery retries the saved response, not the WordPress mutation. WordPress cron must run reliably for delivery and retention. Completed payloads expire within 24 hours and failed-delivery payloads within seven days under hourly maintenance. Logs omit credentials, security URLs and sensitive message bodies.
+
+The posts-only browser editor uses unique, one-time links with an absolute one-hour maximum expiry. Unlinking, suspension and deactivation revoke access. Concurrent content changes require a fresh link instead of overwriting the newer content.
 
 ## Product Direction
 

@@ -210,6 +210,21 @@ class Telepilot_Jobs_Repository {
 
 	public static function pending_count() { return self::status_counts()['pending']; }
 
+	public static function personal_jobs( $actor_id, $page = 1, $limit = 50 ) {
+		global $wpdb;
+		return $wpdb->get_results( $wpdb->prepare( 'SELECT id,status,command_name,payload,created_at FROM ' . self::table_name() . ' WHERE actor_id=%d ORDER BY id LIMIT %d OFFSET %d', $actor_id, $limit, ( max( 1, (int) $page ) - 1 ) * $limit ), ARRAY_A );
+	}
+
+	public static function erase_actor( $actor_id ) {
+		global $wpdb;
+		return $wpdb->query( $wpdb->prepare( "UPDATE " . self::table_name() . " j LEFT JOIN " . self::operations_table() . " o ON j.id=o.job_id SET j.payload='',j.actor_id=0,j.placeholder_chat_id=NULL,j.lease_token=NULL,j.status=IF(j.status='processing','uncertain','cancelled'),o.result=NULL WHERE j.actor_id=%d", $actor_id ) );
+	}
+
+	public static function stop_pending() {
+		global $wpdb;
+		$wpdb->query( "UPDATE " . self::table_name() . " SET status=IF(status='processing','uncertain','cancelled'),lease_token=NULL,last_error='Plugin deactivated; pending access revoked.' WHERE status IN ('pending','processing')" );
+	}
+
 	public static function quarantine_legacy() {
 		global $wpdb;
 		$wpdb->query( "UPDATE " . self::table_name() . " j LEFT JOIN " . self::operations_table() . " o ON j.id=o.job_id SET j.status='uncertain',j.last_error='Legacy request quarantined; inspect the target before cancellation.' WHERE o.job_id IS NULL AND j.status IN ('pending','processing','failed')" );
@@ -218,6 +233,6 @@ class Telepilot_Jobs_Repository {
 	public static function purge_payloads() {
 		global $wpdb;
 		$now = time();
-		$wpdb->query( $wpdb->prepare( "UPDATE " . self::table_name() . " j LEFT JOIN " . self::operations_table() . " o ON j.id=o.job_id SET j.payload='',o.result=NULL WHERE (j.status IN ('complete','cancelled','stale','uncertain') AND j.updated_at<%s) OR (j.status IN ('pending','failed') AND o.state='completed' AND j.created_at<%s)", gmdate( 'Y-m-d H:i:s', $now - DAY_IN_SECONDS ), gmdate( 'Y-m-d H:i:s', $now - 7 * DAY_IN_SECONDS ) ) );
+		$wpdb->query( $wpdb->prepare( "UPDATE " . self::table_name() . " j LEFT JOIN " . self::operations_table() . " o ON j.id=o.job_id SET j.payload='',o.result=NULL WHERE (j.status IN ('complete','cancelled','stale','uncertain') AND j.updated_at<=%s) OR (j.status IN ('pending','failed') AND o.state='completed' AND j.created_at<=%s)", gmdate( 'Y-m-d H:i:s', $now - 23 * HOUR_IN_SECONDS ), gmdate( 'Y-m-d H:i:s', $now - 167 * HOUR_IN_SECONDS ) ) );
 	}
 }

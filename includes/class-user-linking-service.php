@@ -69,6 +69,12 @@ class Telepilot_User_Linking_Service {
 				return Telepilot_Telegram_Response_Builder::error( __( 'Unlink the existing WordPress account before linking a different account.', 'wp-telepilot' ) );
 			}
 		}
+		global $wpdb;
+		$verified_hash = (string) get_user_meta( $user->ID, self::META_LINK_CODE_HASH, true );
+		if ( ! $verified_hash || ! wp_check_password( $code, $verified_hash ) || 1 !== $wpdb->query( $wpdb->prepare( "DELETE FROM {$wpdb->usermeta} WHERE user_id=%d AND meta_key=%s AND meta_value=%s", $user->ID, self::META_LINK_CODE_HASH, $verified_hash ) ) ) {
+			return Telepilot_Telegram_Response_Builder::error( __( 'This link code has already been used. Generate another code.', 'wp-telepilot' ) );
+		}
+		wp_cache_delete( $user->ID, 'user_meta' );
 		Telepilot_Actor_Access::revoke( $user->ID );
 
 		update_user_meta( $user->ID, self::META_TELEGRAM_ID, $telegram_user_id );

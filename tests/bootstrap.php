@@ -8,7 +8,7 @@ tests_add_filter( 'muplugins_loaded', function () {
     add_filter( 'pre_http_request', function () {
         return new WP_Error( 'telepilot_test_network_blocked', 'No external network in tests.' );
     }, PHP_INT_MAX );
-    require dirname( __DIR__ ) . '/wp-telepilot.php';
+    require getenv( 'TELEPILOT_TEST_PLUGIN_FILE' ) ?: dirname( __DIR__ ) . '/wp-telepilot.php';
 } );
 require dirname( __DIR__ ) . '/vendor/wp-phpunit/wp-phpunit/includes/bootstrap.php';
 require __DIR__ . '/support/TestCase.php';

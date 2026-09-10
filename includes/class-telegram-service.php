@@ -1197,6 +1197,7 @@ class Telepilot_Telegram_Service {
 	}
 
 	private function update_diagnostics( $data, $increments = array() ) {
+		$data = Telepilot_Data_Redactor::redact( $data );
 		$diagnostics = get_option( self::DIAGNOSTICS_OPTION, array() );
 
 		foreach ( $increments as $key => $amount ) {

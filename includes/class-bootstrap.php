@@ -30,6 +30,7 @@ class Telepilot_Bootstrap {
 		$this->settings_page->register();
 		$this->privacy_service->register();
 		Telepilot_Domain_Cache::register();
+		Telepilot_Job_Recovery_Page::register();
 		foreach ( array( 'added_user_meta', 'updated_user_meta', 'deleted_user_meta' ) as $hook ) {
 			add_action( $hook, array( 'Telepilot_Actor_Access', 'changed_user_meta' ), 10, 3 );
 		}
@@ -37,6 +38,8 @@ class Telepilot_Bootstrap {
 		add_filter( 'cron_schedules', array( $this, 'register_cron_schedules' ) );
 		add_action( 'rest_api_init', array( $this->rest_controller, 'register_routes' ) );
 		add_action( 'telepilot_daily_maintenance', array( $this, 'run_daily_maintenance' ) );
+		add_action( 'telepilot_hourly_maintenance', array( 'Telepilot_Jobs_Repository', 'purge_payloads' ) );
+		add_action( 'telepilot_hourly_maintenance', array( 'Telepilot_Security_Records', 'purge' ) );
 		add_action( 'telepilot_poll_updates', array( $this, 'poll_updates' ) );
 		add_action( 'telepilot_process_jobs', array( $this, 'process_jobs' ) );
 		add_action( 'admin_post_' . Telepilot_Post_Editor_Service::HANDLER_ACTION, array( $this->post_editor_service, 'handle_request' ) );
@@ -63,6 +66,9 @@ class Telepilot_Bootstrap {
 		}
 
 		$this->sync_transport_schedule();
+		if ( ! wp_next_scheduled( 'telepilot_hourly_maintenance' ) ) {
+			wp_schedule_event( time() + HOUR_IN_SECONDS, 'hourly', 'telepilot_hourly_maintenance' );
+		}
 	}
 
 	public function run_daily_maintenance() {
@@ -72,6 +78,7 @@ class Telepilot_Bootstrap {
 		Telepilot_Audit_Log_Repository::purge_expired_logs( $days );
 		Telepilot_Processed_Updates_Repository::purge_expired( min( $days, 14 ) );
 		Telepilot_Jobs_Repository::purge_payloads();
+		Telepilot_Security_Records::purge();
 		$this->notification_service->maybe_send_update_notifications();
 	}
 
@@ -115,7 +122,7 @@ class Telepilot_Bootstrap {
 		wp_clear_scheduled_hook( 'telepilot_poll_updates' );
 	}
 
-	private function maybe_upgrade_schema() {
+	public function maybe_upgrade_schema() {
 		$current_version = (string) get_option( 'telepilot_schema_version', '' );
 
 		if ( self::SCHEMA_VERSION === $current_version ) {
@@ -125,6 +132,15 @@ class Telepilot_Bootstrap {
 		Telepilot_Audit_Log_Repository::create_table();
 		Telepilot_Jobs_Repository::create_table();
 		Telepilot_Jobs_Repository::quarantine_legacy();
+		Telepilot_Security_Records::create_table();
+		if ( version_compare( $current_version ?: '0', '0.3.1', '<' ) ) {
+			global $wpdb;
+			$wpdb->query( 'UPDATE ' . Telepilot_Audit_Log_Repository::table_name() . " SET before_state=NULL,after_state=NULL,context=NULL,ip_address=NULL,failure_reason=NULL,resource_id=IF(resource_id REGEXP '^[0-9]+$',resource_id,NULL)" );
+			update_option( 'telepilot_access_epoch', wp_generate_uuid4(), false );
+			foreach ( array( 'telepilot_transport_diagnostics', 'telepilot_command_diagnostics', 'telepilot_webhook_status' ) as $option ) {
+				update_option( $option, Telepilot_Data_Redactor::redact( get_option( $option, array() ) ), false );
+			}
+		}
 		Telepilot_Processed_Updates_Repository::create_table();
 		update_option( 'telepilot_schema_version', self::SCHEMA_VERSION, false );
 	}

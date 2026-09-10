@@ -5,7 +5,7 @@ if ( ! defined( 'ABSPATH' ) ) { exit; }
 class Telepilot_Domain_Abilities {
 	public static function domains() {
 		return array(
-			'posts' => array( 'class' => 'Telepilot_Posts_Service', 'cap' => 'edit_posts', 'reads' => 'latest,latest_page,drafts,drafts_page,trashed_page,search,search_page,stats,get_assigned_term_ids,filtered_page', 'writes' => 'create_draft,update_title,update_excerpt,assign_terms,schedule,publish,unpublish,trash,restore,delete' ),
+			'posts' => array( 'class' => 'Telepilot_Posts_Service', 'cap' => 'edit_posts', 'reads' => 'latest,latest_page,drafts,drafts_page,trashed_page,search,search_page,stats,get_assigned_term_ids,filtered_page', 'writes' => 'create_draft,update_draft,update_title,update_excerpt,assign_terms,schedule,publish,unpublish,trash,restore,delete' ),
 			'pages' => array( 'class' => 'Telepilot_Pages_Service', 'cap' => 'edit_pages', 'reads' => 'latest,latest_page,search_page,drafts_page,trashed_page,get_page_details,filtered_page', 'writes' => 'create_page,update_title,update_slug,set_status,publish,draft,trash,restore,delete' ),
 			'comments' => array( 'class' => 'Telepilot_Comments_Service', 'cap' => 'moderate_comments', 'reads' => 'pending_page,approved_page,spam_page,trash_page,search_page,get_comment_details,filtered_page', 'writes' => 'moderate_comment,reply_to_comment' ),
 			'users' => array( 'class' => 'Telepilot_Users_Service', 'cap' => 'list_users', 'reads' => 'recent,recent_page,search_page,get_user_details', 'writes' => 'create_user,disable_user,enable_user,assign_role,generate_reset_link,send_reset_email,update_email,update_display_name,send_welcome_email,delete_user' ),
@@ -29,6 +29,7 @@ class Telepilot_Domain_Abilities {
 			if ( 'wp_user' === $name ) { $schema = array( 'type' => 'integer', 'minimum' => 1 ); }
 			if ( 'taxonomy' === $name ) { $schema['enum'] = array( 'category', 'post_tag' ); }
 			if ( 'email' === $name ) { $schema['format'] = 'email'; }
+			if ( $parameter->isDefaultValueAvailable() && null === $parameter->getDefaultValue() ) { $schema['type'] = array( $schema['type'], 'null' ); }
 			$properties[ $name ] = $schema;
 			if ( ! $parameter->isOptional() ) { $required[] = $name; }
 		}
@@ -57,6 +58,16 @@ class Telepilot_Domain_Abilities {
 		if ( 'mcp' === $context->source && $write ) { return new WP_Error( 'telepilot_mcp_read_only', 'MCP is read-only.' ); }
 		if ( in_array( $domain, array( 'posts', 'pages' ), true ) ) {
 			$id = $arguments['post_id'] ?? $arguments['page_id'] ?? 0;
+			if ( 'create_draft' === $method ) {
+				foreach ( $arguments['category_ids'] ?? $arguments['categories'] ?? array() as $term_id ) {
+					if ( ! term_exists( $term_id, 'category' ) || ! user_can( $user, get_taxonomy( 'category' )->cap->assign_terms ) ) { return new WP_Error( 'telepilot_category_invalid', 'A selected category is unavailable or cannot be assigned.' ); }
+				}
+			}
+			if ( 'schedule' === $method && isset( $arguments['scheduled_at'] ) ) {
+				try { $date = $arguments['scheduled_at'] instanceof DateTimeInterface ? $arguments['scheduled_at'] : new DateTimeImmutable( $arguments['scheduled_at'], wp_timezone() ); }
+				catch ( Exception $error ) { return new WP_Error( 'telepilot_schedule_invalid', 'Specify an unambiguous future date and time.' ); }
+				if ( $date->getTimestamp() <= time() + 60 ) { return new WP_Error( 'telepilot_schedule_past', 'Scheduling requires a time more than one minute in the future.' ); }
+			}
 			if ( $id && ! user_can( $user, in_array( $method, array( 'trash', 'delete' ), true ) ? 'delete_post' : 'edit_post', $id ) ) { return new WP_Error( 'telepilot_target_denied', 'This content is not accessible to your account.' ); }
 			if ( in_array( $method, array( 'publish', 'unpublish', 'schedule', 'draft' ), true ) || ( 'set_status' === $method && 'draft' !== ( $arguments['status'] ?? '' ) ) ) {
 				if ( ! user_can( $user, 'pages' === $domain ? 'publish_pages' : 'publish_posts' ) ) { return new WP_Error( 'telepilot_publish_denied', 'Publishing permission is required.' ); }

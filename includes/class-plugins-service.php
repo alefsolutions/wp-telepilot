@@ -399,6 +399,8 @@ class Telepilot_Plugins_Service {
 		if ( empty( $before['update_version'] ) ) {
 			return new WP_Error( 'telepilot_plugin_no_update', __( 'That plugin does not currently have an available update.', 'wp-telepilot' ) );
 		}
+		$approved = Telepilot_Operation_Context::current()->expected_target;
+		if ( 'ai' === Telepilot_Operation_Context::current()->source && ( empty( $approved['update_version'] ) || $approved['update_version'] !== $before['update_version'] ) ) { return new WP_Error( 'telepilot_plugin_target_changed', 'The available update changed. Request a fresh proposal.' ); }
 
 		$upgrader = new Plugin_Upgrader( new Automatic_Upgrader_Skin() );
 		$result   = $upgrader->upgrade( $plugin_file );

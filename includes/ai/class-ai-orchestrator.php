@@ -89,10 +89,39 @@ class Telepilot_AI_Orchestrator {
 	}
 
 	private function prepare_confirmation( $result, $identity, $session ) {
-		return $this->reply( 'Write preparation is complete, but confirmed writes are not enabled in this development stage. No changes were made.', true );
+		$manager = new Telepilot_AI_Confirmation_Manager();
+		$proposal = $manager->create_pending_action( $session, $identity, $result['tool_name'], $result['ability'], $result['arguments'], $result['prompt'], $result['risk_level'] );
+		if ( is_wp_error( $proposal ) ) { return $this->reply( $proposal->get_error_message(), true ); }
+		return $this->proposal_reply( $proposal, $identity );
 	}
-	public function confirm_pending_action( $id, $identity, $final = false ) { return $this->reply( 'Legacy confirmations are invalid. Request a fresh proposal after confirmed writes are enabled.', true ); }
-	public function cancel_pending_action( $id, $identity ) { return $this->reply( 'No current confirmed-write proposal is available.', true ); }
+	public function confirm_pending_action( $id, $identity, $final = false ) {
+		$result = ( new Telepilot_AI_Confirmation_Manager() )->confirm( $id, $identity, $final );
+		if ( is_wp_error( $result ) ) { return $this->reply( $result->get_error_message() . ' If execution failed, inspect the target before making another request.', true ); }
+		if ( ! empty( $result['warning'] ) ) { return $this->proposal_reply( $result, $identity ); }
+		$this->clear_pending( $id, $identity );
+		$response = $this->reply( $result['summary'] ?? 'The confirmed action completed.' );
+		$post_id = $result['data']['post_id'] ?? 0;
+		if ( $post_id ) { $response['reply_markup']['inline_keyboard'][] = array( array( 'text' => Telepilot_Telegram_Response_Builder::button_label( 'edit', 'Edit [' . $post_id . ']' ), 'callback_data' => '/posts edit ' . $post_id ) ); }
+		return $response;
+	}
+	public function cancel_pending_action( $id, $identity ) {
+		$result = ( new Telepilot_AI_Confirmation_Manager() )->cancel_pending_action( $id, $identity );
+		if ( ! $result ) { return $this->reply( 'This proposal is no longer available or is not yours.', true ); }
+		$this->clear_pending( $id, $identity );
+		return $this->reply( 'Proposal cancelled. No action was executed.' );
+	}
+	private function clear_pending( $id, $identity ) {
+		$sessions = new Telepilot_AI_Session_Manager(); $session = $sessions->get_session( $identity );
+		if ( $session && $session['pending_action_id'] === $id ) { $session['pending_action_id'] = ''; $sessions->update_session( $identity, $session ); }
+	}
+	private function proposal_reply( $proposal, $identity ) {
+		$sessions = new Telepilot_AI_Session_Manager(); $session = $sessions->get_session( $identity );
+		if ( ! $session ) { return $this->reply( 'Session access expired.', true ); }
+		$session['pending_action_id'] = $proposal['action_id']; $sessions->update_session( $identity, $session );
+		$warning = ! empty( $proposal['warning'] );
+		$text = $warning ? 'Final warning: this changes live publishing or executable plugin code. It can affect visitors or site availability. Execute only if the exact changes below are intended.' . "\n\n" : '';
+		return Telepilot_Telegram_Response_Builder::success_html( '<b>' . ( $warning ? 'Final confirmation' : 'Confirm proposed changes' ) . '</b>' . "\n\n" . Telepilot_Telegram_Response_Builder::escape( $text . $proposal['summary'] ), array( 'command' => '/chat', 'reply_markup' => ( new Telepilot_AI_Confirmation_Manager() )->build_confirmation_keyboard( $proposal['action_id'], $warning, $proposal['target']['id'] ) ) );
+	}
 	public function cancel_session_actions( $session_id ) { do_action( 'telepilot_ai_session_ended', $session_id, get_current_user_id() ); }
 
 	private function reply( $text, $error = false ) {

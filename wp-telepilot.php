@@ -26,6 +26,7 @@ require_once TELEPILOT_PATH . 'includes/class-activator.php';
 require_once TELEPILOT_PATH . 'includes/class-deactivator.php';
 require_once TELEPILOT_PATH . 'includes/class-audit-log-repository.php';
 require_once TELEPILOT_PATH . 'includes/class-jobs-repository.php';
+require_once TELEPILOT_PATH . 'includes/class-db-transaction.php';
 require_once TELEPILOT_PATH . 'includes/class-processed-updates-repository.php';
 require_once TELEPILOT_PATH . 'includes/ai/class-ai-settings.php';
 require_once TELEPILOT_PATH . 'includes/ai/class-ai-data-policy.php';
@@ -88,6 +89,7 @@ register_activation_hook( __FILE__, array( 'Telepilot_Activator', 'activate' ) )
 register_deactivation_hook( __FILE__, array( 'Telepilot_Deactivator', 'deactivate' ) );
 add_action( 'telepilot_actor_revoked', array( 'Telepilot_AI_Session_Manager', 'erase_actor' ) );
 add_action( 'telepilot_erase_actor_data', array( 'Telepilot_AI_Session_Manager', 'erase_actor' ) );
+add_action( 'telepilot_ai_session_ended', array( 'Telepilot_AI_Confirmation_Manager', 'cancel_session_actions' ), 10, 2 );
 
 function telepilot() {
 	static $plugin = null;

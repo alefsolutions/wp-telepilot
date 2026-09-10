@@ -559,6 +559,18 @@ class Telepilot_Posts_Service {
 		} );
 	}
 
+	public function update_draft( $post_id, $title = null, $excerpt = null ) {
+		return Telepilot_Domain_Abilities::run( 'posts', 'update_draft', get_defined_vars(), function () use ( $post_id, $title, $excerpt ) {
+			$post = get_post( $post_id );
+			if ( ! $post || 'post' !== $post->post_type || 'draft' !== $post->post_status ) { return new WP_Error( 'telepilot_draft_required', 'This operation only edits current draft posts.' ); }
+			$fields = array();
+			if ( null !== $title ) { if ( '' === trim( $title ) ) { return new WP_Error( 'telepilot_title_required', 'The title cannot be empty.' ); } $fields['post_title'] = sanitize_text_field( $title ); }
+			if ( null !== $excerpt ) { $fields['post_excerpt'] = sanitize_textarea_field( $excerpt ); }
+			if ( ! $fields ) { return new WP_Error( 'telepilot_changes_required', 'Specify a title or excerpt change.' ); }
+			return $this->update_fields( $post_id, $fields, 'draft updated' );
+		} );
+	}
+
 	private function operation_update_title( $post_id, $title ) {
 		return $this->update_fields(
 			$post_id,
@@ -861,6 +873,7 @@ class Telepilot_Posts_Service {
 			array(
 				'ID'            => $post_id,
 				'post_status'   => 'future',
+				'edit_date'     => true,
 				'post_date'     => $scheduled_at->format( 'Y-m-d H:i:s' ),
 				'post_date_gmt' => $gmt->format( 'Y-m-d H:i:s' ),
 			),

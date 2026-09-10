@@ -9,6 +9,7 @@ final class Telepilot_Operation_Context {
 	public $operation_id;
 	public $identity;
 	public $reply_message_id = 0;
+	public $expected_target = array();
 	public $confirmed = false;
 
 	private function __construct( $source, $identity = array() ) {
@@ -18,6 +19,7 @@ final class Telepilot_Operation_Context {
 		$this->identity = $identity;
 		$this->operation_id = (string) ( $identity['operation_id'] ?? ( self::$active->operation_id ?? wp_generate_uuid4() ) );
 		$this->reply_message_id = (int) ( $identity['reply_message_id'] ?? ( self::$active->reply_message_id ?? 0 ) );
+		$this->expected_target = self::$active->expected_target ?? array();
 	}
 
 	public static function current() { return self::$active ?: new self( 'wordpress' ); }

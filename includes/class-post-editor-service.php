@@ -471,12 +471,12 @@ class Telepilot_Post_Editor_Service {
 		$identity = $this->session_identity( $session );
 		$check = Telepilot_Actor_Access::check( $identity, 'edit_post', (int) $session['post_id'] );
 		if ( is_wp_error( $check ) ) { return $check; }
-		$wpdb->query( 'START TRANSACTION' );
+		Telepilot_DB_Transaction::begin();
 		try {
 			// Lock the actual row, not a possibly stale object-cache snapshot.
 			$row = $wpdb->get_row( $wpdb->prepare( "SELECT * FROM {$wpdb->posts} WHERE ID=%d FOR UPDATE", $session['post_id'] ) );
 			if ( ! $row || 'post' !== $row->post_type || ! hash_equals( (string) $session['revision'], self::revision( $row ) ) ) {
-				$wpdb->query( 'ROLLBACK' );
+				Telepilot_DB_Transaction::rollback();
 				return new WP_Error( 'telepilot_editor_conflict', __( 'This post changed after the link was created. Your changes were not saved. Request a fresh link to review the latest version.', 'wp-telepilot' ) );
 			}
 			$values = array( 'ID' => (int) $row->ID );
@@ -490,14 +490,14 @@ class Telepilot_Post_Editor_Service {
 			}
 			$result = Telepilot_Actor_Access::as_actor( $identity, static function () use ( $values ) { return wp_update_post( wp_slash( $values ), true ); } );
 			if ( is_wp_error( $result ) || ! is_int( $result ) ) {
-				$wpdb->query( 'ROLLBACK' );
+				Telepilot_DB_Transaction::rollback();
 				clean_post_cache( $row->ID );
 				return is_wp_error( $result ) ? $result : new WP_Error( 'telepilot_editor_denied', __( 'Access changed before saving. Request a new link.', 'wp-telepilot' ) );
 			}
-			$wpdb->query( 'COMMIT' );
+			Telepilot_DB_Transaction::commit();
 			return $result;
 		} catch ( Throwable $error ) {
-			$wpdb->query( 'ROLLBACK' );
+			Telepilot_DB_Transaction::rollback();
 			clean_post_cache( (int) $session['post_id'] );
 			throw $error;
 		}

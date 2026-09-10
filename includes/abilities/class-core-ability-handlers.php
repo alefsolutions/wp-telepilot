@@ -541,12 +541,12 @@ class Telepilot_Core_Ability_Handlers {
 				if ( is_wp_error( $post ) ) {
 					return $post;
 				}
-				if ( 'draft' !== $post->post_status && 'pending' !== $post->post_status && 'future' !== $post->post_status ) {
-					return new WP_Error( 'telepilot_ai_update_draft_invalid', __( 'Only drafts, pending posts, or scheduled posts can be updated through this AI draft tool.', 'wp-telepilot' ) );
+				if ( 'draft' !== $post->post_status ) {
+					return new WP_Error( 'telepilot_ai_update_draft_invalid', __( 'Only current drafts can be edited through this tool.', 'wp-telepilot' ) );
 				}
-				$title   = isset( $arguments['title'] ) ? sanitize_text_field( (string) $arguments['title'] ) : '';
-				$excerpt = isset( $arguments['excerpt'] ) ? sanitize_textarea_field( (string) $arguments['excerpt'] ) : '';
-				if ( '' === $title && '' === $excerpt ) {
+				$title   = isset( $arguments['title'] ) ? sanitize_text_field( (string) $arguments['title'] ) : null;
+				$excerpt = isset( $arguments['excerpt'] ) ? sanitize_textarea_field( (string) $arguments['excerpt'] ) : null;
+				if ( ( null === $title && null === $excerpt ) || '' === $title ) {
 					return new WP_Error( 'telepilot_ai_update_draft_empty', __( 'Provide a new title or excerpt for the draft update.', 'wp-telepilot' ) );
 				}
 
@@ -554,11 +554,11 @@ class Telepilot_Core_Ability_Handlers {
 					'ok'         => true,
 					'ability'    => 'telepilot/update-draft',
 					'tool_name'  => $tool_name,
-					'arguments'  => array(
+					'arguments'  => array_filter( array(
 						'post_id' => (int) $post->ID,
 						'title'   => $title,
 						'excerpt' => $excerpt,
-					),
+					), static function ( $value ) { return null !== $value; } ),
 					'prompt'     => sprintf( __( 'You are about to update draft post [%1$d] %2$s.', 'wp-telepilot' ), $post->ID, get_the_title( $post ) ),
 					'risk_level' => 'low_write',
 				);
@@ -773,38 +773,10 @@ class Telepilot_Core_Ability_Handlers {
 	}
 
 	private function execute_update_draft( $arguments, $session ) {
-		$post = $this->resolve_post_from_arguments( $arguments, $session );
-		if ( is_wp_error( $post ) ) {
-			return $post;
-		}
-
-		$messages = array();
-		$title    = isset( $arguments['title'] ) ? (string) $arguments['title'] : '';
-		$excerpt  = isset( $arguments['excerpt'] ) ? (string) $arguments['excerpt'] : '';
-
-		if ( '' !== $title ) {
-			$title_result = $this->posts_service->update_title( $post->ID, $title );
-			if ( is_wp_error( $title_result ) ) {
-				return $title_result;
-			}
-			$messages[] = __( 'title updated', 'wp-telepilot' );
-		}
-
-		if ( '' !== $excerpt ) {
-			$excerpt_result = $this->posts_service->update_excerpt( $post->ID, $excerpt );
-			if ( is_wp_error( $excerpt_result ) ) {
-				return $excerpt_result;
-			}
-			$messages[] = __( 'excerpt updated', 'wp-telepilot' );
-		}
-
-		return array(
-			'ok'      => true,
-			'summary' => sprintf( __( 'Draft post [%1$d] %2$s was updated: %3$s.', 'wp-telepilot' ), $post->ID, get_the_title( get_post( $post->ID ) ), implode( ', ', $messages ) ),
-			'data'    => array(
-				'post_id' => $post->ID,
-			),
-		);
+		$result = $this->posts_service->update_draft( $arguments['post_id'], $arguments['title'] ?? null, $arguments['excerpt'] ?? null );
+		if ( is_wp_error( $result ) ) { return $result; }
+		$post = $result['post'];
+		return array( 'ok' => true, 'summary' => sprintf( 'Draft post [%d] %s was updated.', $post->ID, $post->post_title ), 'data' => array( 'post_id' => $post->ID, 'title' => $post->post_title, 'excerpt' => $post->post_excerpt, 'status' => $post->post_status ) );
 	}
 
 	private function execute_schedule_post( $arguments, $session ) {

@@ -140,6 +140,8 @@ Telegram is a third-party service:
 
 This maintenance branch targets `0.3.1`. Automated regression tests cover access controls, author attribution, durable execution, delivery failures, revoked links, browser editing and privacy. Live Telegram transport and visual staging checks remain release gates; a passing test suite is not a claim that every hosting configuration has been verified.
 
+Additional regressions cover real concurrent PHP workers and browser saves, command-menu reads across standard/custom roles, nested queue transactions, schedule dates, notification target access and polling persistence failures. The maintenance candidate does not include OpenAI or MCP; those remain on the separate V4 beta branch.
+
 ### Maintenance Upgrade
 
 Existing WordPress content, linked accounts and ordinary settings are preserved. Old pending operations are quarantined rather than replayed. Generate fresh browser-editor links and confirmations after upgrading. Notifications go only to authorized, active linked private chats; an allowed chat ID does not subscribe a recipient.

@@ -67,7 +67,7 @@ class Telepilot_Jobs_Repository {
 		if ( $update_id && $wpdb->get_var( $wpdb->prepare( 'SELECT id FROM ' . self::table_name() . ' WHERE update_id=%d', $update_id ) ) ) {
 			return 'duplicate';
 		}
-		$wpdb->query( 'START TRANSACTION' );
+		Telepilot_DB_Transaction::begin();
 		$inserted = $wpdb->insert( self::table_name(), array(
 			'update_id' => $update_id ? absint( $update_id ) : null,
 			'transport' => sanitize_key( $transport ),
@@ -84,16 +84,16 @@ class Telepilot_Jobs_Repository {
 		) );
 		if ( false === $inserted ) {
 			$duplicate = $update_id && $wpdb->get_var( $wpdb->prepare( 'SELECT id FROM ' . self::table_name() . ' WHERE update_id=%d', $update_id ) );
-			$wpdb->query( 'ROLLBACK' );
+			Telepilot_DB_Transaction::rollback();
 			return $duplicate ? 'duplicate' : new WP_Error( 'telepilot_job_enqueue_failed', __( 'Unable to persist request. No action was executed.', 'wp-telepilot' ) );
 		}
 		$id = (int) $wpdb->insert_id;
 		$result = $options['result'] ?? null;
 		if ( false === $wpdb->insert( self::operations_table(), array( 'job_id' => $id, 'state' => null === $result ? 'accepted' : 'completed', 'result' => null === $result ? null : wp_json_encode( $result ), 'created_at' => $now, 'updated_at' => $now ) ) ) {
-			$wpdb->query( 'ROLLBACK' );
+			Telepilot_DB_Transaction::rollback();
 			return new WP_Error( 'telepilot_operation_enqueue_failed', __( 'Unable to persist operation.', 'wp-telepilot' ) );
 		}
-		$wpdb->query( 'COMMIT' );
+		Telepilot_DB_Transaction::commit();
 		return $id;
 	}
 

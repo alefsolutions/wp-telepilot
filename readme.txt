@@ -2,7 +2,7 @@
 Contributors: alefsolutions
 Tags: telegram, bot, notifications, moderation, remote management
 Requires at least: 6.6
-Tested up to: 7.0
+Tested up to: 7.1
 Requires PHP: 8.0
 Stable tag: 0.3.1
 License: GPLv2 or later
@@ -95,6 +95,9 @@ WP Telepilot stores Telegram linkage metadata such as Telegram user IDs, chat ID
 
 = 0.3.1 =
 
+* preserve draft schedule dates, nested transaction ownership and polling offsets when persistence fails
+* recheck notification targets and suppress stale private response data during delayed delivery
+* exercise real concurrent workers/browser saves and standard/custom-role command reads
 * enforce active, linked, authorized private-chat access and actor-scoped content queries
 * separate durable WordPress execution outcomes from retried Telegram delivery
 * quarantine interrupted actions instead of replaying mutations; add Queue Recovery controls

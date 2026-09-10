@@ -572,12 +572,14 @@ class Telepilot_Notification_Service {
 
 			$message    = $this->build_standard_message( $title, $facts, $links );
 			$recipients = $this->get_recipient_chat_ids( $capability );
+			$target = in_array( $resource_type, array( 'post', 'page', 'comment' ), true ) ? array( 'type' => $resource_type, 'id' => (int) $resource_id ) : array();
 
 			foreach ( $recipients as $chat_id ) {
 				$response = ( new Telepilot_Telegram_Service() )->queue_notification(
 					$chat_id,
 					$message,
-					$capability
+					$capability,
+					$target
 				);
 
 				if ( is_wp_error( $response ) ) {

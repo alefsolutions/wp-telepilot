@@ -33,6 +33,27 @@ class QueueTest extends Telepilot_TestCase {
 		$this->assertSame( $job['outcome'], Telepilot_Jobs_Repository::get( $id )['outcome'] );
 	}
 
+	public function test_delivery_retry_does_not_resend_content_after_ownership_changes() {
+		global $wpdb;
+		$actor = $this->actor( 'author' );
+		$post = self::factory()->post->create( array( 'post_author' => $actor['wp_user']->ID, 'post_status' => 'draft', 'post_title' => 'Private title fixture' ) );
+		update_option( 'telepilot_settings', array( 'bot_token' => 'fixture' ) );
+		$service = new Telepilot_Telegram_Service();
+		$id = $service->handle_update( $this->update( $actor, 1015, '/posts' ) )['operation_id'];
+		$service->process_jobs( 1 );
+		$this->assertStringContainsString( 'Private title fixture', Telepilot_Jobs_Repository::get( $id )['outcome'] );
+		wp_update_post( array( 'ID' => $post, 'post_author' => self::factory()->user->create( array( 'role' => 'author' ) ) ) );
+		$sent = '';
+		add_filter( 'pre_http_request', static function ( $pre, $args, $url ) use ( &$sent ) {
+			if ( false !== strpos( $url, '/sendMessage' ) ) { $sent .= wp_json_encode( $args['body'] ); }
+			return $pre;
+		}, PHP_INT_MAX, 3 );
+		$wpdb->update( Telepilot_Jobs_Repository::table_name(), array( 'available_at' => gmdate( 'Y-m-d H:i:s', time() - 1 ) ), array( 'id' => $id ) );
+		$service->process_jobs( 1 );
+		$this->assertStringNotContainsString( 'Private title fixture', $sent );
+		$this->assertStringContainsString( 'data changed', $sent );
+	}
+
 	public function test_duplicate_updates_have_one_durable_operation() {
 		global $wpdb;
 		$actor = $this->actor();
@@ -99,6 +120,21 @@ class QueueTest extends Telepilot_TestCase {
 		$items = $posts->latest_page()['items'];
 		$matching = array_values( array_filter( $items, static function ( $post ) use ( $id ) { return $post->ID === $id; } ) );
 		$this->assertSame( 'After', $matching[0]->post_title );
+	}
+
+	public function test_notification_rechecks_target_access_at_delivery() {
+		$actor = $this->actor( 'author' );
+		$id = self::factory()->post->create( array( 'post_status' => 'publish' ) );
+		$service = new Telepilot_Telegram_Service();
+		$job = $service->queue_notification( $actor['chat_id'], 'Publication notification', 'edit_posts', array( 'type' => 'post', 'id' => $id ) );
+		$this->assertIsInt( $job );
+		wp_update_post( array( 'ID' => $id, 'post_status' => 'draft' ) );
+		$sent = 0;
+		add_filter( 'pre_http_request', static function ( $response, $args, $url ) use ( &$sent ) { if ( false !== strpos( $url, '/sendMessage' ) ) { $sent++; } return $response; }, PHP_INT_MAX, 3 );
+		$service->process_jobs( 1 );
+		$this->assertSame( 0, $sent );
+		$this->assertSame( 'complete', Telepilot_Jobs_Repository::get( $job )['status'] );
+		$this->assertWPError( $service->queue_notification( $actor['chat_id'], 'Private draft', 'edit_posts', array( 'type' => 'post', 'id' => $id ) ) );
 	}
 
 	public function test_unchanged_telegram_edit_is_success() {

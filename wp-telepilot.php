@@ -26,6 +26,7 @@ require_once TELEPILOT_PATH . 'includes/class-activator.php';
 require_once TELEPILOT_PATH . 'includes/class-deactivator.php';
 require_once TELEPILOT_PATH . 'includes/class-audit-log-repository.php';
 require_once TELEPILOT_PATH . 'includes/class-jobs-repository.php';
+require_once TELEPILOT_PATH . 'includes/class-db-transaction.php';
 require_once TELEPILOT_PATH . 'includes/class-processed-updates-repository.php';
 require_once TELEPILOT_PATH . 'includes/class-telegram-response-builder.php';
 require_once TELEPILOT_PATH . 'includes/class-telegram-client.php';

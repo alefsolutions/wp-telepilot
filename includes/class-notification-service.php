@@ -574,12 +574,10 @@ class Telepilot_Notification_Service {
 			$recipients = $this->get_recipient_chat_ids( $capability );
 
 			foreach ( $recipients as $chat_id ) {
-				$response = $this->client->send_message(
+				$response = ( new Telepilot_Telegram_Service() )->queue_notification(
 					$chat_id,
 					$message,
-					array(
-						'parse_mode' => 'HTML',
-					)
+					$capability
 				);
 
 				if ( is_wp_error( $response ) ) {
@@ -606,7 +604,7 @@ class Telepilot_Notification_Service {
 				Telepilot_Audit_Log_Repository::log(
 					array(
 						'chat_id'       => $chat_id,
-						'action_name'   => 'telegram_notification_sent',
+						'action_name'   => 'telegram_notification_queued',
 						'resource_type' => $resource_type,
 						'resource_id'   => $resource_id ? $resource_id : $action_name,
 						'context'       => wp_parse_args(
@@ -616,7 +614,7 @@ class Telepilot_Notification_Service {
 								'action_name'  => $action_name,
 							)
 						),
-						'after_state'   => isset( $response['result'] ) ? $response['result'] : null,
+						'after_state'   => array( 'job_id' => $response ),
 					)
 				);
 			}

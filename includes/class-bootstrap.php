@@ -5,7 +5,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 class Telepilot_Bootstrap {
-	const SCHEMA_VERSION = '0.3.0';
+	const SCHEMA_VERSION = '0.3.1';
 
 	private $settings_page;
 	private $rest_controller;
@@ -29,6 +29,7 @@ class Telepilot_Bootstrap {
 		$this->ensure_settings_defaults();
 		$this->settings_page->register();
 		$this->privacy_service->register();
+		Telepilot_Domain_Cache::register();
 		foreach ( array( 'added_user_meta', 'updated_user_meta', 'deleted_user_meta' ) as $hook ) {
 			add_action( $hook, array( 'Telepilot_Actor_Access', 'changed_user_meta' ), 10, 3 );
 		}
@@ -70,6 +71,7 @@ class Telepilot_Bootstrap {
 
 		Telepilot_Audit_Log_Repository::purge_expired_logs( $days );
 		Telepilot_Processed_Updates_Repository::purge_expired( min( $days, 14 ) );
+		Telepilot_Jobs_Repository::purge_payloads();
 		$this->notification_service->maybe_send_update_notifications();
 	}
 
@@ -122,6 +124,7 @@ class Telepilot_Bootstrap {
 
 		Telepilot_Audit_Log_Repository::create_table();
 		Telepilot_Jobs_Repository::create_table();
+		Telepilot_Jobs_Repository::quarantine_legacy();
 		Telepilot_Processed_Updates_Repository::create_table();
 		update_option( 'telepilot_schema_version', self::SCHEMA_VERSION, false );
 	}

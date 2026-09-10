@@ -22,9 +22,10 @@ class FoundationTest extends Telepilot_TestCase {
 
     public function test_schema_creation_is_repeatable_and_preserves_settings() {
         update_option( 'telepilot_test_marker', 'preserved' );
+        $pending = Telepilot_Jobs_Repository::pending_count();
         Telepilot_Jobs_Repository::create_table();
         Telepilot_Jobs_Repository::create_table();
-        $this->assertSame( 0, Telepilot_Jobs_Repository::pending_count() );
+        $this->assertSame( $pending, Telepilot_Jobs_Repository::pending_count() );
         $this->assertSame( 'preserved', get_option( 'telepilot_test_marker' ) );
     }
 

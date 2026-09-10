@@ -149,7 +149,7 @@ class Telepilot_Telegram_Client {
 		$response = wp_remote_post(
 			$url,
 			array(
-				'timeout' => 15,
+				'timeout' => 'answerCallbackQuery' === $method ? 2 : 10,
 				'body'    => $payload,
 			)
 		);
@@ -160,6 +160,9 @@ class Telepilot_Telegram_Client {
 
 		$status = (int) wp_remote_retrieve_response_code( $response );
 		$body   = json_decode( wp_remote_retrieve_body( $response ), true );
+		if ( 'editMessageText' === $method && 400 === $status && false !== stripos( (string) ( $body['description'] ?? '' ), 'message is not modified' ) ) {
+			return array( 'ok' => true, 'result' => array( 'message_id' => $payload['message_id'] ?? 0 ) );
+		}
 
 		if ( $status < 200 || $status >= 300 || empty( $body['ok'] ) ) {
 			$message = isset( $body['description'] ) ? (string) $body['description'] : __( 'Telegram API request failed.', 'wp-telepilot' );

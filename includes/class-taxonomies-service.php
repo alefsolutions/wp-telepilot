@@ -14,6 +14,12 @@ class Telepilot_Taxonomies_Service {
 	}
 
 	public function list_terms( $taxonomy, $page = 1, $limit = self::PER_PAGE, $search = '' ) {
+		return Telepilot_Domain_Abilities::run( 'terms', 'list_terms', get_defined_vars(), function () use ( $taxonomy, $page, $limit, $search ) {
+			return $this->operation_list_terms( $taxonomy, $page, $limit, $search );
+		} );
+	}
+
+	private function operation_list_terms( $taxonomy, $page = 1, $limit = self::PER_PAGE, $search = '' ) {
 		$taxonomy = $this->normalize_taxonomy( $taxonomy );
 		$page     = max( 1, absint( $page ) );
 		$limit    = max( 1, absint( $limit ) );
@@ -167,6 +173,12 @@ class Telepilot_Taxonomies_Service {
 	}
 
 	public function get_term_details( $taxonomy, $term_id ) {
+		return Telepilot_Domain_Abilities::run( 'terms', 'get_term_details', get_defined_vars(), function () use ( $taxonomy, $term_id ) {
+			return $this->operation_get_term_details( $taxonomy, $term_id );
+		} );
+	}
+
+	private function operation_get_term_details( $taxonomy, $term_id ) {
 		$taxonomy = $this->normalize_taxonomy( $taxonomy );
 		$term     = get_term( absint( $term_id ), $taxonomy );
 
@@ -178,6 +190,12 @@ class Telepilot_Taxonomies_Service {
 	}
 
 	public function create_term( $taxonomy, $name ) {
+		return Telepilot_Domain_Abilities::run( 'terms', 'create_term', get_defined_vars(), function () use ( $taxonomy, $name ) {
+			return $this->operation_create_term( $taxonomy, $name );
+		} );
+	}
+
+	private function operation_create_term( $taxonomy, $name ) {
 		$taxonomy = $this->normalize_taxonomy( $taxonomy );
 		$name     = sanitize_text_field( $name );
 
@@ -197,6 +215,12 @@ class Telepilot_Taxonomies_Service {
 	}
 
 	public function rename_term( $taxonomy, $term_id, $name ) {
+		return Telepilot_Domain_Abilities::run( 'terms', 'rename_term', get_defined_vars(), function () use ( $taxonomy, $term_id, $name ) {
+			return $this->operation_rename_term( $taxonomy, $term_id, $name );
+		} );
+	}
+
+	private function operation_rename_term( $taxonomy, $term_id, $name ) {
 		$taxonomy = $this->normalize_taxonomy( $taxonomy );
 		$term_id  = absint( $term_id );
 		$name     = sanitize_text_field( $name );
@@ -223,6 +247,12 @@ class Telepilot_Taxonomies_Service {
 	}
 
 	public function update_slug( $taxonomy, $term_id, $slug ) {
+		return Telepilot_Domain_Abilities::run( 'terms', 'update_slug', get_defined_vars(), function () use ( $taxonomy, $term_id, $slug ) {
+			return $this->operation_update_slug( $taxonomy, $term_id, $slug );
+		} );
+	}
+
+	private function operation_update_slug( $taxonomy, $term_id, $slug ) {
 		$slug = sanitize_title( $slug );
 		if ( '' === $slug ) {
 			return new WP_Error( 'telepilot_term_slug_invalid', __( 'A valid slug is required.', 'wp-telepilot' ) );
@@ -238,6 +268,12 @@ class Telepilot_Taxonomies_Service {
 	}
 
 	public function update_description( $taxonomy, $term_id, $description ) {
+		return Telepilot_Domain_Abilities::run( 'terms', 'update_description', get_defined_vars(), function () use ( $taxonomy, $term_id, $description ) {
+			return $this->operation_update_description( $taxonomy, $term_id, $description );
+		} );
+	}
+
+	private function operation_update_description( $taxonomy, $term_id, $description ) {
 		return $this->update_term(
 			$taxonomy,
 			$term_id,
@@ -248,6 +284,12 @@ class Telepilot_Taxonomies_Service {
 	}
 
 	public function update_parent( $term_id, $parent_id ) {
+		return Telepilot_Domain_Abilities::run( 'terms', 'update_parent', get_defined_vars(), function () use ( $term_id, $parent_id ) {
+			return $this->operation_update_parent( $term_id, $parent_id );
+		} );
+	}
+
+	private function operation_update_parent( $term_id, $parent_id ) {
 		$taxonomy = 'category';
 		$term_id  = absint( $term_id );
 
@@ -277,6 +319,12 @@ class Telepilot_Taxonomies_Service {
 	}
 
 	public function delete_term( $taxonomy, $term_id ) {
+		return Telepilot_Domain_Abilities::run( 'terms', 'delete_term', get_defined_vars(), function () use ( $taxonomy, $term_id ) {
+			return $this->operation_delete_term( $taxonomy, $term_id );
+		} );
+	}
+
+	private function operation_delete_term( $taxonomy, $term_id ) {
 		$taxonomy = $this->normalize_taxonomy( $taxonomy );
 		$term     = get_term( absint( $term_id ), $taxonomy );
 
@@ -305,6 +353,12 @@ class Telepilot_Taxonomies_Service {
 	}
 
 	public function reassign_and_delete_term( $taxonomy, $term_id, $replacement_term_id ) {
+		return Telepilot_Domain_Abilities::run( 'terms', 'reassign_and_delete_term', get_defined_vars(), function () use ( $taxonomy, $term_id, $replacement_term_id ) {
+			return $this->operation_reassign_and_delete_term( $taxonomy, $term_id, $replacement_term_id );
+		} );
+	}
+
+	private function operation_reassign_and_delete_term( $taxonomy, $term_id, $replacement_term_id ) {
 		$taxonomy            = $this->normalize_taxonomy( $taxonomy );
 		$term_id             = absint( $term_id );
 		$replacement_term_id = absint( $replacement_term_id );
@@ -366,6 +420,12 @@ class Telepilot_Taxonomies_Service {
 	}
 
 	public function get_term_usage_details( $taxonomy, $term_id ) {
+		return Telepilot_Domain_Abilities::run( 'terms', 'get_term_usage_details', get_defined_vars(), function () use ( $taxonomy, $term_id ) {
+			return $this->operation_get_term_usage_details( $taxonomy, $term_id );
+		} );
+	}
+
+	private function operation_get_term_usage_details( $taxonomy, $term_id ) {
 		$taxonomy = $this->normalize_taxonomy( $taxonomy );
 		$term     = get_term( absint( $term_id ), $taxonomy );
 

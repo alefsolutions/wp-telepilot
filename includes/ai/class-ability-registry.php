@@ -278,7 +278,24 @@ class Telepilot_Ability_Registry {
 			),
 		);
 
-		return apply_filters( 'telepilot_ability_registry', $abilities );
+		$abilities['telepilot/lookup-terms'] = array(
+			'tool_name' => 'telepilot_lookup_terms', 'description' => 'Search categories or tags before assigning existing term IDs to a draft.', 'risk_level' => 'read',
+			'input_schema' => array( 'type' => 'object', 'properties' => array( 'taxonomy' => array( 'type' => 'string', 'enum' => array( 'category', 'post_tag' ) ), 'query' => array( 'type' => 'string' ), 'page' => array( 'type' => 'integer', 'minimum' => 1 ) ) ),
+		);
+		foreach ( $abilities as $name => &$definition ) {
+			$definition['input_schema']['additionalProperties'] = false;
+			foreach ( $definition['input_schema']['properties'] as $key => $schema ) {
+				if ( 'string' === $schema['type'] ) { $schema['maxLength'] = 'excerpt' === $key ? 10000 : 1000; }
+				if ( 'array' === $schema['type'] ) { $schema['maxItems'] = 100; }
+				$definition['input_schema']['properties'][ $key ] = $schema;
+			}
+			if ( in_array( $name, array( 'telepilot/search-posts', 'telepilot/list-pages' ), true ) ) { $definition['input_schema']['properties']['status']['enum'] = array( 'latest', 'draft', 'trash', 'publish', 'pending', 'future', 'private' ); }
+			$definition['permission_callback'] = static function ( $input = array() ) use ( $name ) { return Telepilot_Ability_Executor::permission( $name, $input ); };
+			$definition['execute_callback'] = static function ( $input = array() ) use ( $name ) { return ( new Telepilot_Ability_Executor() )->execute( $name, $input ); };
+			$definition['output_schema'] = array( 'type' => 'object', 'properties' => array( 'status' => array( 'type' => 'string' ), 'operation_id' => array( 'type' => 'string' ), 'data' => array( 'type' => 'object' ), 'references' => array( 'type' => 'array' ), 'changes' => array( 'type' => 'object' ) ) );
+		}
+		unset( $definition );
+		return $abilities;
 	}
 
 	public function get_ability( $ability_name ) {

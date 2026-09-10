@@ -9,27 +9,65 @@ class Telepilot_Comments_Service {
 
 	private $confirmation_service;
 
+	public function filtered_page( $query = '', $status = 'all', $page = 1, $limit = self::PER_PAGE ) {
+		return Telepilot_Domain_Abilities::run( 'comments', 'filtered_page', get_defined_vars(), function () use ( $query, $status, $page, $limit ) {
+			$statuses = array( 'all' => 'all', 'pending' => 'hold', 'approved' => 'approve', 'spam' => 'spam', 'trash' => 'trash' );
+			if ( ! isset( $statuses[ $status ] ) ) { return new WP_Error( 'telepilot_invalid_status', 'Unsupported comment status.' ); }
+			return $this->query_comments_page( $statuses[ $status ], $query, $page, $limit );
+		} );
+	}
+
 	public function __construct( Telepilot_Confirmation_Service $confirmation_service ) {
 		$this->confirmation_service = $confirmation_service;
 	}
 
 	public function pending_page( $page = 1, $limit = self::PER_PAGE ) {
+		return Telepilot_Domain_Abilities::run( 'comments', 'pending_page', get_defined_vars(), function () use ( $page, $limit ) {
+			return $this->operation_pending_page( $page, $limit );
+		} );
+	}
+
+	private function operation_pending_page( $page = 1, $limit = self::PER_PAGE ) {
 		return $this->query_comments_page( 'hold', '', $page, $limit );
 	}
 
 	public function approved_page( $page = 1, $limit = self::PER_PAGE ) {
+		return Telepilot_Domain_Abilities::run( 'comments', 'approved_page', get_defined_vars(), function () use ( $page, $limit ) {
+			return $this->operation_approved_page( $page, $limit );
+		} );
+	}
+
+	private function operation_approved_page( $page = 1, $limit = self::PER_PAGE ) {
 		return $this->query_comments_page( 'approve', '', $page, $limit );
 	}
 
 	public function spam_page( $page = 1, $limit = self::PER_PAGE ) {
+		return Telepilot_Domain_Abilities::run( 'comments', 'spam_page', get_defined_vars(), function () use ( $page, $limit ) {
+			return $this->operation_spam_page( $page, $limit );
+		} );
+	}
+
+	private function operation_spam_page( $page = 1, $limit = self::PER_PAGE ) {
 		return $this->query_comments_page( 'spam', '', $page, $limit );
 	}
 
 	public function trash_page( $page = 1, $limit = self::PER_PAGE ) {
+		return Telepilot_Domain_Abilities::run( 'comments', 'trash_page', get_defined_vars(), function () use ( $page, $limit ) {
+			return $this->operation_trash_page( $page, $limit );
+		} );
+	}
+
+	private function operation_trash_page( $page = 1, $limit = self::PER_PAGE ) {
 		return $this->query_comments_page( 'trash', '', $page, $limit );
 	}
 
 	public function search_page( $term, $page = 1, $limit = self::PER_PAGE ) {
+		return Telepilot_Domain_Abilities::run( 'comments', 'search_page', get_defined_vars(), function () use ( $term, $page, $limit ) {
+			return $this->operation_search_page( $term, $page, $limit );
+		} );
+	}
+
+	private function operation_search_page( $term, $page = 1, $limit = self::PER_PAGE ) {
 		return $this->query_comments_page( 'all', sanitize_text_field( $term ), $page, $limit );
 	}
 
@@ -114,6 +152,12 @@ class Telepilot_Comments_Service {
 	}
 
 	public function get_comment_details( $comment_id ) {
+		return Telepilot_Domain_Abilities::run( 'comments', 'get_comment_details', get_defined_vars(), function () use ( $comment_id ) {
+			return $this->operation_get_comment_details( $comment_id );
+		} );
+	}
+
+	private function operation_get_comment_details( $comment_id ) {
 		$comment = get_comment( $comment_id );
 
 		if ( ! $comment ) {
@@ -124,6 +168,12 @@ class Telepilot_Comments_Service {
 	}
 
 	public function moderate_comment( $comment_id, $action ) {
+		return Telepilot_Domain_Abilities::run( 'comments', 'moderate_comment', get_defined_vars(), function () use ( $comment_id, $action ) {
+			return $this->operation_moderate_comment( $comment_id, $action );
+		} );
+	}
+
+	private function operation_moderate_comment( $comment_id, $action ) {
 		$comment = get_comment( $comment_id );
 
 		if ( ! $comment ) {
@@ -187,6 +237,12 @@ class Telepilot_Comments_Service {
 	}
 
 	public function reply_to_comment( $comment_id, $content, $wp_user ) {
+		return Telepilot_Domain_Abilities::run( 'comments', 'reply_to_comment', get_defined_vars(), function () use ( $comment_id, $content, $wp_user ) {
+			return $this->operation_reply_to_comment( $comment_id, $content, $wp_user );
+		} );
+	}
+
+	private function operation_reply_to_comment( $comment_id, $content, $wp_user ) {
 		$comment = get_comment( $comment_id );
 
 		if ( ! $comment ) {

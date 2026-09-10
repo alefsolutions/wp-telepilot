@@ -15,19 +15,23 @@ class Telepilot_Media_Service {
 	}
 
 	public function recent( $limit = 5 ) {
-		return get_posts(
-			array(
-				'post_type'        => 'attachment',
-				'post_status'      => 'inherit',
-				'posts_per_page'   => max( 1, absint( $limit ) ),
-				'orderby'          => 'date',
-				'order'            => 'DESC',
-				'suppress_filters' => false,
-			)
-		);
+		return Telepilot_Domain_Abilities::run( 'media', 'recent', get_defined_vars(), function () use ( $limit ) {
+			return $this->operation_recent( $limit );
+		} );
+	}
+
+	private function operation_recent( $limit = 5 ) {
+		$result = $this->recent_page( 1, $limit );
+		return is_wp_error( $result ) ? $result : $result['items'];
 	}
 
 	public function recent_page( $page = 1, $limit = self::PER_PAGE ) {
+		return Telepilot_Domain_Abilities::run( 'media', 'recent_page', get_defined_vars(), function () use ( $page, $limit ) {
+			return $this->operation_recent_page( $page, $limit );
+		} );
+	}
+
+	private function operation_recent_page( $page = 1, $limit = self::PER_PAGE ) {
 		return $this->query_media_page(
 			array(
 				'post_type'   => 'attachment',
@@ -39,20 +43,23 @@ class Telepilot_Media_Service {
 	}
 
 	public function search( $term, $limit = 5 ) {
-		return get_posts(
-			array(
-				'post_type'        => 'attachment',
-				'post_status'      => 'inherit',
-				's'                => sanitize_text_field( $term ),
-				'posts_per_page'   => max( 1, absint( $limit ) ),
-				'orderby'          => 'date',
-				'order'            => 'DESC',
-				'suppress_filters' => false,
-			)
-		);
+		return Telepilot_Domain_Abilities::run( 'media', 'search', get_defined_vars(), function () use ( $term, $limit ) {
+			return $this->operation_search( $term, $limit );
+		} );
+	}
+
+	private function operation_search( $term, $limit = 5 ) {
+		$result = $this->search_page( $term, 1, $limit );
+		return is_wp_error( $result ) ? $result : $result['items'];
 	}
 
 	public function search_page( $term, $page = 1, $limit = self::PER_PAGE ) {
+		return Telepilot_Domain_Abilities::run( 'media', 'search_page', get_defined_vars(), function () use ( $term, $page, $limit ) {
+			return $this->operation_search_page( $term, $page, $limit );
+		} );
+	}
+
+	private function operation_search_page( $term, $page = 1, $limit = self::PER_PAGE ) {
 		return $this->query_media_page(
 			array(
 				'post_type'   => 'attachment',
@@ -135,6 +142,12 @@ class Telepilot_Media_Service {
 	}
 
 	public function get_item_details( $attachment_id ) {
+		return Telepilot_Domain_Abilities::run( 'media', 'get_item_details', get_defined_vars(), function () use ( $attachment_id ) {
+			return $this->operation_get_item_details( $attachment_id );
+		} );
+	}
+
+	private function operation_get_item_details( $attachment_id ) {
 		$item = get_post( $attachment_id );
 		if ( ! $item || 'attachment' !== $item->post_type ) {
 			return new WP_Error( 'telepilot_media_not_found', __( 'Media item not found.', 'wp-telepilot' ) );
@@ -505,9 +518,10 @@ class Telepilot_Media_Service {
 	}
 
 	private function query_media_page( $args, $page, $limit ) {
+		if ( ! current_user_can( 'edit_others_posts' ) ) { $args['author'] = get_current_user_id(); }
 		$page      = max( 1, absint( $page ) );
 		$limit     = max( 1, absint( $limit ) );
-		$cache_key = 'telepilot_media_' . $this->get_cache_version() . '_' . md5( wp_json_encode( array( $args, $page, $limit ) ) );
+		$cache_key = 'telepilot_media_' . $this->get_cache_version() . '_' . md5( wp_json_encode( array( get_current_user_id(), $args, $page, $limit ) ) );
 		$cached    = get_transient( $cache_key );
 
 		if ( is_array( $cached ) ) {

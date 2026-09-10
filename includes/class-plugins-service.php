@@ -14,14 +14,32 @@ class Telepilot_Plugins_Service {
 	}
 
 	public function list_page( $page = 1, $limit = self::PER_PAGE ) {
+		return Telepilot_Domain_Abilities::run( 'plugins', 'list_page', get_defined_vars(), function () use ( $page, $limit ) {
+			return $this->operation_list_page( $page, $limit );
+		} );
+	}
+
+	private function operation_list_page( $page = 1, $limit = self::PER_PAGE ) {
 		return $this->query_plugins_page( '', 'all', $page, $limit );
 	}
 
 	public function search_page( $term, $page = 1, $limit = self::PER_PAGE ) {
+		return Telepilot_Domain_Abilities::run( 'plugins', 'search_page', get_defined_vars(), function () use ( $term, $page, $limit ) {
+			return $this->operation_search_page( $term, $page, $limit );
+		} );
+	}
+
+	private function operation_search_page( $term, $page = 1, $limit = self::PER_PAGE ) {
 		return $this->query_plugins_page( sanitize_text_field( $term ), 'search', $page, $limit );
 	}
 
 	public function updates_page( $page = 1, $limit = self::PER_PAGE ) {
+		return Telepilot_Domain_Abilities::run( 'plugins', 'updates_page', get_defined_vars(), function () use ( $page, $limit ) {
+			return $this->operation_updates_page( $page, $limit );
+		} );
+	}
+
+	private function operation_updates_page( $page = 1, $limit = self::PER_PAGE ) {
 		return $this->query_plugins_page( '', 'updates', $page, $limit );
 	}
 
@@ -125,6 +143,12 @@ class Telepilot_Plugins_Service {
 	}
 
 	public function refresh_updates() {
+		return Telepilot_Domain_Abilities::run( 'plugins', 'refresh_updates', get_defined_vars(), function () {
+			return $this->operation_refresh_updates(  );
+		} );
+	}
+
+	private function operation_refresh_updates() {
 		if ( ! function_exists( 'wp_update_plugins' ) ) {
 			require_once ABSPATH . 'wp-includes/update.php';
 		}
@@ -219,6 +243,12 @@ class Telepilot_Plugins_Service {
 	}
 
 	public function get_plugin_details( $identifier ) {
+		return Telepilot_Domain_Abilities::run( 'plugins', 'get_plugin_details', get_defined_vars(), function () use ( $identifier ) {
+			return $this->operation_get_plugin_details( $identifier );
+		} );
+	}
+
+	private function operation_get_plugin_details( $identifier ) {
 		$plugin_file = $this->resolve_plugin_file( $identifier );
 
 		if ( ! $plugin_file ) {
@@ -229,6 +259,12 @@ class Telepilot_Plugins_Service {
 	}
 
 	public function activate( $identifier ) {
+		return Telepilot_Domain_Abilities::run( 'plugins', 'activate', get_defined_vars(), function () use ( $identifier ) {
+			return $this->operation_activate( $identifier );
+		} );
+	}
+
+	private function operation_activate( $identifier ) {
 		$plugin_file = $this->resolve_plugin_file( $identifier );
 		if ( ! $plugin_file ) {
 			return new WP_Error( 'telepilot_plugin_not_found', __( 'Plugin not found.', 'wp-telepilot' ) );
@@ -256,6 +292,12 @@ class Telepilot_Plugins_Service {
 	}
 
 	public function deactivate( $identifier ) {
+		return Telepilot_Domain_Abilities::run( 'plugins', 'deactivate', get_defined_vars(), function () use ( $identifier ) {
+			return $this->operation_deactivate( $identifier );
+		} );
+	}
+
+	private function operation_deactivate( $identifier ) {
 		$plugin_file = $this->resolve_plugin_file( $identifier );
 		if ( ! $plugin_file ) {
 			return new WP_Error( 'telepilot_plugin_not_found', __( 'Plugin not found.', 'wp-telepilot' ) );
@@ -285,6 +327,12 @@ class Telepilot_Plugins_Service {
 	}
 
 	public function delete( $identifier ) {
+		return Telepilot_Domain_Abilities::run( 'plugins', 'delete', get_defined_vars(), function () use ( $identifier ) {
+			return $this->operation_delete( $identifier );
+		} );
+	}
+
+	private function operation_delete( $identifier ) {
 		$plugin_file = $this->resolve_plugin_file( $identifier );
 		if ( ! $plugin_file ) {
 			return new WP_Error( 'telepilot_plugin_not_found', __( 'Plugin not found.', 'wp-telepilot' ) );
@@ -324,6 +372,12 @@ class Telepilot_Plugins_Service {
 	}
 
 	public function update( $identifier ) {
+		return Telepilot_Domain_Abilities::run( 'plugins', 'update', get_defined_vars(), function () use ( $identifier ) {
+			return $this->operation_update( $identifier );
+		} );
+	}
+
+	private function operation_update( $identifier ) {
 		$plugin_file = $this->resolve_plugin_file( $identifier );
 		if ( ! $plugin_file ) {
 			return new WP_Error( 'telepilot_plugin_not_found', __( 'Plugin not found.', 'wp-telepilot' ) );

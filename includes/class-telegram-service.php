@@ -571,11 +571,16 @@ class Telepilot_Telegram_Service {
 		$last_offset = $offset;
 
 		foreach ( $response['result'] as $update ) {
+			$accepted = $this->handle_update( $update, 'polling' );
+			if ( is_wp_error( $accepted ) || ! empty( $accepted['retryable'] ) ) {
+				update_option( 'telepilot_telegram_poll_offset', $last_offset, false );
+				$this->release_poll_lock();
+				return new WP_Error( 'telepilot_poll_queue_failed', 'Update persistence failed; polling will retry without skipping it.' );
+			}
 			if ( isset( $update['update_id'] ) ) {
 				$last_offset = max( $last_offset, (int) $update['update_id'] + 1 );
 			}
 
-			$this->handle_update( $update, 'polling' );
 		}
 
 		update_option( 'telepilot_telegram_poll_offset', $last_offset, false );

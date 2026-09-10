@@ -54,7 +54,7 @@ class Telepilot_Actor_Access {
 		return true;
 	}
 
-	public static function as_actor( $identity, callable $callback ) {
+	public static function as_actor( $identity, callable $callback, $source = 'telegram', $confirmed = false ) {
 		$check = self::check( $identity );
 		if ( is_wp_error( $check ) ) {
 			return Telepilot_Telegram_Response_Builder::error( $check->get_error_message(), array( 'code' => $check->get_error_code() ) );
@@ -62,7 +62,7 @@ class Telepilot_Actor_Access {
 		$previous = get_current_user_id();
 		wp_set_current_user( $identity['wp_user']->ID );
 		try {
-			return $callback();
+			return Telepilot_Operation_Context::run( $source, $identity, $callback, $confirmed );
 		} finally {
 			wp_set_current_user( $previous );
 		}

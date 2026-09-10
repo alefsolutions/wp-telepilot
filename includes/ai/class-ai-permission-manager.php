@@ -50,6 +50,8 @@ class Telepilot_AI_Permission_Manager {
 			'telepilot/search-posts'      => 'ai_allow_content_read',
 			'telepilot/get-post'          => 'ai_allow_content_read',
 			'telepilot/list-pages'        => 'ai_allow_content_read',
+			'telepilot/get-page'          => 'ai_allow_content_read',
+			'telepilot/lookup-terms'      => 'ai_allow_content_read',
 			'telepilot/list-comments'     => 'ai_allow_comments_read',
 			'telepilot/list-users'        => 'ai_allow_users_read',
 			'telepilot/list-plugins'      => 'ai_allow_plugins_read',

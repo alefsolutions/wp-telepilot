@@ -15,6 +15,12 @@ class Telepilot_Users_Service {
 	}
 
 	public function recent( $limit = 5 ) {
+		return Telepilot_Domain_Abilities::run( 'users', 'recent', get_defined_vars(), function () use ( $limit ) {
+			return $this->operation_recent( $limit );
+		} );
+	}
+
+	private function operation_recent( $limit = 5 ) {
 		return get_users(
 			array(
 				'number'      => max( 1, absint( $limit ) ),
@@ -26,6 +32,12 @@ class Telepilot_Users_Service {
 	}
 
 	public function recent_page( $page = 1, $limit = self::PER_PAGE ) {
+		return Telepilot_Domain_Abilities::run( 'users', 'recent_page', get_defined_vars(), function () use ( $page, $limit ) {
+			return $this->operation_recent_page( $page, $limit );
+		} );
+	}
+
+	private function operation_recent_page( $page = 1, $limit = self::PER_PAGE ) {
 		return $this->query_users_page(
 			array(
 				'orderby' => 'registered',
@@ -37,6 +49,12 @@ class Telepilot_Users_Service {
 	}
 
 	public function search_page( $term, $page = 1, $limit = self::PER_PAGE ) {
+		return Telepilot_Domain_Abilities::run( 'users', 'search_page', get_defined_vars(), function () use ( $term, $page, $limit ) {
+			return $this->operation_search_page( $term, $page, $limit );
+		} );
+	}
+
+	private function operation_search_page( $term, $page = 1, $limit = self::PER_PAGE ) {
 		$term = sanitize_text_field( $term );
 
 		return $this->query_users_page(
@@ -144,6 +162,12 @@ class Telepilot_Users_Service {
 	}
 
 	public function get_user_details( $user_id ) {
+		return Telepilot_Domain_Abilities::run( 'users', 'get_user_details', get_defined_vars(), function () use ( $user_id ) {
+			return $this->operation_get_user_details( $user_id );
+		} );
+	}
+
+	private function operation_get_user_details( $user_id ) {
 		$user = get_user_by( 'id', $user_id );
 
 		if ( ! $user ) {
@@ -201,6 +225,12 @@ class Telepilot_Users_Service {
 	}
 
 	public function create_user( $username, $email, $role ) {
+		return Telepilot_Domain_Abilities::run( 'users', 'create_user', get_defined_vars(), function () use ( $username, $email, $role ) {
+			return $this->operation_create_user( $username, $email, $role );
+		} );
+	}
+
+	private function operation_create_user( $username, $email, $role ) {
 		$username = sanitize_user( $username, true );
 		$email    = sanitize_email( $email );
 		$role     = sanitize_key( $role );
@@ -244,6 +274,12 @@ class Telepilot_Users_Service {
 	}
 
 	public function disable_user( $user_id ) {
+		return Telepilot_Domain_Abilities::run( 'users', 'disable_user', get_defined_vars(), function () use ( $user_id ) {
+			return $this->operation_disable_user( $user_id );
+		} );
+	}
+
+	private function operation_disable_user( $user_id ) {
 		$user = get_user_by( 'id', $user_id );
 		if ( ! $user ) {
 			return new WP_Error( 'telepilot_user_not_found', __( 'User not found.', 'wp-telepilot' ) );
@@ -261,6 +297,12 @@ class Telepilot_Users_Service {
 	}
 
 	public function enable_user( $user_id ) {
+		return Telepilot_Domain_Abilities::run( 'users', 'enable_user', get_defined_vars(), function () use ( $user_id ) {
+			return $this->operation_enable_user( $user_id );
+		} );
+	}
+
+	private function operation_enable_user( $user_id ) {
 		$user = get_user_by( 'id', $user_id );
 		if ( ! $user ) {
 			return new WP_Error( 'telepilot_user_not_found', __( 'User not found.', 'wp-telepilot' ) );
@@ -278,6 +320,12 @@ class Telepilot_Users_Service {
 	}
 
 	public function assign_role( $user_id, $role ) {
+		return Telepilot_Domain_Abilities::run( 'users', 'assign_role', get_defined_vars(), function () use ( $user_id, $role ) {
+			return $this->operation_assign_role( $user_id, $role );
+		} );
+	}
+
+	private function operation_assign_role( $user_id, $role ) {
 		$user = get_user_by( 'id', $user_id );
 		if ( ! $user ) {
 			return new WP_Error( 'telepilot_user_not_found', __( 'User not found.', 'wp-telepilot' ) );
@@ -301,6 +349,12 @@ class Telepilot_Users_Service {
 	}
 
 	public function generate_reset_link( $user_id ) {
+		return Telepilot_Domain_Abilities::run( 'users', 'generate_reset_link', get_defined_vars(), function () use ( $user_id ) {
+			return $this->operation_generate_reset_link( $user_id );
+		} );
+	}
+
+	private function operation_generate_reset_link( $user_id ) {
 		$user = get_user_by( 'id', $user_id );
 		if ( ! $user ) {
 			return new WP_Error( 'telepilot_user_not_found', __( 'User not found.', 'wp-telepilot' ) );
@@ -324,6 +378,12 @@ class Telepilot_Users_Service {
 	}
 
 	public function send_reset_email( $user_id ) {
+		return Telepilot_Domain_Abilities::run( 'users', 'send_reset_email', get_defined_vars(), function () use ( $user_id ) {
+			return $this->operation_send_reset_email( $user_id );
+		} );
+	}
+
+	private function operation_send_reset_email( $user_id ) {
 		$user = get_user_by( 'id', $user_id );
 		if ( ! $user ) {
 			return new WP_Error( 'telepilot_user_not_found', __( 'User not found.', 'wp-telepilot' ) );
@@ -341,6 +401,12 @@ class Telepilot_Users_Service {
 	}
 
 	public function update_email( $user_id, $email ) {
+		return Telepilot_Domain_Abilities::run( 'users', 'update_email', get_defined_vars(), function () use ( $user_id, $email ) {
+			return $this->operation_update_email( $user_id, $email );
+		} );
+	}
+
+	private function operation_update_email( $user_id, $email ) {
 		$user = get_user_by( 'id', $user_id );
 		if ( ! $user ) {
 			return new WP_Error( 'telepilot_user_not_found', __( 'User not found.', 'wp-telepilot' ) );
@@ -385,6 +451,12 @@ class Telepilot_Users_Service {
 	}
 
 	public function update_display_name( $user_id, $display_name ) {
+		return Telepilot_Domain_Abilities::run( 'users', 'update_display_name', get_defined_vars(), function () use ( $user_id, $display_name ) {
+			return $this->operation_update_display_name( $user_id, $display_name );
+		} );
+	}
+
+	private function operation_update_display_name( $user_id, $display_name ) {
 		$user = get_user_by( 'id', $user_id );
 		if ( ! $user ) {
 			return new WP_Error( 'telepilot_user_not_found', __( 'User not found.', 'wp-telepilot' ) );
@@ -424,6 +496,12 @@ class Telepilot_Users_Service {
 	}
 
 	public function send_welcome_email( $user_id ) {
+		return Telepilot_Domain_Abilities::run( 'users', 'send_welcome_email', get_defined_vars(), function () use ( $user_id ) {
+			return $this->operation_send_welcome_email( $user_id );
+		} );
+	}
+
+	private function operation_send_welcome_email( $user_id ) {
 		$user = get_user_by( 'id', $user_id );
 		if ( ! $user ) {
 			return new WP_Error( 'telepilot_user_not_found', __( 'User not found.', 'wp-telepilot' ) );
@@ -442,6 +520,12 @@ class Telepilot_Users_Service {
 	}
 
 	public function delete_user( $user_id, $reassign_id = 0 ) {
+		return Telepilot_Domain_Abilities::run( 'users', 'delete_user', get_defined_vars(), function () use ( $user_id, $reassign_id ) {
+			return $this->operation_delete_user( $user_id, $reassign_id );
+		} );
+	}
+
+	private function operation_delete_user( $user_id, $reassign_id = 0 ) {
 		$user = get_user_by( 'id', $user_id );
 		if ( ! $user ) {
 			return new WP_Error( 'telepilot_user_not_found', __( 'User not found.', 'wp-telepilot' ) );

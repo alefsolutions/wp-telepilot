@@ -13,10 +13,22 @@ class Telepilot_Pages_Service {
 	}
 
 	public function latest( $limit = 5 ) {
+		return Telepilot_Domain_Abilities::run( 'pages', 'latest', get_defined_vars(), function () use ( $limit ) {
+			return $this->operation_latest( $limit );
+		} );
+	}
+
+	private function operation_latest( $limit = 5 ) {
 		return $this->latest_page( 1, $limit )['items'];
 	}
 
 	public function latest_page( $page = 1, $limit = self::PER_PAGE ) {
+		return Telepilot_Domain_Abilities::run( 'pages', 'latest_page', get_defined_vars(), function () use ( $page, $limit ) {
+			return $this->operation_latest_page( $page, $limit );
+		} );
+	}
+
+	private function operation_latest_page( $page = 1, $limit = self::PER_PAGE ) {
 		return $this->query_pages_page(
 			array(
 				'post_type'   => 'page',
@@ -28,6 +40,12 @@ class Telepilot_Pages_Service {
 	}
 
 	public function search_page( $term, $page = 1, $limit = self::PER_PAGE ) {
+		return Telepilot_Domain_Abilities::run( 'pages', 'search_page', get_defined_vars(), function () use ( $term, $page, $limit ) {
+			return $this->operation_search_page( $term, $page, $limit );
+		} );
+	}
+
+	private function operation_search_page( $term, $page = 1, $limit = self::PER_PAGE ) {
 		return $this->query_pages_page(
 			array(
 				'post_type'   => 'page',
@@ -40,6 +58,12 @@ class Telepilot_Pages_Service {
 	}
 
 	public function drafts_page( $page = 1, $limit = self::PER_PAGE ) {
+		return Telepilot_Domain_Abilities::run( 'pages', 'drafts_page', get_defined_vars(), function () use ( $page, $limit ) {
+			return $this->operation_drafts_page( $page, $limit );
+		} );
+	}
+
+	private function operation_drafts_page( $page = 1, $limit = self::PER_PAGE ) {
 		return $this->query_pages_page(
 			array(
 				'post_type'   => 'page',
@@ -51,6 +75,12 @@ class Telepilot_Pages_Service {
 	}
 
 	public function trashed_page( $page = 1, $limit = self::PER_PAGE ) {
+		return Telepilot_Domain_Abilities::run( 'pages', 'trashed_page', get_defined_vars(), function () use ( $page, $limit ) {
+			return $this->operation_trashed_page( $page, $limit );
+		} );
+	}
+
+	private function operation_trashed_page( $page = 1, $limit = self::PER_PAGE ) {
 		return $this->query_pages_page(
 			array(
 				'post_type'   => 'page',
@@ -125,6 +155,12 @@ class Telepilot_Pages_Service {
 	}
 
 	public function get_page_details( $page_id ) {
+		return Telepilot_Domain_Abilities::run( 'pages', 'get_page_details', get_defined_vars(), function () use ( $page_id ) {
+			return $this->operation_get_page_details( $page_id );
+		} );
+	}
+
+	private function operation_get_page_details( $page_id ) {
 		$page = get_post( $page_id );
 
 		if ( ! $page || 'page' !== $page->post_type ) {
@@ -194,6 +230,12 @@ class Telepilot_Pages_Service {
 	}
 
 	public function create_page( $title ) {
+		return Telepilot_Domain_Abilities::run( 'pages', 'create_page', get_defined_vars(), function () use ( $title ) {
+			return $this->operation_create_page( $title );
+		} );
+	}
+
+	private function operation_create_page( $title ) {
 		if ( ! current_user_can( 'edit_pages' ) ) {
 			return new WP_Error( 'telepilot_capability_denied', __( 'You cannot create pages.', 'wp-telepilot' ) );
 		}
@@ -220,6 +262,12 @@ class Telepilot_Pages_Service {
 	}
 
 	public function update_title( $page_id, $title ) {
+		return Telepilot_Domain_Abilities::run( 'pages', 'update_title', get_defined_vars(), function () use ( $page_id, $title ) {
+			return $this->operation_update_title( $page_id, $title );
+		} );
+	}
+
+	private function operation_update_title( $page_id, $title ) {
 		return $this->update_fields(
 			$page_id,
 			array(
@@ -230,6 +278,12 @@ class Telepilot_Pages_Service {
 	}
 
 	public function update_slug( $page_id, $slug ) {
+		return Telepilot_Domain_Abilities::run( 'pages', 'update_slug', get_defined_vars(), function () use ( $page_id, $slug ) {
+			return $this->operation_update_slug( $page_id, $slug );
+		} );
+	}
+
+	private function operation_update_slug( $page_id, $slug ) {
 		$slug = sanitize_title( $slug );
 		if ( '' === $slug ) {
 			return new WP_Error( 'telepilot_page_invalid_slug', __( 'That page slug is invalid.', 'wp-telepilot' ) );
@@ -245,6 +299,12 @@ class Telepilot_Pages_Service {
 	}
 
 	public function set_status( $page_id, $status ) {
+		return Telepilot_Domain_Abilities::run( 'pages', 'set_status', get_defined_vars(), function () use ( $page_id, $status ) {
+			return $this->operation_set_status( $page_id, $status );
+		} );
+	}
+
+	private function operation_set_status( $page_id, $status ) {
 		$allowed_statuses = array(
 			'draft'   => __( 'moved to draft', 'wp-telepilot' ),
 			'publish' => __( 'published', 'wp-telepilot' ),
@@ -260,14 +320,32 @@ class Telepilot_Pages_Service {
 	}
 
 	public function publish( $page_id ) {
+		return Telepilot_Domain_Abilities::run( 'pages', 'publish', get_defined_vars(), function () use ( $page_id ) {
+			return $this->operation_publish( $page_id );
+		} );
+	}
+
+	private function operation_publish( $page_id ) {
 		return $this->update_status( $page_id, 'publish', __( 'published', 'wp-telepilot' ) );
 	}
 
 	public function draft( $page_id ) {
+		return Telepilot_Domain_Abilities::run( 'pages', 'draft', get_defined_vars(), function () use ( $page_id ) {
+			return $this->operation_draft( $page_id );
+		} );
+	}
+
+	private function operation_draft( $page_id ) {
 		return $this->update_status( $page_id, 'draft', __( 'moved to draft', 'wp-telepilot' ) );
 	}
 
 	public function trash( $page_id ) {
+		return Telepilot_Domain_Abilities::run( 'pages', 'trash', get_defined_vars(), function () use ( $page_id ) {
+			return $this->operation_trash( $page_id );
+		} );
+	}
+
+	private function operation_trash( $page_id ) {
 		$page = get_post( $page_id );
 		if ( ! $page || 'page' !== $page->post_type ) {
 			return new WP_Error( 'telepilot_page_not_found', __( 'Page not found.', 'wp-telepilot' ) );
@@ -290,6 +368,12 @@ class Telepilot_Pages_Service {
 	}
 
 	public function restore( $page_id ) {
+		return Telepilot_Domain_Abilities::run( 'pages', 'restore', get_defined_vars(), function () use ( $page_id ) {
+			return $this->operation_restore( $page_id );
+		} );
+	}
+
+	private function operation_restore( $page_id ) {
 		$page = get_post( $page_id );
 		if ( ! $page || 'page' !== $page->post_type ) {
 			return new WP_Error( 'telepilot_page_not_found', __( 'Page not found.', 'wp-telepilot' ) );
@@ -312,6 +396,12 @@ class Telepilot_Pages_Service {
 	}
 
 	public function delete( $page_id ) {
+		return Telepilot_Domain_Abilities::run( 'pages', 'delete', get_defined_vars(), function () use ( $page_id ) {
+			return $this->operation_delete( $page_id );
+		} );
+	}
+
+	private function operation_delete( $page_id ) {
 		$page = get_post( $page_id );
 		if ( ! $page || 'page' !== $page->post_type ) {
 			return new WP_Error( 'telepilot_page_not_found', __( 'Page not found.', 'wp-telepilot' ) );
@@ -702,6 +792,14 @@ class Telepilot_Pages_Service {
 
 	private function bump_cache_version() {
 		update_option( 'telepilot_pages_cache_version', $this->get_cache_version() + 1, false );
+	}
+
+	public function filtered_page( $query = '', $status = 'latest', $page = 1, $limit = self::PER_PAGE ) {
+		return Telepilot_Domain_Abilities::run( 'pages', 'filtered_page', get_defined_vars(), function () use ( $query, $status, $page, $limit ) {
+			$statuses = 'latest' === $status ? array( 'publish', 'draft', 'private' ) : array( $status );
+			if ( array_diff( $statuses, array( 'publish', 'draft', 'pending', 'future', 'trash', 'private' ) ) ) { return new WP_Error( 'telepilot_invalid_status', 'Unsupported page status.' ); }
+			return $this->query_pages_page( array( 'post_type' => 'page', 'post_status' => $statuses, 's' => $query ), $page, $limit );
+		} );
 	}
 
 	private function get_cache_version() {

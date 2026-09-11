@@ -124,6 +124,8 @@ class Telepilot_Settings_Page {
 		$next_job_run             = wp_next_scheduled( 'telepilot_process_jobs' );
 		$poll_lock_active         = (bool) get_transient( Telepilot_Telegram_Service::POLL_LOCK_TRANSIENT );
 		$table_status             = $this->get_database_table_status();
+		$queue_schema             = Telepilot_Queue_Schema::status();
+		$enqueue_failure          = get_option( 'telepilot_queue_enqueue_failure', array() );
 		$logo_url                 = $this->get_logo_url();
 		$product_name             = __( 'WP Telepilot', 'wp-telepilot' );
 		$product_version          = TELEPILOT_VERSION;
@@ -522,8 +524,12 @@ class Telepilot_Settings_Page {
 								<strong><?php echo esc_html( $schema_version ); ?></strong>
 							</li>
 							<li class="<?php echo (int) $table_status['ready_count'] === (int) $table_status['total_count'] ? 'is-good' : 'is-warn'; ?>">
-								<span><?php esc_html_e( 'Database tables ready', 'wp-telepilot' ); ?></span>
+								<span><?php esc_html_e( 'Database tables exist', 'wp-telepilot' ); ?></span>
 								<strong><?php echo esc_html( sprintf( __( '%1$d/%2$d', 'wp-telepilot' ), (int) $table_status['ready_count'], (int) $table_status['total_count'] ) ); ?></strong>
+							</li>
+							<li class="<?php echo $queue_schema['ready'] ? 'is-good' : 'is-warn'; ?>">
+								<span><?php esc_html_e( 'AI continuation queue schema', 'wp-telepilot' ); ?></span>
+								<strong><?php echo $queue_schema['ready'] ? esc_html__( 'Verified', 'wp-telepilot' ) : esc_html__( 'Repair required', 'wp-telepilot' ); ?></strong>
 							</li>
 							<li class="is-good">
 								<span><?php esc_html_e( 'Direct-chat-only sensitive actions', 'wp-telepilot' ); ?></span>
@@ -707,9 +713,23 @@ class Telepilot_Settings_Page {
 								?>
 							</p>
 						<?php endif; ?>
+						<p class="telepilot-inline-note" role="status"><?php echo esc_html( $queue_schema['message'] ); ?></p>
+						<?php if ( ! $queue_schema['ready'] ) : ?>
+							<p class="telepilot-inline-note"><?php esc_html_e( 'Automatic repair retries are limited to once every five minutes. Manual retry does not resend failed AI requests.', 'wp-telepilot' ); ?></p>
+							<?php if ( $queue_schema['next_retry'] ) : ?>
+								<p class="telepilot-inline-note"><?php echo esc_html( sprintf( __( 'Automatic repair is eligible on the next request after %s.', 'wp-telepilot' ), $this->format_timestamp( $queue_schema['next_retry'] ) ) ); ?></p>
+							<?php endif; ?>
+							<?php if ( $queue_schema['correlation_id'] ) : ?>
+								<p class="telepilot-inline-note"><?php echo esc_html( sprintf( __( 'Repair failure: %1$s; database error: %2$s; reference: %3$s.', 'wp-telepilot' ), $queue_schema['error_category'], $queue_schema['database_errno'] ?? __( 'unavailable', 'wp-telepilot' ), $queue_schema['correlation_id'] ) ); ?></p>
+							<?php endif; ?>
+						<?php endif; ?>
+						<?php if ( ! empty( $enqueue_failure['correlation_id'] ) ) : ?>
+							<p class="telepilot-inline-note"><?php echo esc_html( sprintf( __( 'Last enqueue failure: %1$s; database error: %2$s; reference: %3$s.', 'wp-telepilot' ), $enqueue_failure['error_category'], $enqueue_failure['database_errno'] ?? __( 'unavailable', 'wp-telepilot' ), $enqueue_failure['correlation_id'] ) ); ?></p>
+						<?php endif; ?>
 						<div class="telepilot-actions">
 							<form method="post" class="telepilot-button-row">
 								<?php wp_nonce_field( 'telepilot_tools_actions', 'telepilot_tools_nonce' ); ?>
+								<button class="button button-secondary" type="submit" name="telepilot_retry_database_repair" value="1"><?php esc_html_e( 'Retry Database Repair', 'wp-telepilot' ); ?></button>
 								<button class="button button-secondary" type="submit" name="telepilot_poll_now" value="1"><?php esc_html_e( 'Poll Now', 'wp-telepilot' ); ?></button>
 								<button class="button button-secondary" type="submit" name="telepilot_process_jobs_now" value="1"><?php esc_html_e( 'Process Queue', 'wp-telepilot' ); ?></button>
 								<button class="button button-secondary" type="submit" name="telepilot_run_transport_self_test" value="1"><?php esc_html_e( 'Run Transport Self-Test', 'wp-telepilot' ); ?></button>
@@ -1344,6 +1364,12 @@ class Telepilot_Settings_Page {
 		}
 
 		if ( ! current_user_can( 'manage_options' ) ) {
+			return;
+		}
+
+		if ( ! empty( $_POST['telepilot_retry_database_repair'] ) ) {
+			$result = Telepilot_Queue_Schema::ensure( true );
+			$this->set_tools_notice( is_wp_error( $result ) ? 'error' : 'success', is_wp_error( $result ) ? $result->get_error_message() : __( 'Queue schema verified. AI continuations are available. Failed requests were not resubmitted.', 'wp-telepilot' ) );
 			return;
 		}
 

@@ -86,7 +86,12 @@ class Telepilot_AI_Orchestrator {
 			'_telepilot_ai_state' => Telepilot_AI_Data_Policy::clean( $state ),
 		);
 		$job = Telepilot_Jobs_Repository::enqueue( null, 'ai_continuation', $payload, '/chat', array( 'chat_id' => $identity['chat_id'], 'message_id' => Telepilot_Operation_Context::current()->reply_message_id ), array( 'priority' => 80, 'delay' => $delay, 'stale_after' => gmdate( 'Y-m-d H:i:s', time() + 300 ) ) );
-		if ( is_wp_error( $job ) ) { return $this->reply( 'Could not save the AI continuation. No WordPress action was executed. Please try again.', true ); }
+		if ( is_wp_error( $job ) ) {
+			$session = ( new Telepilot_AI_Session_Manager() )->get_session( $identity );
+			if ( $session && $session['session_id'] === $state['session_id'] && $session['request_id'] === $state['request_id'] ) { $this->finish( $identity, $session ); }
+			$reference = $job->get_error_data()['correlation_id'] ?? '';
+			return $this->reply( 'Could not save the AI continuation. This request has stopped and will not be retried automatically. No WordPress change was made. Ask an administrator to check WP Telepilot database diagnostics before sending a new request.' . ( $reference ? ' Reference: ' . $reference : '' ), true );
+		}
 		if ( ! wp_next_scheduled( 'telepilot_process_jobs' ) ) { wp_schedule_single_event( time() + max( 1, $delay ), 'telepilot_process_jobs' ); }
 		return $this->reply( $delay ? 'Provider temporarily unavailable. A bounded retry is queued. Use /cancel to stop.' : 'Processing: lookup complete; preparing the reply. Use /cancel to stop.' );
 	}

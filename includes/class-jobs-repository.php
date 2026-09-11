@@ -14,7 +14,7 @@ class Telepilot_Jobs_Repository {
 		$table = self::table_name();
 		dbDelta( "CREATE TABLE $table (
 			id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
-			update_id BIGINT UNSIGNED NULL,
+			update_id BIGINT UNSIGNED NULL DEFAULT NULL,
 			transport VARCHAR(20) NOT NULL DEFAULT 'webhook',
 			status VARCHAR(20) NOT NULL DEFAULT 'pending',
 			payload LONGTEXT NOT NULL,
@@ -68,6 +68,7 @@ class Telepilot_Jobs_Repository {
 			return 'duplicate';
 		}
 		Telepilot_DB_Transaction::begin();
+		$previous_errors = $wpdb->suppress_errors();
 		$inserted = $wpdb->insert( self::table_name(), array(
 			'update_id' => $update_id ? absint( $update_id ) : null,
 			'transport' => sanitize_key( $transport ),
@@ -83,18 +84,40 @@ class Telepilot_Jobs_Repository {
 			'available_at' => gmdate( 'Y-m-d H:i:s', time() + max( 0, min( 60, (int) ( $options['delay'] ?? 0 ) ) ) ), 'created_at' => $now, 'updated_at' => $now,
 		) );
 		if ( false === $inserted ) {
+			$details = self::capture_database_failure( 'queue_insert' );
+			$wpdb->suppress_errors( $previous_errors );
 			$duplicate = $update_id && $wpdb->get_var( $wpdb->prepare( 'SELECT id FROM ' . self::table_name() . ' WHERE update_id=%d', $update_id ) );
 			Telepilot_DB_Transaction::rollback();
-			return $duplicate ? 'duplicate' : new WP_Error( 'telepilot_job_enqueue_failed', __( 'Unable to persist request. No action was executed.', 'wp-telepilot' ) );
+			if ( $duplicate ) { return 'duplicate'; }
+			if ( ! $update_id && 'null_constraint' === $details['error_category'] ) { delete_option( Telepilot_Queue_Schema::REVISION_OPTION ); }
+			self::record_database_failure( $details );
+			return new WP_Error( 'telepilot_job_enqueue_failed', __( 'Unable to persist request. No action was executed.', 'wp-telepilot' ), $details );
 		}
 		$id = (int) $wpdb->insert_id;
 		$result = $options['result'] ?? null;
 		if ( false === $wpdb->insert( self::operations_table(), array( 'job_id' => $id, 'state' => null === $result ? 'accepted' : 'completed', 'result' => null === $result ? null : wp_json_encode( $result ), 'created_at' => $now, 'updated_at' => $now ) ) ) {
+			$details = self::capture_database_failure( 'operation_insert' );
+			$wpdb->suppress_errors( $previous_errors );
 			Telepilot_DB_Transaction::rollback();
-			return new WP_Error( 'telepilot_operation_enqueue_failed', __( 'Unable to persist operation.', 'wp-telepilot' ) );
+			self::record_database_failure( $details );
+			return new WP_Error( 'telepilot_operation_enqueue_failed', __( 'Unable to persist operation.', 'wp-telepilot' ), $details );
 		}
+		$wpdb->suppress_errors( $previous_errors );
 		Telepilot_DB_Transaction::commit();
 		return $id;
+	}
+
+	/** Capture immediately: even a duplicate check or rollback clears the driver error. */
+	public static function capture_database_failure( $stage ) {
+		global $wpdb;
+		$errno = $wpdb->dbh instanceof mysqli ? mysqli_errno( $wpdb->dbh ) : 0;
+		$categories = array( 1048 => 'null_constraint', 1062 => 'duplicate_key', 1142 => 'permission_denied', 1146 => 'missing_table', 1205 => 'lock_timeout', 1213 => 'deadlock', 2006 => 'connection_lost', 2013 => 'connection_lost' );
+		return array( 'error_category' => $categories[$errno] ?? ( $errno ? 'database_error' : 'insert_validation' ), 'database_errno' => $errno ?: null, 'correlation_id' => wp_generate_uuid4(), 'stage' => sanitize_key( $stage ) );
+	}
+
+	private static function record_database_failure( $details ) {
+		update_option( 'telepilot_queue_enqueue_failure', array_merge( $details, array( 'recorded_at' => time() ) ), false );
+		Telepilot_Audit_Log_Repository::log( array( 'action_name' => 'queue_enqueue_failed', 'resource_type' => 'queue', 'was_successful' => 0, 'context' => $details ) );
 	}
 
 	public static function get( $id ) {

@@ -15,11 +15,16 @@ jobs:
         include:
           - php: '8.0'
             wordpress: '6.6.2'
+            database: 'mysql:8.0'
           - php: '8.5'
             wordpress: 'latest'
+            database: 'mysql:8.0'
+          - php: '8.0'
+            wordpress: '6.6.2'
+            database: 'mariadb:10.11'
     services:
       mysql:
-        image: mysql:8.0
+        image: ${{ matrix.database }}
         env:
           MYSQL_ROOT_PASSWORD: test-only
           MYSQL_DATABASE: telepilot_tests
@@ -63,5 +68,5 @@ jobs:
           TELEPILOT_TEST_PLUGIN_FILE="$PWD/.test-env/package/wp-telepilot/wp-telepilot.php" composer test
       - uses: actions/upload-artifact@v4
         with:
-          name: validated-plugin-php-${{ matrix.php }}
+          name: validated-plugin-php-${{ matrix.php }}-${{ strategy.job-index }}
           path: dist/*.zip

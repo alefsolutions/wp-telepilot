@@ -11,6 +11,11 @@ for ( $index = 0; $index < 25; $index++ ) {
     $timings[] = array( 'command' => '/pages', 'transport' => 'webhook', 'duration_ms' => 12, 'dispatch_error' => '', 'recorded_at' => time() );
 }
 update_option( Telepilot_Telegram_Service::COMMAND_DIAGNOSTICS_OPTION, $timings );
+if ( getenv( 'TELEPILOT_TEST_QUEUE_REPAIR_FAILURE' ) ) {
+    delete_option( Telepilot_Queue_Schema::REVISION_OPTION );
+    update_option( Telepilot_Queue_Schema::STATUS_OPTION, array( 'message' => 'Queue repair could not change update_id to nullable. Ask your host to check ALTER permission and database locks, then use Retry Database Repair.', 'next_retry' => time() + 300, 'error_category' => 'permission_denied', 'database_errno' => 1142, 'correlation_id' => 'ebf0b0d0-42f3-4f2e-a84e-37356fc68f29' ), false );
+    update_option( 'telepilot_queue_enqueue_failure', array( 'error_category' => 'null_constraint', 'database_errno' => 1048, 'correlation_id' => 'ebf0b0d0-42f3-4f2e-a84e-37356fc68f29' ), false );
+}
 ob_start();
 ( new Telepilot_Settings_Page() )->render_page();
 $body = ob_get_clean();

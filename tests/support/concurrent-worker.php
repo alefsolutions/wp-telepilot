@@ -16,5 +16,13 @@ if ( 'claim' === $input['action'] ) {
 } elseif ( 'editor' === $input['action'] ) {
     $saved = ( new Telepilot_Post_Editor_Service() )->save( $input['token'], array( 'post_content' => $input['content'] ) );
     $result = array( 'ok' => ! is_wp_error( $saved ), 'result' => is_wp_error( $saved ) ? $saved->get_error_code() : $saved );
+} elseif ( 'repair' === $input['action'] ) {
+    $alters = 0;
+    add_filter( 'query', static function ( $query ) use ( &$alters ) {
+        if ( 0 === strpos( $query, 'ALTER TABLE' ) ) { $alters++; usleep( 300000 ); }
+        return $query;
+    } );
+    $repair = Telepilot_Queue_Schema::ensure( true );
+    $result = array( 'ok' => true === $repair, 'code' => is_wp_error( $repair ) ? $repair->get_error_code() : '', 'alters' => $alters );
 } else { throw new RuntimeException( 'Unknown test action.' ); }
 echo wp_json_encode( $result );

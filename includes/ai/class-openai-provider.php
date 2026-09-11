@@ -27,6 +27,8 @@ class Telepilot_OpenAI_Provider implements Telepilot_AI_Provider_Interface {
 	}
 
 	public function chat( $messages, $tools = array(), $options = array() ) {
+		$queue = Telepilot_Queue_Schema::provider_gate();
+		if ( is_wp_error( $queue ) ) { return $queue; }
 		if ( ! $this->is_configured() ) { return new WP_Error( 'telepilot_ai_missing_api_key', 'Configure or replace the API key using authenticated encryption first.' ); }
 		if ( ! $this->increment( 'requests', 1, (int) Telepilot_AI_Settings::get_settings()['ai_daily_request_limit'] ) ) { return new WP_Error( 'telepilot_ai_quota', 'The site daily AI request limit has been reached.' ); }
 		$payload = array( 'model' => Telepilot_AI_Settings::get_model(), 'messages' => Telepilot_AI_Data_Policy::clean( array_values( $messages ) ), 'max_completion_tokens' => empty( $options['test'] ) ? 1200 : 16, 'store' => false );

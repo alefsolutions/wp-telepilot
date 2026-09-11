@@ -1,7 +1,7 @@
 # WP Telepilot
 
 [![Release](https://img.shields.io/github/v/release/alefsolutions/wp-telepilot?display_name=tag&color=0ea5d3)](https://github.com/alefsolutions/wp-telepilot/releases)
-[![Development](https://img.shields.io/badge/development-0.4.0--beta.1-0ea5d3)](https://github.com/alefsolutions/wp-telepilot/tree/v4)
+[![Development](https://img.shields.io/badge/development-0.4.0--beta.2-0ea5d3)](https://github.com/alefsolutions/wp-telepilot/tree/v4)
 [![Tests](https://img.shields.io/github/actions/workflow/status/alefsolutions/wp-telepilot/tests.yml?branch=v4&label=tests&color=0ea5d3)](https://github.com/alefsolutions/wp-telepilot/actions/workflows/tests.yml)
 [![Release Workflow](https://img.shields.io/github/actions/workflow/status/alefsolutions/wp-telepilot/release-plugin.yml?branch=main&label=release&color=0ea5d3)](https://github.com/alefsolutions/wp-telepilot/actions/workflows/release-plugin.yml)
 [![WordPress](https://img.shields.io/badge/WordPress-6.6%2B-1f2933)](https://wordpress.org)
@@ -183,11 +183,19 @@ MCP returns authorized WordPress data to the authenticated client you configure,
 - PHP mbstring; OpenSSL with AES-256-GCM for AI key storage
 - HTTPS for webhook mode
 - HTTPS and the optional dependencies above for MCP
-- Current development version: `0.4.0-beta.1`; maintenance candidate: `0.3.1`
+- Current development version: `0.4.0-beta.2`; maintenance candidate: `0.3.1`
 
 ## Project Status
 
-The `v4` branch targets `0.4.0-beta.1` and incorporates the `0.3.1` maintenance repairs. It is a beta candidate, not a stable-readiness declaration. Isolated tests cover standard/custom roles, native commands, mocked OpenAI/Telegram, confirmed writes, native plugin upgrades, real concurrent workers/editor saves, privacy, migrations, and the official MCP Adapter HTTP transport. The compatibility matrix is WordPress 6.6.2/PHP 8.0 and WordPress 7.1/PHP 8.5. Local desktop/mobile admin fixture checks complement, but do not replace, testing in a real wp-admin installation. Live staging Telegram/OpenAI/MCP checks remain required before publication.
+The `v4` branch targets `0.4.0-beta.2` and incorporates the `0.3.1` maintenance repairs. It is a beta candidate, not a stable-readiness declaration. Isolated tests cover standard/custom roles, native commands, mocked OpenAI/Telegram, confirmed writes, native plugin upgrades, real concurrent workers/editor saves, privacy, migrations, and the official MCP Adapter HTTP transport. The compatibility matrix is WordPress 6.6.2/PHP 8.0 and WordPress 7.1/PHP 8.5. Local desktop/mobile admin fixture checks complement, but do not replace, testing in a real wp-admin installation. Live staging Telegram/OpenAI/MCP checks remain required before publication.
+
+### Beta.2 Queue Repair
+
+This update explicitly repairs a historical queue constraint that could stop AI replies after their first lookup. It preserves existing queue IDs and Telegram deduplication, verifies the actual column and unique index, and tracks repair completion separately from the plugin schema version. No command syntax, linked accounts, credentials, or WordPress content is changed by this repair.
+
+Diagnostics and Site Health distinguish existing tables from a verified AI continuation schema. If repair fails, AI provider requests pause while ordinary commands remain available where possible. An administrator can use **Retry Database Repair** in diagnostics after resolving database permissions or locks. Automatic attempts are limited to once every five minutes. Unexpected schema differences require host/database-administrator review rather than a blind conversion.
+
+A failed continuation save stops that request and displays a safe reference ID. Failed AI requests are not automatically resubmitted after repair; send a new request only after diagnostics verify the queue. Back up before upgrading and verify final Telegram replies on staging before publishing this beta.
 
 Additional regressions cover real concurrent PHP workers and browser saves, command-menu reads across standard/custom roles, nested queue transactions, schedule dates, notification target access and polling persistence failures. The maintenance candidate does not include OpenAI or MCP; those remain on the separate V4 beta branch.
 

@@ -4,6 +4,7 @@ if ( ! defined( 'ABSPATH' ) ) { exit; }
 /** Keep nested Telepilot queue inserts from committing their caller's content lock. */
 class Telepilot_DB_Transaction {
 	private static $depth = 0;
+	public static function is_active() { return self::$depth > 0; }
 	public static function begin() {
 		global $wpdb;
 		$wpdb->query( self::$depth ? 'SAVEPOINT telepilot_' . self::$depth : 'START TRANSACTION' );

@@ -46,4 +46,25 @@ class ConcurrencyTest extends Telepilot_TestCase {
         wp_cache_flush();
         $this->assertContains( get_post( $id )->post_content, array( 'Writer one', 'Writer two' ) );
     }
+
+    public function test_two_processes_serialize_queue_repair() {
+        global $wpdb;
+        $table = Telepilot_Jobs_Repository::table_name();
+        $wpdb->query( "DELETE FROM $table" );
+        $wpdb->query( "ALTER TABLE $table MODIFY COLUMN update_id BIGINT UNSIGNED NOT NULL" );
+        // Keep child bootstrap out of the race; both explicitly force verification after the barrier.
+        update_option( 'telepilot_schema_version', Telepilot_Bootstrap::SCHEMA_VERSION );
+        update_option( Telepilot_Queue_Schema::REVISION_OPTION, Telepilot_Queue_Schema::REVISION, false );
+        delete_option( Telepilot_Queue_Schema::LOCK_OPTION );
+        $wpdb->query( 'COMMIT' );
+        try {
+            $results = $this->race( array( array( 'action' => 'repair' ), array( 'action' => 'repair' ) ) );
+            $this->assertSame( 1, array_sum( array_column( $results, 'alters' ) ), wp_json_encode( $results ) );
+            $this->assertContains( true, array_column( $results, 'ok' ) );
+            $this->assertTrue( Telepilot_Queue_Schema::inspect()['ready'] );
+        } finally {
+            $wpdb->query( "ALTER TABLE $table MODIFY COLUMN update_id BIGINT UNSIGNED NULL DEFAULT NULL" );
+            wp_cache_flush(); Telepilot_Queue_Schema::ensure( true );
+        }
+    }
 }

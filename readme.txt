@@ -4,7 +4,7 @@ Tags: telegram, bot, notifications, moderation, remote management
 Requires at least: 6.6
 Tested up to: 7.1
 Requires PHP: 8.0
-Stable tag: 0.4.0-beta.1
+Stable tag: 0.4.0-beta.2
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -27,7 +27,7 @@ WP Telepilot currently includes:
 * optional OpenAI chat with administrator-configured keys, task/role grants, usage limits, and confirmed writes
 * independently optional read-only MCP through the official WordPress MCP Adapter and Abilities API
 
-WP Telepilot 0.4.0-beta.1 is a beta candidate incorporating the 0.3.1 maintenance repairs. Live staging checks are required before publication. Normal commands do not require OpenAI or MCP.
+WP Telepilot 0.4.0-beta.2 is a beta candidate incorporating the 0.3.1 maintenance repairs and an explicit AI continuation queue repair. Live staging checks are required before publication. Normal commands do not require OpenAI or MCP.
 
 Full command reference:
 https://github.com/alefsolutions/wp-telepilot/blob/v4/COMMANDS.md
@@ -116,6 +116,15 @@ Queued payloads and bounded AI context participate in privacy export/erasure. Se
 
 == Changelog ==
 
+= 0.4.0-beta.2 =
+
+* explicitly repair historical non-null update_id columns, preserving records and Telegram update deduplication
+* verify queue type, nullability and unique index using a separately tracked, locked, retryable migration
+* distinguish table existence from AI queue readiness in diagnostics and Site Health; add an administrator Retry Database Repair button
+* pause provider requests while repair is unresolved and stop failed continuation requests without automatic replay
+* capture safe database error categories, numbers and reference IDs before rollback clears them
+* add real MySQL/MariaDB migration, concurrency, denied-permission and complete mocked AI delivery regression coverage
+
 = 0.4.0-beta.1 =
 
 * share authorization, input validation, execution, audit and cache policies across domain commands and AI/MCP abilities
@@ -155,6 +164,10 @@ Queued payloads and bounded AI context participate in privacy export/erasure. Se
 * add linked-data and audit-log privacy anonymization flows
 
 == Upgrade Notice ==
+
+= 0.4.0-beta.2 =
+
+Back up before installing. This repair preserves content, accounts, credentials and command syntax. If AI queue verification fails, ask your host to inspect database ALTER permissions and the queue schema, then use Retry Database Repair in WP Telepilot diagnostics. Failed AI requests are not automatically resent. Verify final read-only AI replies after upgrading before publication.
 
 = 0.4.0-beta.1 =
 

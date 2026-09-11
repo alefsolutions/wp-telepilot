@@ -9,6 +9,8 @@ class Telepilot_Site_Health {
 	public static function test() {
 		global $wpdb;
 		$settings = get_option( 'telepilot_settings', array() ); $issues = array();
+		$queue_schema = Telepilot_Queue_Schema::status();
+		if ( ! $queue_schema['ready'] ) { $issues[] = 'AI continuation queue schema is not verified. ' . $queue_schema['message']; }
 		if ( ! empty( $settings['bot_token'] ) && 'webhook' === ( $settings['transport_mode'] ?? 'webhook' ) && empty( $settings['webhook_secret'] ) ) { $issues[] = 'Webhook authentication secret is missing.'; }
 		if ( ! wp_next_scheduled( 'telepilot_hourly_maintenance' ) ) { $issues[] = 'Retention maintenance is not scheduled.'; }
 		$uncertain = (int) $wpdb->get_var( "SELECT COUNT(*) FROM " . Telepilot_Jobs_Repository::table_name() . " WHERE status='uncertain'" );

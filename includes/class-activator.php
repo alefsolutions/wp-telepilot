@@ -7,7 +7,9 @@ if ( ! defined( 'ABSPATH' ) ) {
 class Telepilot_Activator {
 	public static function activate() {
 		Telepilot_Audit_Log_Repository::create_table();
-		Telepilot_Jobs_Repository::create_table();
+		if ( ! Telepilot_Queue_Schema::table_exists() || ! is_wp_error( Telepilot_Queue_Schema::ensure() ) ) {
+			Telepilot_Jobs_Repository::create_table();
+		}
 		Telepilot_Security_Records::create_table();
 		Telepilot_Processed_Updates_Repository::create_table();
 

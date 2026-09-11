@@ -74,6 +74,12 @@ const assert = require('node:assert/strict');
       ]);
       await page.locator('#submit').click();
       assert.equal(await page.evaluate(() => window.qaSubmissions[1].submitter), 'submit');
+      const repairButton = page.locator('[name="telepilot_retry_database_repair"]');
+      assert.equal(await repairButton.count(), 1);
+      assert.equal(await repairButton.evaluate(e => e.form.method), 'post');
+      assert.ok(await repairButton.evaluate(e => new FormData(e.form).has('telepilot_tools_nonce')));
+      await repairButton.click();
+      assert.equal(await page.evaluate(() => window.qaSubmissions[2].submitter), 'telepilot_retry_database_repair');
       const tables = await page.locator('.telepilot-table-scroll').evaluateAll(es => es.map(e => ({
         focusable: e.tabIndex === 0, label: e.getAttribute('aria-label'), overflow: getComputedStyle(e).overflow,
         vertical: e.scrollHeight > e.clientHeight, horizontal: e.scrollWidth > e.clientWidth,

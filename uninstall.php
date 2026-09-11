@@ -53,6 +53,10 @@ if ( ! $cleanup_enabled ) {
 $options_to_delete = array(
 	'telepilot_settings',
 	'telepilot_schema_version',
+	'telepilot_queue_repair_revision',
+	'telepilot_queue_repair_status',
+	'telepilot_queue_repair_lock',
+	'telepilot_queue_enqueue_failure',
 	'telepilot_webhook_status',
 	'telepilot_transport_diagnostics',
 	'telepilot_command_diagnostics',

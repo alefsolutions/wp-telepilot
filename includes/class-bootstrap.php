@@ -5,7 +5,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 class Telepilot_Bootstrap {
-	const SCHEMA_VERSION = '0.4.0-beta.1';
+	const SCHEMA_VERSION = '0.4.0-beta.2';
 
 	private $settings_page;
 	private $rest_controller;
@@ -126,14 +126,17 @@ class Telepilot_Bootstrap {
 	}
 
 	public function maybe_upgrade_schema() {
+		if ( Telepilot_DB_Transaction::is_active() ) { return; }
 		$current_version = (string) get_option( 'telepilot_schema_version', '' );
+		$repair = Telepilot_Queue_Schema::table_exists() ? Telepilot_Queue_Schema::ensure() : null;
 
-		if ( self::SCHEMA_VERSION === $current_version ) {
+		if ( self::SCHEMA_VERSION === $current_version && null !== $repair ) {
 			return;
 		}
 
 		Telepilot_Audit_Log_Repository::create_table();
-		Telepilot_Jobs_Repository::create_table();
+		if ( ! is_wp_error( $repair ) ) { Telepilot_Jobs_Repository::create_table(); }
+		if ( null === $repair ) { Telepilot_Queue_Schema::ensure(); }
 		Telepilot_Jobs_Repository::quarantine_legacy();
 		Telepilot_Security_Records::create_table();
 		if ( version_compare( $current_version ?: '0', '0.3.1', '<' ) ) {

@@ -149,7 +149,7 @@ class Telepilot_Telegram_Client {
 		$response = wp_remote_post(
 			$url,
 			array(
-				'timeout' => 'answerCallbackQuery' === $method ? 2 : 10,
+				'timeout' => 'sendChatAction' === $method ? 1 : ( 'answerCallbackQuery' === $method ? 2 : 10 ),
 				'body'    => $payload,
 			)
 		);

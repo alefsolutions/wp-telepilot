@@ -403,7 +403,9 @@ class Telepilot_Plugins_Service {
 		if ( 'ai' === Telepilot_Operation_Context::current()->source && ( empty( $approved['update_version'] ) || $approved['update_version'] !== $before['update_version'] ) ) { return new WP_Error( 'telepilot_plugin_target_changed', 'The available update changed. Request a fresh proposal.' ); }
 
 		$upgrader = new Plugin_Upgrader( new Automatic_Upgrader_Skin() );
+		Telepilot_Telegram_Activity::pulse();
 		$result   = $upgrader->upgrade( $plugin_file );
+		Telepilot_Telegram_Activity::pulse();
 
 		if ( is_wp_error( $result ) ) {
 			return $result;
@@ -415,6 +417,7 @@ class Telepilot_Plugins_Service {
 
 		wp_clean_plugins_cache( false );
 		wp_update_plugins();
+		Telepilot_Telegram_Activity::pulse();
 		$this->bump_cache_version();
 
 		return array(

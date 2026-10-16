@@ -4,7 +4,7 @@ Tags: telegram, bot, notifications, moderation, remote management
 Requires at least: 6.6
 Tested up to: 7.1
 Requires PHP: 8.0
-Stable tag: 0.4.0-beta.3
+Stable tag: 0.4.0-beta.4
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -27,7 +27,7 @@ WP Telepilot currently includes:
 * optional OpenAI chat with administrator-configured keys, task/role grants, usage limits, and confirmed writes
 * independently optional read-only MCP through the official WordPress MCP Adapter and Abilities API
 
-WP Telepilot 0.4.0-beta.3 is a beta candidate incorporating the 0.3.1 maintenance repairs, the AI continuation queue repair, and security, ordering, privacy, pagination and content fixes. Live staging checks are required before publication. Normal commands do not require OpenAI or MCP.
+WP Telepilot 0.4.0-beta.4 is a beta candidate with quieter Telegram feedback, incorporating the 0.3.1 maintenance repairs, the AI continuation queue repair, and security, ordering, privacy, pagination and content fixes. Live staging checks are required before publication. Normal commands do not require OpenAI or MCP.
 
 Full command reference:
 https://github.com/alefsolutions/wp-telepilot/blob/v4/COMMANDS.md
@@ -116,6 +116,15 @@ Queued payloads and bounded AI context participate in privacy export/erasure. Se
 
 == Changelog ==
 
+= 0.4.0-beta.4 =
+
+* replace generic processing messages with best-effort typing feedback for Telegram commands, buttons, guided input and uploaded files
+* acknowledge buttons silently and keep their existing message and keyboard visible until the final result
+* suppress routine AI continuation messages while preserving provider retry notices, confirmations and errors
+* refresh typing at work boundaries and during compatible cURL transfers, with bounded feedback timeouts and failure isolation
+* preserve existing queued reply targets and delivery-only retries without repeating WordPress writes
+* add regression coverage for quiet delivery, typing refreshes, AI continuations, legacy placeholders and feedback failures
+
 = 0.4.0-beta.3 =
 
 * block suspended accounts across browser and application-password authentication, invalidate browser sessions, and enforce the linking switch throughout code creation and consumption
@@ -174,6 +183,10 @@ Queued payloads and bounded AI context participate in privacy export/erasure. Se
 * add linked-data and audit-log privacy anonymization flows
 
 == Upgrade Notice ==
+
+= 0.4.0-beta.4 =
+
+Telegram requests now use typing feedback instead of generic processing messages. Existing queued placeholders still receive their final results. Provider retry notices, confirmations and errors remain visible. No new setting or database migration is required. Typing can briefly lapse during blocking local work or unsupported HTTP transports.
 
 = 0.4.0-beta.3 =
 

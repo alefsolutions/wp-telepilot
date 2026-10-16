@@ -12,10 +12,26 @@ class Telepilot_AI_Tool_Registry {
 	}
 
 	public function get_tool_schemas() {
+		return $this->get_request_context()['schemas'];
+	}
+
+	/** One assessment supplies both model instructions and callable schemas. */
+	public function get_request_context( $remaining_tool_calls = PHP_INT_MAX ) {
 		$schemas = array();
+		$capabilities = array();
+		$permissions = new Telepilot_AI_Permission_Manager();
 
 		foreach ( $this->get_tools() as $tool_name => $definition ) {
-			if ( ! ( new Telepilot_AI_Permission_Manager() )->is_tool_enabled( $definition['ability'] ) || is_wp_error( Telepilot_Ability_Executor::permission( $definition['ability'] ) ) ) { continue; }
+			$enabled = $permissions->is_tool_enabled( $definition['ability'] );
+			$access = $enabled ? Telepilot_Ability_Executor::permission( $definition['ability'] ) : null;
+			$status = ! $enabled ? 'disabled' : ( is_wp_error( $access ) ? 'denied' : 'available' );
+			$capabilities[] = array(
+				'tool' => $tool_name,
+				'description' => $definition['description'],
+				'status' => $status,
+				'requires_confirmation' => $definition['requires_confirmation'],
+			);
+			if ( 'available' !== $status || $remaining_tool_calls <= 0 ) { continue; }
 			$schemas[] = array(
 				'type'     => 'function',
 				'function' => array(
@@ -27,7 +43,7 @@ class Telepilot_AI_Tool_Registry {
 			);
 		}
 
-		return $schemas;
+		return array( 'schemas' => $schemas, 'capabilities' => $capabilities, 'remaining_tool_calls' => max( 0, $remaining_tool_calls ) );
 	}
 
 	public static function strict_schema( $schema ) {

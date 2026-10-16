@@ -89,11 +89,17 @@ Ordinary slash commands and callback buttons remain deterministic. OpenAI is use
 
 Finish or cancel an unfinished guided post/page flow before entering AI mode. Normal commands such as `/posts`, `/pages`, and `/menu` remain available during AI chat.
 
+AI chat is instructed to discuss only management of this WordPress site, including brief, relevant WordPress guidance. Unrelated questions and lists are refused; mixed requests receive help only with the site-management portion. Explanations stay within 2-3 sentences and about 60 words, even when more detail is requested. Longer lists are reserved for requested site results, with compact titles and IDs. Exact confirmation previews and required warnings retain their details.
+
+Every provider request, including a queued continuation, receives fresh instructions and a capability catalog derived from the same permission assessment as the offered tools. The catalog distinguishes available tasks, administrator-disabled tasks, and tasks denied to the current WordPress account; an exhausted request budget is separate. Unsupported or denied actions do not need conversational approval. Supported writes go directly to a real proposal and the plugin's confirmation buttons. Terminal access/tool denials stop locally and are recorded in conversation history without another continuation or proposal.
+
 ### Reads And Confirmed Writes
 
 AI can look up site information, posts, pages, comments, users, plugins, and category/tag terms when the corresponding tasks and capabilities are allowed. User emails are omitted by default.
 
 The approved write set is deliberately limited: create post drafts, edit draft titles/excerpts, schedule posts, publish/unpublish posts, approve/trash comments, and activate/deactivate/update plugins. Media stays read-only. User management and page writes are not AI tools in this beta; existing authorized slash commands remain available.
+
+Purpose, topic scope, and reply style live in `includes/ai/class-ai-prompt-builder.php`. Capability assessment lives in `includes/ai/class-ai-tool-registry.php`, and deterministic denial replies use `includes/ai/class-ai-error-policy.php`. Topic and prose-length compliance rely on model instructions and staging evaluation; there is no additional classifier, shortening request, or automatic hard word limit.
 
 Before a write, review the site, target `[ID]`, title, exact changes, and scheduling timezone. Publishing, unpublishing, and plugin changes require a second explicit warning/confirmation. A model request alone cannot execute a write. Changed targets, revoked access, expired sessions, and replayed confirmations are rejected. Use the existing posts-only browser handoff for long content.
 
@@ -183,11 +189,17 @@ MCP returns authorized WordPress data to the authenticated client you configure,
 - PHP mbstring; OpenSSL with AES-256-GCM for AI key storage
 - HTTPS for webhook mode
 - HTTPS and the optional dependencies above for MCP
-- Current development version: `0.4.0-beta.3`; maintenance candidate: `0.3.1`
+- Current development version: `0.4.0-beta.4`; maintenance candidate: `0.3.1`
 
 ## Project Status
 
-The `v4` branch targets `0.4.0-beta.3` and incorporates the `0.3.1` maintenance repairs. It is a beta candidate, not a stable-readiness declaration. Isolated tests cover standard/custom roles, native commands, mocked OpenAI/Telegram, confirmed writes, native plugin upgrades, real concurrent workers/editor saves, privacy, migrations, and the official MCP Adapter HTTP transport. The compatibility matrix is WordPress 6.6.2/PHP 8.0 and WordPress 7.1/PHP 8.5. Local desktop/mobile admin fixture checks complement, but do not replace, testing in a real wp-admin installation. Live staging Telegram/OpenAI/MCP checks remain required before publication.
+The `v4` branch targets `0.4.0-beta.4` and incorporates the `0.3.1` maintenance repairs. It is a beta candidate, not a stable-readiness declaration. Isolated tests cover standard/custom roles, native commands, mocked OpenAI/Telegram, confirmed writes, native plugin upgrades, real concurrent workers/editor saves, privacy, migrations, and the official MCP Adapter HTTP transport. The compatibility matrix is WordPress 6.6.2/PHP 8.0 and WordPress 7.1/PHP 8.5. Local desktop/mobile admin fixture checks complement, but do not replace, testing in a real wp-admin installation. Live staging Telegram/OpenAI/MCP checks remain required before publication.
+
+### Beta.4 Telegram Feedback
+
+Commands, guided input and uploaded files use best-effort typing feedback before their useful response. Buttons acknowledge silently and retain the existing message and keyboard until the final result. Routine AI continuations no longer send processing text; provider retry notices, confirmations and errors remain visible.
+
+Typing refreshes at work boundaries and during compatible cURL transfers, with a one-second feedback timeout and failure isolation. Existing queued reply targets and delivery-only retries are preserved. This update adds no setting or database migration; blocking local work and unsupported HTTP transports can leave brief typing gaps.
 
 ### Beta.3 Bug Fixes
 
@@ -218,6 +230,10 @@ The posts-only browser editor uses unique, one-time links with an absolute one-h
 For early V4 builds, the upgrade clears unsafe legacy AI actions and sessions and removes the unsupported AI Manage Users setting. Unsupported legacy encrypted/plain key formats disable AI until the key is replaced. Recheck task grants, model access, and MCP settings after upgrading. Back up the database before installing a beta; downgrading a database is not an automatic migration path.
 
 ## Development And Packaging
+
+Telegram command execution uses best-effort typing feedback instead of generic processing messages. Buttons are acknowledged silently after queue persistence and keep their existing message and keyboard until the final result is delivered. Routine AI tool continuations are silent; provider retry delays, confirmations, and errors still produce useful notices. Existing queued placeholder messages remain valid reply targets after upgrading.
+
+Typing starts when an accepted request executes and refreshes at most once every four seconds at work boundaries and during compatible WordPress cURL transfers. Feedback requests have a one-second timeout, and the first feedback failure disables further attempts for that execution without affecting the operation. Scoped HTTP hooks are removed before final delivery. Notifications, delivery-only retries, and scheduled retry waits do not show typing. Blocking database, filesystem, image-processing work, and HTTP transports without cURL progress support can leave brief gaps; there is no extra heartbeat worker or configuration toggle.
 
 The reproducible PHPUnit environment uses a disposable `telepilot_tests` database and blocks external HTTP unless explicitly mocked. Install development dependencies with Composer, install matching WordPress core with `php scripts/install-test-wordpress.php 6.6.2`, and run `composer test`. Database connection overrides use the `TELEPILOT_TEST_DB_*` environment variables; never use production credentials. Enable PHP's ZIP extension for upgrader and packaging tests.
 

@@ -80,7 +80,7 @@ class Telepilot_Telegram_Service {
 			return Telepilot_Telegram_Response_Builder::error( $queued->get_error_message(), array( 'retryable' => true, 'skip_dispatch' => true ) );
 		}
 		if ( ! empty( $update['callback_query']['id'] ) ) {
-			$this->client->answer_callback_query( (string) $update['callback_query']['id'], __( 'Queued', 'wp-telepilot' ) );
+			$this->client->answer_callback_query( (string) $update['callback_query']['id'] );
 		}
 		if ( 'duplicate' !== $queued ) { $this->schedule_job_processing(); }
 		$this->refresh_queue_diagnostics();
@@ -117,86 +117,9 @@ class Telepilot_Telegram_Service {
 		return $post && user_can( $user, 'publish' === $post->post_status ? 'read_post' : 'edit_post', $id );
 	}
 
-	private function send_processing_placeholder( $update, $command ) {
-		$identity = $this->user_resolver->resolve_from_update( $update );
-		$chat_id  = ! empty( $identity['chat_id'] ) ? (string) $identity['chat_id'] : '';
-
-		if ( '' === $chat_id ) {
-			return array();
-		}
-
-		$message = $this->get_processing_message( $command );
-		$args    = array( 'parse_mode' => 'HTML', 'reply_markup' => Telepilot_Telegram_Response_Builder::empty_keyboard() );
-
-		if ( ! empty( $update['callback_query'] ) ) {
-			if ( ! empty( $update['callback_query']['message']['message_id'] ) ) {
-				$message_id = (int) $update['callback_query']['message']['message_id'];
-				$result     = $this->client->edit_message_text( $chat_id, $message_id, $message, $args );
-
-				if ( ! is_wp_error( $result ) ) {
-					return array(
-						'chat_id'    => $chat_id,
-						'message_id' => $message_id,
-					);
-				}
-			}
-
-			$result = $this->client->send_message( $chat_id, $message, $args );
-
-			if ( is_wp_error( $result ) || empty( $result['result']['message_id'] ) ) {
-				return array(
-					'chat_id' => $chat_id,
-				);
-			}
-
-			return array(
-				'chat_id'    => $chat_id,
-				'message_id' => (int) $result['result']['message_id'],
-			);
-		}
-
-		$this->client->send_chat_action( $chat_id, 'typing' );
-
-		if ( ! empty( $update['message']['message_id'] ) ) {
-			$args['reply_to_message_id'] = (int) $update['message']['message_id'];
-		}
-
-		$result = $this->client->send_message( $chat_id, $message, $args );
-
-		if ( is_wp_error( $result ) || empty( $result['result']['message_id'] ) ) {
-			return array(
-				'chat_id' => $chat_id,
-			);
-		}
-
-		return array(
-			'chat_id'    => $chat_id,
-			'message_id' => (int) $result['result']['message_id'],
-		);
-	}
-
-	private function get_processing_message( $command ) {
-		$command_name = ! empty( $command['name'] ) ? (string) $command['name'] : '';
-
-		$messages = array(
-			'/site'       => __( '<b>Working on it...</b>' . "\n" . 'Building your site overview now.', 'wp-telepilot' ),
-			'/dashboard'  => __( '<b>Working on it...</b>' . "\n" . 'Gathering dashboard data now.', 'wp-telepilot' ),
-			'/comments'   => __( '<b>Working on it...</b>' . "\n" . 'Fetching comment moderation data now.', 'wp-telepilot' ),
-			'/posts'      => __( '<b>Working on it...</b>' . "\n" . 'Loading posts now.', 'wp-telepilot' ),
-			'/pages'      => __( '<b>Working on it...</b>' . "\n" . 'Loading pages now.', 'wp-telepilot' ),
-			'/media'      => __( '<b>Working on it...</b>' . "\n" . 'Fetching media items now.', 'wp-telepilot' ),
-			'/users'      => __( '<b>Working on it...</b>' . "\n" . 'Loading users now.', 'wp-telepilot' ),
-			'/plugins'    => __( '<b>Working on it...</b>' . "\n" . 'Checking installed plugins now.', 'wp-telepilot' ),
-			'/notifications' => __( '<b>Working on it...</b>' . "\n" . 'Loading notification controls now.', 'wp-telepilot' ),
-			'/categories' => __( '<b>Working on it...</b>' . "\n" . 'Loading categories now.', 'wp-telepilot' ),
-			'/tags'       => __( '<b>Working on it...</b>' . "\n" . 'Loading tags now.', 'wp-telepilot' ),
-		);
-
-		if ( isset( $messages[ $command_name ] ) ) {
-			return $messages[ $command_name ];
-		}
-
-		return __( '<b>Working on it...</b>' . "\n" . 'Processing your request now.', 'wp-telepilot' );
+	private function get_reply_target( $job, $update ) {
+		// Keep targets from older jobs; new commands need no placeholder message.
+		return array( 'message_id' => absint( $job['placeholder_message_id'] ?: ( $update['callback_query']['message']['message_id'] ?? 0 ) ) );
 	}
 
 	private function schedule_job_processing() {
@@ -268,7 +191,7 @@ class Telepilot_Telegram_Service {
 						$result = Telepilot_Telegram_Response_Builder::success( 'This operation finished, but WordPress data changed before its response could be delivered. Run a fresh read command to inspect the current state. The original action was not repeated.', array( 'operation_id' => $id ) );
 					}
 				} else {
-					$placeholder = 'ai_continuation' === $job['transport'] ? array( 'message_id' => $job['placeholder_message_id'] ) : $this->send_processing_placeholder( $payload, $this->command_router->parse_command( $payload ) );
+					$placeholder = $this->get_reply_target( $job, $payload );
 					Telepilot_Jobs_Repository::save_placeholder( $id, $owner, $placeholder );
 					$job['placeholder_message_id'] = $placeholder['message_id'] ?? 0;
 					if ( ! Telepilot_Jobs_Repository::begin_execution( $id, $owner ) ) { continue; }
@@ -276,7 +199,11 @@ class Telepilot_Telegram_Service {
 					try {
 						$result = Telepilot_Operation_Context::run( 'worker', array( 'operation_id' => $id, 'reply_message_id' => $job['placeholder_message_id'] ), function () use ( $payload, $job, $identity ) {
 							if ( 'ai_continuation' === $job['transport'] ) {
-								return Telepilot_Actor_Access::as_actor( $identity, static function () use ( $payload, $identity ) { return ( new Telepilot_AI_Orchestrator() )->resume( $payload['_telepilot_ai_state'] ?? array(), $identity ); }, 'ai' );
+								$activity = new Telepilot_Telegram_Activity( $this->client, $identity['chat_id'] );
+								// resume() pulses only after session/cancellation validation.
+								return $activity->run( static function () use ( $payload, $identity ) {
+									return Telepilot_Actor_Access::as_actor( $identity, static function () use ( $payload, $identity ) { return ( new Telepilot_AI_Orchestrator() )->resume( $payload['_telepilot_ai_state'] ?? array(), $identity ); }, 'ai' );
+								}, false );
 							}
 							return $this->process_update( $payload, $job['transport'], array( 'skip_duplicate_check' => true, 'callback_already_answered' => true, 'edit_message_id' => $job['placeholder_message_id'] ) );
 						} );
@@ -459,8 +386,6 @@ class Telepilot_Telegram_Service {
 
 		$command = $this->command_router->parse_command( $update );
 
-		$this->maybe_send_chat_action( $identity, $command, $update, $options );
-
 		if ( ! empty( $command['name'] ) ) {
 			$this->log_command_event(
 				'telegram_command_received',
@@ -474,17 +399,21 @@ class Telepilot_Telegram_Service {
 		}
 
 		try {
-			$result = $this->get_cached_command_response( $identity, $command, $update );
-
-			if ( null === $result ) {
-				$result = $this->handle_media_upload( $update, $identity, $command );
+			$activity = new Telepilot_Telegram_Activity( $this->client, 'private' === ( $identity['chat_type'] ?? '' ) ? $chat_id : '' );
+			$result = $activity->run( function () use ( $identity, $command, $update ) {
+				$result = $this->get_cached_command_response( $identity, $command, $update );
 
 				if ( null === $result ) {
-					$result = $this->command_router->route( $update, $identity );
-				}
+					$result = $this->handle_media_upload( $update, $identity, $command );
 
-				$this->maybe_cache_command_response( $identity, $command, $update, $result );
-			}
+					if ( null === $result ) {
+						$result = $this->command_router->route( $update, $identity );
+					}
+
+					$this->maybe_cache_command_response( $identity, $command, $update, $result );
+				}
+				return $result;
+			} );
 		} catch ( Throwable $throwable ) {
 			$result = Telepilot_Telegram_Response_Builder::error(
 				__( 'WP Telepilot hit an internal error while processing that command.', 'wp-telepilot' ),
@@ -805,27 +734,6 @@ class Telepilot_Telegram_Service {
 		);
 
 		return '';
-	}
-
-	private function maybe_send_chat_action( $identity, $command, $update, $options = array() ) {
-		if ( $this->defer_delivery ) { return; }
-		if ( ! empty( $update['callback_query'] ) ) {
-			return;
-		}
-
-		if ( ! empty( $options['edit_message_id'] ) ) {
-			return;
-		}
-
-		if ( empty( $identity['chat_id'] ) ) {
-			return;
-		}
-
-		if ( empty( $command['name'] ) ) {
-			return;
-		}
-
-		$this->client->send_chat_action( (string) $identity['chat_id'], 'typing' );
 	}
 
 	private function trigger_async_worker( $limit = 5 ) {

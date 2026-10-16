@@ -85,7 +85,9 @@ class AIReadTest extends Telepilot_TestCase {
         $session = ( new Telepilot_AI_Session_Manager() )->start_session( $actor, 'openai', 'gpt-4.1-mini' );
         $this->mock_http( 'api.openai.com', array( 'choices' => array( array( 'message' => array( 'tool_calls' => array( array( 'id' => 'fixture_call', 'type' => 'function', 'function' => array( 'name' => 'telepilot_search_posts', 'arguments' => '{"status":"draft"}' ) ) ) ) ) ) ) );
         $result = Telepilot_Actor_Access::as_actor( $actor, static function () use ( $actor, $session ) { return ( new Telepilot_AI_Orchestrator() )->handle_message( 'List drafts', $actor, $session ); }, 'ai' );
-        $this->assertStringContainsString( 'Processing', $result['message'] );
+        $this->assertTrue( $result['ok'] );
+        $this->assertTrue( $result['skip_dispatch'] );
+        $this->assertSame( '', $result['message'] );
         $row = $wpdb->get_row( "SELECT * FROM " . Telepilot_Jobs_Repository::table_name() . " WHERE transport='ai_continuation' ORDER BY id DESC LIMIT 1", ARRAY_A );
         $this->assertNotEmpty( $row );
         $payload = json_decode( $row['payload'], true );
@@ -158,11 +160,12 @@ class AIReadTest extends Telepilot_TestCase {
             array( 'Find categories matching Israel.', 'telepilot_lookup_terms', '{"taxonomy":"category","query":"Israel"}' ),
             array( 'List my five most recent published posts.', 'telepilot_search_posts', '{"status":"publish","limit":5}', true ),
             array( 'Find categories matching Israel.', 'telepilot_lookup_terms', '{"taxonomy":"category","query":"Israel"}', true ),
+            array( 'List my five most recent published posts.', 'telepilot_search_posts', '{"status":"publish","limit":5}', false, 821 ),
         );
     }
 
     /** @dataProvider read_requests */
-    public function test_complete_read_request_reaches_final_telegram_delivery( $text, $tool, $arguments, $cancel = false ) {
+    public function test_complete_read_request_reaches_final_telegram_delivery( $text, $tool, $arguments, $cancel = false, $reply_target = 0 ) {
         global $wpdb;
         foreach ( array( Telepilot_Jobs_Repository::table_name(), Telepilot_Jobs_Repository::operations_table(), Telepilot_Jobs_Repository::locks_table() ) as $table ) { $wpdb->query( "DELETE FROM $table" ); }
         $this->enable(); $actor = $this->actor();
@@ -170,8 +173,8 @@ class AIReadTest extends Telepilot_TestCase {
         self::factory()->post->create( array( 'post_title' => 'Published fixture', 'post_status' => 'publish' ) );
         wp_insert_term( 'Israel fixture', 'category' );
         $sessions = new Telepilot_AI_Session_Manager(); $sessions->start_session( $actor, 'openai', 'gpt-4.1-mini' );
-        $calls = 0; $sent = array(); $tool_result = null;
-        add_filter( 'pre_http_request', function ( $pre, $args, $url ) use ( &$calls, &$sent, &$tool_result, $tool, $arguments ) {
+        $calls = 0; $sent = array(); $typing = 0; $tool_result = null;
+        add_filter( 'pre_http_request', function ( $pre, $args, $url ) use ( &$calls, &$sent, &$typing, &$tool_result, $tool, $arguments ) {
             if ( false !== strpos( $url, 'api.openai.com' ) ) {
                 $calls++;
                 $input = json_decode( $args['body'], true );
@@ -184,20 +187,31 @@ class AIReadTest extends Telepilot_TestCase {
                 return array( 'headers' => array(), 'body' => wp_json_encode( array( 'choices' => array( array( 'message' => $message ) ) ) ), 'response' => array( 'code' => 200 ) );
             }
             if ( false !== strpos( $url, 'api.telegram.org' ) ) {
-                $sent[] = $args['body'];
+                if ( false !== strpos( $url, '/sendChatAction' ) ) { $typing++; }
+                if ( false !== strpos( $url, '/sendMessage' ) || false !== strpos( $url, '/editMessageText' ) ) { $sent[] = $args['body']; }
                 return array( 'headers' => array(), 'body' => '{"ok":true,"result":{"message_id":72}}', 'response' => array( 'code' => 200 ) );
             }
             return $pre;
         }, PHP_INT_MAX, 3 );
         $service = new Telepilot_Telegram_Service();
-        $service->handle_update( array( 'update_id' => 82001, 'message' => array( 'date' => time(), 'text' => $text, 'from' => array( 'id' => $actor['telegram_user_id'] ), 'chat' => array( 'id' => $actor['chat_id'], 'type' => 'private' ) ) ) );
+        $accepted = $service->handle_update( array( 'update_id' => 82001, 'message' => array( 'date' => time(), 'text' => $text, 'from' => array( 'id' => $actor['telegram_user_id'] ), 'chat' => array( 'id' => $actor['chat_id'], 'type' => 'private' ) ) ) );
+        if ( $reply_target ) { $wpdb->update( Telepilot_Jobs_Repository::table_name(), array( 'placeholder_message_id' => $reply_target ), array( 'id' => $accepted['operation_id'] ) ); }
         $service->process_jobs( 1 );
+        $this->assertCount( 0, $sent, 'Routine AI tool steps must not send a processing message.' );
+        $this->assertSame( 1, $typing );
+        $this->assertSame( (string) $reply_target, $wpdb->get_var( "SELECT placeholder_message_id FROM " . Telepilot_Jobs_Repository::table_name() . " WHERE transport='ai_continuation' ORDER BY id DESC LIMIT 1" ) );
         if ( $cancel ) { ( new Telepilot_AI_Chat_Handler() )->cancel_pending_action( $actor ); }
         $service->process_jobs( 1 );
         $this->assertSame( $cancel ? 1 : 2, $calls );
         if ( $cancel ) {
+            $this->assertCount( 0, $sent );
+            $this->assertSame( 1, $typing, 'Cancelled continuations must not restart typing.' );
             $this->assertStringNotContainsString( 'Final read-only fixture reply.', wp_json_encode( $sent ) );
         } else {
+            $this->assertCount( 1, $sent );
+            $this->assertSame( 2, $typing );
+            if ( $reply_target ) { $this->assertSame( $reply_target, $sent[0]['message_id'] ); }
+            else { $this->assertArrayNotHasKey( 'message_id', $sent[0] ); }
             $this->assertNotNull( $tool_result );
             $this->assertArrayNotHasKey( 'error', $tool_result, wp_json_encode( $tool_result ) );
             $this->assertStringContainsString( 'Final read-only fixture reply.', wp_json_encode( $sent ) );

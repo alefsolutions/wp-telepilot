@@ -446,6 +446,7 @@ class Telepilot_Media_Service {
 			return new WP_Error( 'telepilot_media_missing_file', __( 'No supported Telegram file was found in that message.', 'wp-telepilot' ) );
 		}
 
+		Telepilot_Telegram_Activity::pulse();
 		$file_response = $this->telegram_client->get_file( $file['file_id'] );
 		if ( is_wp_error( $file_response ) ) {
 			return $file_response;
@@ -456,6 +457,7 @@ class Telepilot_Media_Service {
 		}
 
 		$download_url = $this->telegram_client->build_file_url( $file_response['result']['file_path'] );
+		Telepilot_Telegram_Activity::pulse();
 		$tmp_file     = download_url( $download_url, 30 );
 
 		if ( is_wp_error( $tmp_file ) ) {
@@ -476,7 +478,9 @@ class Telepilot_Media_Service {
 		require_once ABSPATH . 'wp-admin/includes/file.php';
 		require_once ABSPATH . 'wp-admin/includes/image.php';
 
+		Telepilot_Telegram_Activity::pulse();
 		$attachment_id = media_handle_sideload( $upload, 0 );
+		Telepilot_Telegram_Activity::pulse();
 
 		if ( is_wp_error( $attachment_id ) ) {
 			@unlink( $tmp_file );

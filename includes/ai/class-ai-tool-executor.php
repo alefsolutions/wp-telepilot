@@ -35,7 +35,8 @@ class Telepilot_AI_Tool_Executor {
 		$permissions = new Telepilot_AI_Permission_Manager();
 		if ( true !== $permissions->require_ai_mode_access( $identity ) ) { return new WP_Error( 'telepilot_ai_access_denied', 'AI access is no longer available.' ); }
 		$definition = ( new Telepilot_Ability_Registry() )->get_ability_by_tool( $tool_name );
-		if ( ! $definition || ! $permissions->is_tool_enabled( $definition['ability_name'] ) ) { return new WP_Error( 'telepilot_ai_tool_disabled', 'This task is not enabled.' ); }
+		if ( ! $definition ) { return new WP_Error( 'telepilot_ai_tool_missing', 'This task is not registered.' ); }
+		if ( ! $permissions->is_tool_enabled( $definition['ability_name'] ) ) { return new WP_Error( 'telepilot_ai_tool_disabled', 'This task is not enabled.' ); }
 		$arguments = $this->resolve_arguments( $definition, $arguments, $session );
 		if ( is_wp_error( $arguments ) ) { return $arguments; }
 		return Telepilot_Actor_Access::as_actor( $identity, static function () use ( $definition, $arguments, $confirmed ) {

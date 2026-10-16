@@ -151,6 +151,7 @@ class QueueTest extends Telepilot_TestCase {
 		add_filter( 'pre_http_request', function ( $response, $args, $url ) use ( &$observed, $wpdb ) {
 			if ( false !== strpos( $url, '/answerCallbackQuery' ) ) {
 				$observed = true;
+				$this->assertArrayNotHasKey( 'text', $args['body'], 'Button acknowledgement should not show a Queued toast.' );
 				$this->assertLessThanOrEqual( 2, $args['timeout'] );
 				$this->assertSame( 1, (int) $wpdb->get_var( 'SELECT COUNT(*) FROM ' . Telepilot_Jobs_Repository::table_name() ) );
 			}

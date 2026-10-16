@@ -35,6 +35,8 @@ Available only when AI is configured and enabled, your role has an explicit gran
 
 Once `/chat` is active, send ordinary text such as:
 
+AI chat covers management of this site and brief WordPress guidance. It refuses unrelated conversation, even when asked for a list or to adopt another role. Explanations use 2-3 sentences and about 60 words; requested lists of site results can be longer. Denied actions receive a brief reason instead of repeated confirmation requests. User approval cannot enable a disabled task or grant WordPress permissions.
+
 | Task | Example | Result |
 | --- | --- | --- |
 | Find posts | `List my draft posts about travel` | Permission-scoped results with titles and `[ID]` references. |
@@ -46,6 +48,10 @@ Once `/chat` is active, send ordinary text such as:
 | Publish | `Publish post 42` | Two explicit confirmation steps before publishing. |
 | Moderate | `Approve comment 17` | Target-specific confirmation before moderation. |
 | Manage a plugin | `Update plugin akismet` | Exact plugin/version proposal and an additional warning before execution. |
+| Explain a workflow | `Explain how scheduling works on this site` | Brief WordPress guidance, distinguished from verified site facts. |
+| Unsupported action | `Change the full article body of post 42` | Explains the AI tool limitation and, where permitted, points to `/posts edit 42`. |
+| Unrelated request | `List interesting sports trivia` | Refuses without providing trivia and redirects to site management. |
+| Mixed request | `List my drafts and tell me a joke` | Lists the authorized drafts and briefly excludes the unrelated request. |
 
 Natural-language examples are requests to interpret, not additional fixed command syntaxes. Ambiguous targets should be clarified. Write proposals expire after five minutes, allow at most three pending proposals by default, and cannot be replayed. AI cannot manage users, write pages, or change media in this beta. Ordinary slash commands/callbacks remain deterministic and work while AI mode is active. MCP is independently configured in wp-admin and has no Telegram command.
 

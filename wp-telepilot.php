@@ -3,7 +3,7 @@
  * Plugin Name: WP Telepilot
  * Plugin URI: https://alefdigitalsolutions.com
  * Description: Manage key WordPress operations from Telegram with secure remote workflows, audit logging, and WP Telepilot guidance.
- * Version: 0.4.0-beta.3
+ * Version: 0.4.0-beta.4
  * Author: Alef Digital Solutions
  * Requires at least: 6.6
  * Requires PHP: 8.0
@@ -17,7 +17,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'TELEPILOT_VERSION', '0.4.0-beta.3' );
+define( 'TELEPILOT_VERSION', '0.4.0-beta.4' );
 define( 'TELEPILOT_FILE', __FILE__ );
 define( 'TELEPILOT_PATH', plugin_dir_path( __FILE__ ) );
 define( 'TELEPILOT_URL', plugin_dir_url( __FILE__ ) );
@@ -44,11 +44,14 @@ require_once TELEPILOT_PATH . 'includes/abilities/class-ability-executor.php';
 require_once TELEPILOT_PATH . 'includes/abilities/class-core-ability-handlers.php';
 require_once TELEPILOT_PATH . 'includes/ai/class-ai-tool-registry.php';
 require_once TELEPILOT_PATH . 'includes/ai/class-ai-tool-executor.php';
+require_once TELEPILOT_PATH . 'includes/ai/class-ai-prompt-builder.php';
+require_once TELEPILOT_PATH . 'includes/ai/class-ai-error-policy.php';
 require_once TELEPILOT_PATH . 'includes/ai/class-ai-orchestrator.php';
 require_once TELEPILOT_PATH . 'includes/ai/class-ai-chat-handler.php';
 require_once TELEPILOT_PATH . 'includes/ai/class-mcp-integration-service.php';
 require_once TELEPILOT_PATH . 'includes/class-telegram-response-builder.php';
 require_once TELEPILOT_PATH . 'includes/class-telegram-client.php';
+require_once TELEPILOT_PATH . 'includes/class-telegram-activity.php';
 require_once TELEPILOT_PATH . 'includes/class-command-grammar.php';
 require_once TELEPILOT_PATH . 'includes/class-user-linking-service.php';
 require_once TELEPILOT_PATH . 'includes/class-linked-user-resolver.php';

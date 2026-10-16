@@ -4,7 +4,7 @@ Tags: telegram, bot, notifications, moderation, remote management
 Requires at least: 6.6
 Tested up to: 7.1
 Requires PHP: 8.0
-Stable tag: 0.4.0-beta.4
+Stable tag: 0.4.0-beta.5
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -27,7 +27,7 @@ WP Telepilot currently includes:
 * optional OpenAI chat with administrator-configured keys, task/role grants, usage limits, and confirmed writes
 * independently optional read-only MCP through the official WordPress MCP Adapter and Abilities API
 
-WP Telepilot 0.4.0-beta.4 is a beta candidate with quieter Telegram feedback, incorporating the 0.3.1 maintenance repairs, the AI continuation queue repair, and security, ordering, privacy, pagination and content fixes. Live staging checks are required before publication. Normal commands do not require OpenAI or MCP.
+WP Telepilot 0.4.0-beta.5 is a beta candidate with explicit site-management-only AI instructions, concise replies, terminal denial handling, and quieter Telegram feedback. It incorporates the 0.3.1 maintenance repairs, the AI continuation queue repair, and security, ordering, privacy, pagination and content fixes. Live staging checks are required before publication. Normal commands do not require OpenAI or MCP.
 
 Full command reference:
 https://github.com/alefsolutions/wp-telepilot/blob/v4/COMMANDS.md
@@ -116,6 +116,16 @@ Queued payloads and bounded AI context participate in privacy export/erasure. Se
 
 == Changelog ==
 
+= 0.4.0-beta.5 =
+
+* instruct AI chat to discuss only management of the connected WordPress site and brief, relevant WordPress guidance
+* target 2-3 sentences and about 60 words for explanations, allowing longer requested lists of site results
+* refresh instructions and an account-specific capability catalog on every provider request, including existing queued continuations
+* distinguish supported tasks, disabled tasks, account restrictions, and exhausted tool-call budgets using the same assessment as offered tools
+* stop unsupported and denied tool requests locally, record the denial in conversation history, and avoid repeated proposals or confirmation loops
+* preserve real confirmation buttons, exact change previews, additional warnings, and clarification for correctable input errors
+* add AI policy regressions and document live model scope and brevity evaluation; no new tools, settings, database migration, or extra classification/shortening calls
+
 = 0.4.0-beta.4 =
 
 * replace generic processing messages with best-effort typing feedback for Telegram commands, buttons, guided input and uploaded files
@@ -183,6 +193,10 @@ Queued payloads and bounded AI context participate in privacy export/erasure. Se
 * add linked-data and audit-log privacy anonymization flows
 
 == Upgrade Notice ==
+
+= 0.4.0-beta.5 =
+
+AI chat now receives explicit site-management-only instructions and concise reply rules. Unsupported and denied tool requests stop without repeated confirmation. Existing queued continuations receive refreshed instructions. No new setting or database migration is required. Topic and reply-length compliance depend on model behavior; complete the documented staging evaluation before publication.
 
 = 0.4.0-beta.4 =
 

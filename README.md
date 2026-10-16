@@ -189,11 +189,17 @@ MCP returns authorized WordPress data to the authenticated client you configure,
 - PHP mbstring; OpenSSL with AES-256-GCM for AI key storage
 - HTTPS for webhook mode
 - HTTPS and the optional dependencies above for MCP
-- Current development version: `0.4.0-beta.4`; maintenance candidate: `0.3.1`
+- Current development version: `0.4.0-beta.5`; maintenance candidate: `0.3.1`
 
 ## Project Status
 
-The `v4` branch targets `0.4.0-beta.4` and incorporates the `0.3.1` maintenance repairs. It is a beta candidate, not a stable-readiness declaration. Isolated tests cover standard/custom roles, native commands, mocked OpenAI/Telegram, confirmed writes, native plugin upgrades, real concurrent workers/editor saves, privacy, migrations, and the official MCP Adapter HTTP transport. The compatibility matrix is WordPress 6.6.2/PHP 8.0 and WordPress 7.1/PHP 8.5. Local desktop/mobile admin fixture checks complement, but do not replace, testing in a real wp-admin installation. Live staging Telegram/OpenAI/MCP checks remain required before publication.
+The `v4` branch targets `0.4.0-beta.5` and incorporates the `0.3.1` maintenance repairs. It is a beta candidate, not a stable-readiness declaration. Isolated tests cover standard/custom roles, native commands, mocked OpenAI/Telegram, confirmed writes, native plugin upgrades, real concurrent workers/editor saves, privacy, migrations, and the official MCP Adapter HTTP transport. The compatibility matrix is WordPress 6.6.2/PHP 8.0 and WordPress 7.1/PHP 8.5. Local desktop/mobile admin fixture checks complement, but do not replace, testing in a real wp-admin installation. Live staging Telegram/OpenAI/MCP checks remain required before publication.
+
+### Beta.5 AI Chat Policy
+
+AI chat receives explicit site-management-only instructions, brief WordPress guidance rules, and a 2-3 sentence/about 60-word explanation target. Longer requested lists of site results remain supported. Every provider request refreshes the policy and capability catalog from the same permission assessment as callable tools, including existing queued continuations.
+
+Unsupported and denied tool requests stop locally, are recorded in conversation history, and do not create repeated continuations or confirmation proposals. Valid writes retain actual confirmation buttons, exact previews, and additional warnings. No tools, settings, schema migrations, or extra classification/shortening calls are added. Live model evaluation remains required for topic and brevity compliance.
 
 ### Beta.4 Telegram Feedback
 

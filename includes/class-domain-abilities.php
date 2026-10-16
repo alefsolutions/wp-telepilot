@@ -62,9 +62,14 @@ class Telepilot_Domain_Abilities {
 		if ( 'mcp' === $context->source && $write ) { return new WP_Error( 'telepilot_mcp_read_only', 'MCP is read-only.' ); }
 		if ( in_array( $domain, array( 'posts', 'pages' ), true ) ) {
 			$id = $arguments['post_id'] ?? $arguments['page_id'] ?? 0;
-			if ( 'create_draft' === $method ) {
-				foreach ( $arguments['category_ids'] ?? $arguments['categories'] ?? array() as $term_id ) {
-					if ( ! term_exists( $term_id, 'category' ) || ! user_can( $user, get_taxonomy( 'category' )->cap->assign_terms ) ) { return new WP_Error( 'telepilot_category_invalid', 'A selected category is unavailable or cannot be assigned.' ); }
+			$terms = $arguments['category_ids'] ?? $arguments['categories'] ?? array();
+			if ( 'assign_terms' === $method || ( 'create_draft' === $method && $terms ) ) {
+				$taxonomy_name = 'assign_terms' === $method ? ( $arguments['taxonomy'] ?? '' ) : 'category';
+				$taxonomy = get_taxonomy( $taxonomy_name );
+				$terms = 'assign_terms' === $method ? ( $arguments['term_ids'] ?? array() ) : $terms;
+				if ( ! $taxonomy || ! user_can( $user, $taxonomy->cap->assign_terms ) ) { return new WP_Error( 'telepilot_term_assignment_denied', 'You cannot assign terms in this taxonomy.' ); }
+				foreach ( $terms as $term_id ) {
+					if ( ! term_exists( $term_id, $taxonomy_name ) || ! user_can( $user, 'assign_term', $term_id ) ) { return new WP_Error( 'telepilot_term_assignment_denied', 'A selected term is unavailable or cannot be assigned.' ); }
 				}
 			}
 			if ( 'schedule' === $method && isset( $arguments['scheduled_at'] ) ) {

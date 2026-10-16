@@ -1,7 +1,7 @@
 # WP Telepilot
 
 [![Release](https://img.shields.io/github/v/release/alefsolutions/wp-telepilot?display_name=tag&color=0ea5d3)](https://github.com/alefsolutions/wp-telepilot/releases)
-[![Development](https://img.shields.io/badge/development-0.4.0--beta.2-0ea5d3)](https://github.com/alefsolutions/wp-telepilot/tree/v4)
+[![Development](https://img.shields.io/badge/development-0.4.0--beta.3-0ea5d3)](https://github.com/alefsolutions/wp-telepilot/tree/v4)
 [![Tests](https://img.shields.io/github/actions/workflow/status/alefsolutions/wp-telepilot/tests.yml?branch=v4&label=tests&color=0ea5d3)](https://github.com/alefsolutions/wp-telepilot/actions/workflows/tests.yml)
 [![Release Workflow](https://img.shields.io/github/actions/workflow/status/alefsolutions/wp-telepilot/release-plugin.yml?branch=main&label=release&color=0ea5d3)](https://github.com/alefsolutions/wp-telepilot/actions/workflows/release-plugin.yml)
 [![WordPress](https://img.shields.io/badge/WordPress-6.6%2B-1f2933)](https://wordpress.org)
@@ -183,11 +183,19 @@ MCP returns authorized WordPress data to the authenticated client you configure,
 - PHP mbstring; OpenSSL with AES-256-GCM for AI key storage
 - HTTPS for webhook mode
 - HTTPS and the optional dependencies above for MCP
-- Current development version: `0.4.0-beta.2`; maintenance candidate: `0.3.1`
+- Current development version: `0.4.0-beta.3`; maintenance candidate: `0.3.1`
 
 ## Project Status
 
-The `v4` branch targets `0.4.0-beta.2` and incorporates the `0.3.1` maintenance repairs. It is a beta candidate, not a stable-readiness declaration. Isolated tests cover standard/custom roles, native commands, mocked OpenAI/Telegram, confirmed writes, native plugin upgrades, real concurrent workers/editor saves, privacy, migrations, and the official MCP Adapter HTTP transport. The compatibility matrix is WordPress 6.6.2/PHP 8.0 and WordPress 7.1/PHP 8.5. Local desktop/mobile admin fixture checks complement, but do not replace, testing in a real wp-admin installation. Live staging Telegram/OpenAI/MCP checks remain required before publication.
+The `v4` branch targets `0.4.0-beta.3` and incorporates the `0.3.1` maintenance repairs. It is a beta candidate, not a stable-readiness declaration. Isolated tests cover standard/custom roles, native commands, mocked OpenAI/Telegram, confirmed writes, native plugin upgrades, real concurrent workers/editor saves, privacy, migrations, and the official MCP Adapter HTTP transport. The compatibility matrix is WordPress 6.6.2/PHP 8.0 and WordPress 7.1/PHP 8.5. Local desktop/mobile admin fixture checks complement, but do not replace, testing in a real wp-admin installation. Live staging Telegram/OpenAI/MCP checks remain required before publication.
+
+### Beta.3 Bug Fixes
+
+Beta.3 repairs the eleven issues found in the codebase review. Suspension now ends browser sessions and blocks passwords and application passwords before `init`; application passwords become usable again after re-enabling, but old browser sessions do not. Disabling new Telegram linking blocks code generation and consumption while preserving existing links and unused codes until their original expiry.
+
+User messages and buttons execute in acceptance order within each chat, ahead of AI continuations and delivery retries. Blocked chats cannot hide unrelated jobs behind the first queue batch. Validation errors return normal error responses; genuine uncertain executions still require Queue Recovery review and are never automatically replayed.
+
+Search pagination uses actor-bound controls valid for 15 minutes. Repeat the search when a control expires. Taxonomy changes enforce assignment permissions, backslashes survive text writes, default-category deletion is refused before reassignment, and privacy erasure anonymizes all matching audit records or reports a retryable failure.
 
 ### Beta.2 Queue Repair
 

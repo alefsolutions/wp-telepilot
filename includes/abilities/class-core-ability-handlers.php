@@ -88,6 +88,7 @@ class Telepilot_Core_Ability_Handlers {
 
 	private function get_site_info() {
 		$summary = $this->dashboard_service->get_summary();
+		if ( is_wp_error( $summary ) ) { return $summary; }
 
 		return array(
 			'ok'       => true,
@@ -110,6 +111,7 @@ class Telepilot_Core_Ability_Handlers {
 
 	private function get_site_health() {
 		$summary = $this->dashboard_service->get_summary();
+		if ( is_wp_error( $summary ) ) { return $summary; }
 
 		return array(
 			'ok'       => true,
@@ -282,6 +284,7 @@ class Telepilot_Core_Ability_Handlers {
 		$limit = ! empty( $arguments['limit'] ) ? max( 1, min( 10, absint( $arguments['limit'] ) ) ) : 5;
 
 		$result   = '' !== $query ? $this->users_service->search_page( $query, $page, $limit ) : $this->users_service->recent_page( $page, $limit );
+		if ( is_wp_error( $result ) ) { return $result; }
 		$items    = array();
 		$entities = array();
 		$position = 1;
@@ -330,10 +333,13 @@ class Telepilot_Core_Ability_Handlers {
 
 		if ( '' !== $query && 'updates' !== $mode ) {
 			$result = $this->plugins_service->search_page( $query, $page, $limit );
+			if ( is_wp_error( $result ) ) { return $result; }
 		} elseif ( 'updates' === $mode ) {
 			$result = $this->plugins_service->updates_page( $page, $limit );
+			if ( is_wp_error( $result ) ) { return $result; }
 		} else {
 			$result = $this->plugins_service->list_page( $page, $limit );
+			if ( is_wp_error( $result ) ) { return $result; }
 		}
 
 		$items    = array();
@@ -374,7 +380,9 @@ class Telepilot_Core_Ability_Handlers {
 
 	private function list_updates() {
 		$summary        = $this->dashboard_service->get_summary();
+		if ( is_wp_error( $summary ) ) { return $summary; }
 		$plugin_updates = $this->plugins_service->updates_page( 1, 10 );
+		if ( is_wp_error( $plugin_updates ) ) { return $plugin_updates; }
 		$items          = array();
 		$entities       = array();
 		$position       = 1;

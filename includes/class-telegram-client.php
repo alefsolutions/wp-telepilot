@@ -29,7 +29,7 @@ class Telepilot_Telegram_Client {
 		}
 
 		if ( array_key_exists( 'reply_markup', $args ) ) {
-			$payload['reply_markup'] = wp_json_encode( $args['reply_markup'] );
+			$payload['reply_markup'] = wp_json_encode( Telepilot_Telegram_Response_Builder::transport_keyboard( $args['reply_markup'] ) );
 		}
 
 		if ( ! empty( $args['reply_to_message_id'] ) ) {
@@ -74,7 +74,7 @@ class Telepilot_Telegram_Client {
 		}
 
 		if ( array_key_exists( 'reply_markup', $args ) ) {
-			$payload['reply_markup'] = wp_json_encode( $args['reply_markup'] );
+			$payload['reply_markup'] = wp_json_encode( Telepilot_Telegram_Response_Builder::transport_keyboard( $args['reply_markup'] ) );
 		}
 
 		return $this->request( 'editMessageText', $payload );

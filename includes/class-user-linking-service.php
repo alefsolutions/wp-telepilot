@@ -14,6 +14,7 @@ class Telepilot_User_Linking_Service {
 	const META_LINKED_AT      = '_telepilot_linked_at';
 
 	public function generate_link_code( $user_id ) {
+		if ( ! $this->linking_enabled() ) { return new WP_Error( 'telepilot_linking_disabled', __( 'New Telegram account linking is disabled.', 'wp-telepilot' ) ); }
 		$user_id = absint( $user_id );
 		$code    = strtoupper( wp_generate_password( 8, false, false ) );
 
@@ -39,6 +40,7 @@ class Telepilot_User_Linking_Service {
 	}
 
 	public function consume_link_code( $code, $message ) {
+		if ( ! $this->linking_enabled() ) { return Telepilot_Telegram_Response_Builder::error( __( 'New Telegram account linking is disabled.', 'wp-telepilot' ), array( 'code' => 'telepilot_linking_disabled' ) ); }
 		$code = strtoupper( sanitize_text_field( $code ) );
 		$user = $this->find_user_by_code( $code );
 
@@ -71,6 +73,7 @@ class Telepilot_User_Linking_Service {
 		}
 		global $wpdb;
 		$verified_hash = (string) get_user_meta( $user->ID, self::META_LINK_CODE_HASH, true );
+		if ( (int) get_user_meta( $user->ID, self::META_LINK_EXPIRES, true ) <= time() ) { return Telepilot_Telegram_Response_Builder::error( __( 'This link code expired. Generate another code.', 'wp-telepilot' ) ); }
 		if ( ! $verified_hash || ! wp_check_password( $code, $verified_hash ) || 1 !== $wpdb->query( $wpdb->prepare( "DELETE FROM {$wpdb->usermeta} WHERE user_id=%d AND meta_key=%s AND meta_value=%s", $user->ID, self::META_LINK_CODE_HASH, $verified_hash ) ) ) {
 			return Telepilot_Telegram_Response_Builder::error( __( 'This link code has already been used. Generate another code.', 'wp-telepilot' ) );
 		}
@@ -148,30 +151,26 @@ class Telepilot_User_Linking_Service {
 	}
 
 	private function find_user_by_code( $code ) {
-		$users = get_users(
-			array(
-				'meta_key'    => self::META_LINK_CODE_HASH,
-				'number'      => 50,
-				'count_total' => false,
-			)
-		);
-
-		foreach ( $users as $user ) {
-			$expires = (int) get_user_meta( $user->ID, self::META_LINK_EXPIRES, true );
-
-			if ( $expires < time() ) {
-				$this->clear_link_code( $user->ID );
-				continue;
+		global $wpdb;
+		$cursor = 0;
+		do {
+			// Keyset pagination is unaffected when another request consumes an earlier code.
+			$ids = $wpdb->get_col( $wpdb->prepare( "SELECT DISTINCT h.user_id FROM $wpdb->usermeta h INNER JOIN $wpdb->usermeta e ON e.user_id=h.user_id AND e.meta_key=%s WHERE h.meta_key=%s AND h.user_id>%d AND CAST(e.meta_value AS UNSIGNED)>%d ORDER BY h.user_id LIMIT 50", self::META_LINK_EXPIRES, self::META_LINK_CODE_HASH, $cursor, time() ) );
+			foreach ( $ids as $id ) {
+				$cursor = (int) $id;
+				$user = get_user_by( 'id', $id );
+				if ( ! Telepilot_Actor_Access::active_user( $user ) ) { continue; }
+				$hash = (string) get_user_meta( $id, self::META_LINK_CODE_HASH, true );
+				if ( $hash && wp_check_password( $code, $hash ) ) { return $user; }
 			}
-
-			$hash = (string) get_user_meta( $user->ID, self::META_LINK_CODE_HASH, true );
-
-			if ( $hash && wp_check_password( $code, $hash ) ) {
-				return $user;
-			}
-		}
+		} while ( count( $ids ) === 50 );
 
 		return null;
+	}
+
+	private function linking_enabled() {
+		$settings = get_option( 'telepilot_settings', array() );
+		return ! empty( $settings['linking_enabled'] ?? 1 );
 	}
 
 	private function clear_link_code( $user_id ) {

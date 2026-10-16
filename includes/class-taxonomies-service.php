@@ -203,7 +203,7 @@ class Telepilot_Taxonomies_Service {
 			return new WP_Error( 'telepilot_term_name_required', __( 'A term name is required.', 'wp-telepilot' ) );
 		}
 
-		$result = wp_insert_term( $name, $taxonomy );
+		$result = wp_insert_term( wp_slash( $name ), $taxonomy );
 
 		if ( is_wp_error( $result ) ) {
 			return $result;
@@ -232,9 +232,9 @@ class Telepilot_Taxonomies_Service {
 		$result = wp_update_term(
 			$term_id,
 			$taxonomy,
-			array(
+			wp_slash( array(
 				'name' => $name,
-			)
+			) )
 		);
 
 		if ( is_wp_error( $result ) ) {
@@ -331,6 +331,9 @@ class Telepilot_Taxonomies_Service {
 		if ( ! $term || is_wp_error( $term ) ) {
 			return new WP_Error( 'telepilot_term_not_found', __( 'Term not found.', 'wp-telepilot' ) );
 		}
+		if ( 'category' === $taxonomy && (int) get_option( 'default_category' ) === (int) $term->term_id ) {
+			return new WP_Error( 'telepilot_default_category', __( 'Choose another default category in WordPress before deleting this category.', 'wp-telepilot' ) );
+		}
 
 		$usage = $this->get_term_usage_details( $taxonomy, $term->term_id );
 		if ( is_wp_error( $usage ) ) {
@@ -343,7 +346,7 @@ class Telepilot_Taxonomies_Service {
 
 		$deleted = wp_delete_term( $term->term_id, $taxonomy );
 
-		if ( is_wp_error( $deleted ) || false === $deleted ) {
+		if ( true !== $deleted ) {
 			return is_wp_error( $deleted ) ? $deleted : new WP_Error( 'telepilot_term_delete_failed', __( 'WordPress could not delete that term.', 'wp-telepilot' ) );
 		}
 
@@ -366,6 +369,9 @@ class Telepilot_Taxonomies_Service {
 
 		if ( ! $term || is_wp_error( $term ) ) {
 			return new WP_Error( 'telepilot_term_not_found', __( 'Term not found.', 'wp-telepilot' ) );
+		}
+		if ( 'category' === $taxonomy && (int) get_option( 'default_category' ) === (int) $term->term_id ) {
+			return new WP_Error( 'telepilot_default_category', __( 'Choose another default category in WordPress before deleting this category.', 'wp-telepilot' ) );
 		}
 
 		if ( ! $replacement_term_id || $replacement_term_id === $term_id ) {
@@ -406,7 +412,7 @@ class Telepilot_Taxonomies_Service {
 		}
 
 		$deleted = wp_delete_term( $term->term_id, $taxonomy );
-		if ( is_wp_error( $deleted ) || false === $deleted ) {
+		if ( true !== $deleted ) {
 			return is_wp_error( $deleted ) ? $deleted : new WP_Error( 'telepilot_term_delete_failed', __( 'WordPress could not delete that term.', 'wp-telepilot' ) );
 		}
 
@@ -514,6 +520,8 @@ class Telepilot_Taxonomies_Service {
 			return array();
 		}
 
+		if ( '' !== $result['search'] ) { return Telepilot_Pagination_Service::search_row( $resource, $result['search'], $result['page'], $result['total_pages'] ); }
+
 		$buttons = array();
 		$command = '/' . $resource . ' ';
 		$mode    = '' !== $result['search'] ? 'search ' . $result['search'] : 'list';
@@ -600,7 +608,7 @@ class Telepilot_Taxonomies_Service {
 			return new WP_Error( 'telepilot_term_not_found', __( 'Term not found.', 'wp-telepilot' ) );
 		}
 
-		$result = wp_update_term( $term_id, $taxonomy, $args );
+		$result = wp_update_term( $term_id, $taxonomy, wp_slash( $args ) );
 
 		if ( is_wp_error( $result ) ) {
 			return $result;

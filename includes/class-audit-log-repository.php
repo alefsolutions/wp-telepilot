@@ -168,40 +168,16 @@ class Telepilot_Audit_Log_Repository {
 
 	public static function anonymize_personal_logs( $wp_user_id, $telegram_user_id = '', $chat_id = '' ) {
 		global $wpdb;
-
-		$logs = self::find_personal_logs( $wp_user_id, $telegram_user_id, $chat_id, 1, 5000 );
-
-		if ( empty( $logs ) ) {
-			return 0;
-		}
-
-		$anonymized = 0;
-
-		foreach ( $logs as $log ) {
-			$updated = $wpdb->update(
-				self::table_name(),
-				array(
-					'wp_user_id'       => null,
-					'telegram_user_id' => null,
-					'chat_id'          => null,
-					'before_state'     => null,
-					'after_state'      => null,
-					'ip_address'       => null,
-					'context'          => null,
-				),
-				array(
-					'id' => (int) $log['id'],
-				),
-				array( '%d', '%s', '%s', '%s', '%s', '%s', '%s' ),
-				array( '%d' )
-			);
-
-			if ( false !== $updated ) {
-				++$anonymized;
-			}
-		}
-
-		return $anonymized;
+		$conditions = array(); $args = array();
+		if ( $wp_user_id ) { $conditions[] = 'wp_user_id=%d'; $args[] = (int) $wp_user_id; }
+		if ( '' !== (string) $telegram_user_id ) { $conditions[] = 'telegram_user_id=%s'; $args[] = (string) $telegram_user_id; }
+		if ( '' !== (string) $chat_id ) { $conditions[] = 'chat_id=%s'; $args[] = (string) $chat_id; }
+		if ( ! $conditions ) { return 0; }
+		$previous = $wpdb->suppress_errors();
+		try {
+			$updated = $wpdb->query( $wpdb->prepare( 'UPDATE ' . self::table_name() . ' SET wp_user_id=NULL,telegram_user_id=NULL,chat_id=NULL,before_state=NULL,after_state=NULL,ip_address=NULL,context=NULL WHERE ' . implode( ' OR ', $conditions ), $args ) );
+		} finally { $wpdb->suppress_errors( $previous ); }
+		return false === $updated ? new WP_Error( 'telepilot_privacy_audit_failed', __( 'Audit data could not be erased. Retry the erasure after database availability is restored.', 'wp-telepilot' ) ) : (int) $updated;
 	}
 
 	private static function maybe_encode_json( $value ) {

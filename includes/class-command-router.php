@@ -191,6 +191,9 @@ class Telepilot_Command_Router {
 			case 'tp:ai':
 				return $this->ai_chat_handler->handle_callback( $command, $identity );
 
+			case 'tp:pagination':
+				return $this->handle_pagination( $command, $identity );
+
 			default:
 				return $this->unknown_command_response( $command['name'], $identity );
 		}
@@ -200,6 +203,17 @@ class Telepilot_Command_Router {
 		$grammar = new Telepilot_Command_Grammar();
 
 		return $grammar->parse_update( $update );
+	}
+
+	private function handle_pagination( $command, $identity ) {
+		$state = Telepilot_Pagination_Service::read( $command['args'][0] ?? '', $command['args'][1] ?? '' );
+		if ( ! $state ) { return Telepilot_Telegram_Response_Builder::error( __( 'This search control expired or is no longer authorized. Repeat the search command.', 'wp-telepilot' ) ); }
+		$resource = $state['resource'];
+		// Pass tokens directly so quotes and backslashes inside a query are not parsed again.
+		$search = array( 'name' => '/' . $resource, 'args' => array( 'search', $state['query'], 'page:' . $state['page'] ) );
+		if ( in_array( $resource, array( 'categories', 'tags' ), true ) ) { return $this->handle_terms( 'categories' === $resource ? 'category' : 'post_tag', $resource, $search, $identity ); }
+		$handler = 'handle_' . $resource;
+		return $this->$handler( $search, $identity );
 	}
 
 	private function handle_start( $identity ) {
@@ -382,8 +396,10 @@ class Telepilot_Command_Router {
 		}
 
 		if ( 'summary' === $subcommand ) {
+			$summary = $this->site_settings_command_service->get_summary();
+			if ( is_wp_error( $summary ) ) { return Telepilot_Telegram_Response_Builder::error( $summary->get_error_message() ); }
 			return Telepilot_Telegram_Response_Builder::success_html(
-				$this->site_settings_command_service->render_summary_message( $this->site_settings_command_service->get_summary() ),
+				$this->site_settings_command_service->render_summary_message( $summary ),
 				array(
 					'command'      => '/settings',
 					'reply_markup' => $this->site_settings_command_service->build_keyboard(),
@@ -465,12 +481,14 @@ class Telepilot_Command_Router {
 		$subcommand = ! empty( $args[0] ) ? strtolower( (string) $args[0] ) : 'list';
 
 		if ( 'help' === $subcommand ) {
+			$options = $this->notifications_command_service->list_page( 1 );
+			if ( is_wp_error( $options ) ) { return Telepilot_Telegram_Response_Builder::error( $options->get_error_message() ); }
 			return Telepilot_Telegram_Response_Builder::success_html(
 				$this->notifications_command_service->render_help_message(),
 				array(
 					'command'      => '/notifications',
 					'reply_markup' => $this->notifications_command_service->build_list_keyboard(
-						$this->notifications_command_service->list_page( 1 )
+						$options
 					),
 				)
 			);
@@ -478,6 +496,7 @@ class Telepilot_Command_Router {
 
 		if ( in_array( $subcommand, array( 'list', 'status' ), true ) ) {
 			$result = $this->notifications_command_service->list_page( $page );
+			if ( is_wp_error( $result ) ) { return Telepilot_Telegram_Response_Builder::error( $result->get_error_message(), array( 'code' => $result->get_error_code() ) ); }
 
 			return Telepilot_Telegram_Response_Builder::success_html(
 				$this->notifications_command_service->render_page_message( $result ),
@@ -512,6 +531,7 @@ class Telepilot_Command_Router {
 
 		if ( 'toggle' === $subcommand ) {
 			$page_result = $this->notifications_command_service->list_page( 1, 100 );
+			if ( is_wp_error( $page_result ) ) { return Telepilot_Telegram_Response_Builder::error( $page_result->get_error_message(), array( 'code' => $page_result->get_error_code() ) ); }
 			foreach ( $page_result['items'] as $item ) {
 				if ( $item['key'] === sanitize_key( $key ) ) {
 					$enabled = ! $item['enabled'];
@@ -670,6 +690,8 @@ class Telepilot_Command_Router {
 
 		$summary = $this->dashboard_service->get_summary();
 
+		if ( is_wp_error( $summary ) ) { return Telepilot_Telegram_Response_Builder::error( $summary->get_error_message(), array( 'code' => $summary->get_error_code() ) ); }
+
 		return Telepilot_Telegram_Response_Builder::success_html(
 			$this->dashboard_service->render_summary_message( $summary ),
 			array(
@@ -710,18 +732,22 @@ class Telepilot_Command_Router {
 			switch ( $subcommand ) {
 				case 'approved':
 					$result  = $this->comments_service->approved_page( $page );
+					if ( is_wp_error( $result ) ) { return Telepilot_Telegram_Response_Builder::error( $result->get_error_message(), array( 'code' => $result->get_error_code() ) ); }
 					$heading = __( 'Approved Comments', 'wp-telepilot' );
 					break;
 				case 'spam':
 					$result  = $this->comments_service->spam_page( $page );
+					if ( is_wp_error( $result ) ) { return Telepilot_Telegram_Response_Builder::error( $result->get_error_message(), array( 'code' => $result->get_error_code() ) ); }
 					$heading = __( 'Spam Comments', 'wp-telepilot' );
 					break;
 				case 'trash':
 					$result  = $this->comments_service->trash_page( $page );
+					if ( is_wp_error( $result ) ) { return Telepilot_Telegram_Response_Builder::error( $result->get_error_message(), array( 'code' => $result->get_error_code() ) ); }
 					$heading = __( 'Trashed Comments', 'wp-telepilot' );
 					break;
 				default:
 					$result  = $this->comments_service->pending_page( $page );
+					if ( is_wp_error( $result ) ) { return Telepilot_Telegram_Response_Builder::error( $result->get_error_message(), array( 'code' => $result->get_error_code() ) ); }
 					$heading = __( 'Pending Comments', 'wp-telepilot' );
 					break;
 			}
@@ -747,6 +773,8 @@ class Telepilot_Command_Router {
 			}
 
 			$result = $this->comments_service->search_page( $term, $page );
+
+			if ( is_wp_error( $result ) ) { return Telepilot_Telegram_Response_Builder::error( $result->get_error_message(), array( 'code' => $result->get_error_code() ) ); }
 
 			return Telepilot_Telegram_Response_Builder::success_html(
 				$this->comments_service->render_page_message( $result, sprintf( __( 'Comment Search: %s', 'wp-telepilot' ), $term ) ),
@@ -1309,6 +1337,7 @@ class Telepilot_Command_Router {
 		$flow_service = $this->get_flow_state_service();
 		if ( null === $selected_ids ) {
 			$selected_ids = $this->posts_service->get_assigned_term_ids( $post_id, 'category' );
+			if ( is_wp_error( $selected_ids ) ) { return Telepilot_Telegram_Response_Builder::error( $selected_ids->get_error_message() ); }
 		}
 
 		$state = array(
@@ -1478,6 +1507,7 @@ class Telepilot_Command_Router {
 
 		if ( in_array( $subcommand, array( 'list', 'recent' ), true ) ) {
 			$items = $this->media_service->recent_page( $page );
+			if ( is_wp_error( $items ) ) { return Telepilot_Telegram_Response_Builder::error( $items->get_error_message(), array( 'code' => $items->get_error_code() ) ); }
 			return Telepilot_Telegram_Response_Builder::success_html(
 				$this->media_service->render_page_message( $items, __( 'Recent Media', 'wp-telepilot' ) ),
 				array(
@@ -1504,6 +1534,8 @@ class Telepilot_Command_Router {
 			}
 
 			$items = $this->media_service->search_page( $term, $page );
+
+			if ( is_wp_error( $items ) ) { return Telepilot_Telegram_Response_Builder::error( $items->get_error_message(), array( 'code' => $items->get_error_code() ) ); }
 			return Telepilot_Telegram_Response_Builder::success_html(
 				$this->media_service->render_page_message( $items, sprintf( __( 'Media Search: %s', 'wp-telepilot' ), $term ) ),
 				array(

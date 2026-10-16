@@ -930,7 +930,8 @@ class Telepilot_Settings_Page {
 			return;
 		}
 
-		$linking_service->generate_link_code( $user_id );
+		$result = $linking_service->generate_link_code( $user_id );
+		if ( is_wp_error( $result ) ) { add_settings_error( 'telepilot_settings', $result->get_error_code(), $result->get_error_message() ); }
 	}
 
 	public function handle_settings_updated( $old_value, $value ) {

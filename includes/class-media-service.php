@@ -221,10 +221,10 @@ class Telepilot_Media_Service {
 		);
 
 		$result = wp_update_post(
-			array(
+			wp_slash( array(
 				'ID'         => $attachment_id,
 				'post_title' => sanitize_text_field( $title ),
-			),
+			) ),
 			true
 		);
 
@@ -278,10 +278,10 @@ class Telepilot_Media_Service {
 		);
 
 		$result = wp_update_post(
-			array(
+			wp_slash( array(
 				'ID'           => $attachment_id,
 				'post_excerpt' => sanitize_textarea_field( $caption ),
-			),
+			) ),
 			true
 		);
 
@@ -392,6 +392,8 @@ class Telepilot_Media_Service {
 			return array();
 		}
 
+		if ( 'search' === $subcommand ) { return Telepilot_Pagination_Service::search_row( 'media', $search_term, $page, $total_pages ); }
+
 		$buttons = array();
 
 		if ( $page > 1 ) {
@@ -412,10 +414,6 @@ class Telepilot_Media_Service {
 	}
 
 	private function build_command( $subcommand, $search_term, $page ) {
-		if ( 'search' === $subcommand ) {
-			return trim( '/media search ' . $search_term . ' page:' . $page );
-		}
-
 		return '/media recent page:' . $page;
 	}
 

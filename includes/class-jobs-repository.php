@@ -129,25 +129,40 @@ class Telepilot_Jobs_Repository {
 		global $wpdb;
 		self::recover_expired();
 		$now = gmdate( 'Y-m-d H:i:s' );
-		$jobs = $wpdb->get_results( $wpdb->prepare( 'SELECT j.*,o.state AS execution_state,o.result AS outcome FROM ' . self::table_name() . ' j INNER JOIN ' . self::operations_table() . ' o ON j.id=o.job_id WHERE j.status=%s AND j.available_at<=%s ORDER BY j.priority,j.available_at,j.id LIMIT 100', 'pending', $now ), ARRAY_A );
-		foreach ( $jobs as $job ) {
-			$chat = (string) $job['placeholder_chat_id'];
-			// Unknown executions quarantine only their chat, never unrelated chats.
-			if ( $wpdb->get_var( $wpdb->prepare( 'SELECT id FROM ' . self::table_name() . ' WHERE placeholder_chat_id=%s AND status=%s LIMIT 1', $chat, 'uncertain' ) ) ) { continue; }
-			if ( 'accepted' === $job['execution_state'] && ! empty( $job['stale_after'] ) && $job['stale_after'] <= $now ) {
-				self::cancel( $job['id'], 'Request expired before execution.' );
-				continue;
+		$table = self::table_name();
+		$operations = self::operations_table();
+		$locks = self::locks_table();
+		// Expiry must also progress in quarantined chats; completed outcomes are never re-executed.
+		$expired = $wpdb->query( $wpdb->prepare( "UPDATE $table j INNER JOIN $operations o ON o.job_id=j.id SET j.status='cancelled',j.last_error='Request expired before execution.',j.updated_at=%s WHERE j.status='pending' AND o.state='accepted' AND j.stale_after IS NOT NULL AND j.stale_after<=%s", $now, $now ) );
+		if ( false === $expired ) { return array(); }
+		$rank = "CASE WHEN j.transport IN ('webhook','polling') AND o.state='accepted' THEN 0 WHEN j.transport='ai_continuation' AND o.state='accepted' THEN 1 WHEN j.transport='notification' THEN 3 ELSE 2 END";
+		$cursor = null;
+		do {
+			$after = $cursor ? $wpdb->prepare( " AND ($rank,j.priority,j.available_at,j.id)>(%d,%d,%s,%d)", $cursor['queue_rank'], $cursor['priority'], $cursor['available_at'], $cursor['id'] ) : '';
+			$jobs = $wpdb->get_results( $wpdb->prepare( "SELECT j.*,o.state AS execution_state,o.result AS outcome,$rank AS queue_rank FROM $table j INNER JOIN $operations o ON j.id=o.job_id
+				WHERE j.status='pending' AND j.available_at<=%s
+				AND NOT EXISTS (SELECT 1 FROM $table q WHERE q.placeholder_chat_id <=> j.placeholder_chat_id AND q.status='uncertain')
+				AND NOT EXISTS (SELECT 1 FROM $locks l WHERE l.chat_id=COALESCE(j.placeholder_chat_id,''))
+				AND (NOT (j.transport IN ('webhook','polling') AND o.state='accepted') OR NOT EXISTS (
+					SELECT 1 FROM $table h INNER JOIN $operations ho ON ho.job_id=h.id WHERE h.placeholder_chat_id <=> j.placeholder_chat_id AND h.id<j.id AND h.transport IN ('webhook','polling') AND h.status IN ('pending','processing') AND ho.state IN ('accepted','executing')))
+				$after ORDER BY queue_rank,j.priority,j.available_at,j.id LIMIT 100", $now ), ARRAY_A );
+			if ( ! is_array( $jobs ) ) { return array(); }
+			foreach ( $jobs as $job ) {
+				$cursor = $job;
+				$chat = (string) $job['placeholder_chat_id'];
+				$owner = wp_generate_uuid4();
+				$locked = $wpdb->query( $wpdb->prepare( 'INSERT IGNORE INTO ' . self::locks_table() . ' (chat_id,job_id,owner,expires_at) VALUES (%s,%d,%s,%s)', $chat, $job['id'], $owner, gmdate( 'Y-m-d H:i:s', time() + max( 60, (int) $lock_timeout ) ) ) );
+				if ( 1 !== $locked ) { continue; }
+				// A different worker may have quarantined this chat after candidate selection.
+				if ( $wpdb->get_var( $wpdb->prepare( "SELECT id FROM $table WHERE COALESCE(placeholder_chat_id,'')=%s AND status='uncertain' LIMIT 1", $chat ) ) ) { self::release_lock( $job['id'], $owner ); continue; }
+				$claimed = $wpdb->update( self::table_name(), array( 'status' => 'processing', 'lease_token' => $owner, 'locked_at' => $now, 'updated_at' => $now ), array( 'id' => $job['id'], 'status' => 'pending' ) );
+				if ( ! $claimed ) { self::release_lock( $job['id'], $owner ); continue; }
+				$job['lease_token'] = $owner;
+				$job['status'] = 'processing';
+				// Claim only the job we are about to execute; never lease a whole batch in advance.
+				return array( $job );
 			}
-			$owner = wp_generate_uuid4();
-			$locked = $wpdb->query( $wpdb->prepare( 'INSERT IGNORE INTO ' . self::locks_table() . ' (chat_id,job_id,owner,expires_at) VALUES (%s,%d,%s,%s)', $chat, $job['id'], $owner, gmdate( 'Y-m-d H:i:s', time() + max( 60, (int) $lock_timeout ) ) ) );
-			if ( 1 !== $locked ) { continue; }
-			$claimed = $wpdb->update( self::table_name(), array( 'status' => 'processing', 'lease_token' => $owner, 'locked_at' => $now, 'updated_at' => $now ), array( 'id' => $job['id'], 'status' => 'pending' ) );
-			if ( ! $claimed ) { self::release_lock( $job['id'], $owner ); continue; }
-			$job['lease_token'] = $owner;
-			$job['status'] = 'processing';
-			// Claim only the job we are about to execute; never lease a whole batch in advance.
-			return array( $job );
-		}
+		} while ( count( $jobs ) === 100 );
 		return array();
 	}
 

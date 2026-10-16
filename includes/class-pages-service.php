@@ -19,7 +19,8 @@ class Telepilot_Pages_Service {
 	}
 
 	private function operation_latest( $limit = 5 ) {
-		return $this->latest_page( 1, $limit )['items'];
+		$result = $this->latest_page( 1, $limit );
+		return is_wp_error( $result ) ? $result : $result['items'];
 	}
 
 	public function latest_page( $page = 1, $limit = self::PER_PAGE ) {
@@ -240,12 +241,12 @@ class Telepilot_Pages_Service {
 			return new WP_Error( 'telepilot_capability_denied', __( 'You cannot create pages.', 'wp-telepilot' ) );
 		}
 		$page_id = wp_insert_post(
-			array(
+			wp_slash( array(
 				'post_type'   => 'page',
 				'post_status' => 'draft',
 				'post_title'  => sanitize_text_field( $title ),
 				'post_author' => get_current_user_id(),
-			),
+			) ),
 			true
 		);
 
@@ -518,6 +519,8 @@ class Telepilot_Pages_Service {
 			return array();
 		}
 
+		if ( 'search' === $subcommand ) { return Telepilot_Pagination_Service::search_row( 'pages', $search_term, $page, $total_pages ); }
+
 		$buttons = array();
 
 		if ( $page > 1 ) {
@@ -538,10 +541,6 @@ class Telepilot_Pages_Service {
 	}
 
 	private function build_command( $subcommand, $search_term, $page ) {
-		if ( 'search' === $subcommand ) {
-			return trim( '/pages search ' . $search_term . ' page:' . $page );
-		}
-
 		if ( 'drafts' === $subcommand ) {
 			return '/pages drafts page:' . $page;
 		}
@@ -689,10 +688,10 @@ class Telepilot_Pages_Service {
 
 		$before_status = $page->post_status;
 		$result        = wp_update_post(
-			array(
+			wp_slash( array(
 				'ID'          => $page_id,
 				'post_status' => $status,
-			),
+			) ),
 			true
 		);
 
@@ -723,12 +722,12 @@ class Telepilot_Pages_Service {
 		);
 
 		$result = wp_update_post(
-			array_merge(
+			wp_slash( array_merge(
 				array(
 					'ID' => $page_id,
 				),
 				$fields
-			),
+			) ),
 			true
 		);
 

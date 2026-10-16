@@ -126,9 +126,24 @@ class Telepilot_Privacy_Service {
 			);
 		}
 
+		// Keep lookup identifiers until the database has anonymized every matching event.
+		$telegram_user_id = (string) get_user_meta( $user->ID, Telepilot_User_Linking_Service::META_TELEGRAM_ID, true );
+		$chat_id = (string) get_user_meta( $user->ID, Telepilot_User_Linking_Service::META_TELEGRAM_CHAT, true );
+		$anonymized_logs = Telepilot_Audit_Log_Repository::anonymize_personal_logs( $user->ID, $telegram_user_id, $chat_id );
+		if ( is_wp_error( $anonymized_logs ) ) {
+			return array( 'items_removed' => false, 'items_retained' => true, 'messages' => array( $anonymized_logs->get_error_message() ), 'done' => false );
+		}
 		Telepilot_Actor_Access::revoke( $user->ID );
-		$items_removed = (bool) Telepilot_Jobs_Repository::erase_actor( $user->ID );
-		$items_removed = (bool) Telepilot_Security_Records::erase_actor( $user->ID ) || $items_removed;
+		global $wpdb;
+		$previous_errors = $wpdb->suppress_errors();
+		try {
+			$erased_jobs = Telepilot_Jobs_Repository::erase_actor( $user->ID );
+			$erased_security = Telepilot_Security_Records::erase_actor( $user->ID );
+		} finally { $wpdb->suppress_errors( $previous_errors ); }
+		if ( false === $erased_jobs || false === $erased_security ) {
+			return array( 'items_removed' => $anonymized_logs > 0 || $erased_jobs > 0 || $erased_security > 0, 'items_retained' => true, 'messages' => array( __( 'Queued or security data could not be erased. Retry after database availability is restored.', 'wp-telepilot' ) ), 'done' => false );
+		}
+		$items_removed = $erased_jobs > 0 || $erased_security > 0;
 		$flows = new Telepilot_Flow_State_Service();
 		$telegram_id = get_user_meta( $user->ID, Telepilot_User_Linking_Service::META_TELEGRAM_ID, true );
 		$flows->clear_pending_post( $telegram_id );
@@ -156,8 +171,6 @@ class Telepilot_Privacy_Service {
 				$items_removed = true;
 			}
 		}
-
-		$anonymized_logs = Telepilot_Audit_Log_Repository::anonymize_personal_logs( $user->ID, $telegram_user_id, $chat_id );
 
 		if ( $anonymized_logs > 0 ) {
 			$items_removed  = true;

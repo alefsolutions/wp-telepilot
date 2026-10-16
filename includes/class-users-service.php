@@ -10,6 +10,48 @@ class Telepilot_Users_Service {
 
 	private $confirmation_service;
 
+	/** Authentication can happen before init, including REST application passwords. */
+	public static function register_access_guards() {
+		add_filter( 'authenticate', array( __CLASS__, 'guard_authentication' ), PHP_INT_MAX );
+		add_filter( 'determine_current_user', array( __CLASS__, 'guard_current_user' ), PHP_INT_MAX );
+		add_filter( 'wp_is_application_passwords_available_for_user', array( __CLASS__, 'application_passwords_available' ), PHP_INT_MAX, 2 );
+		add_action( 'wp_authenticate_application_password_errors', array( __CLASS__, 'guard_application_password' ), PHP_INT_MAX, 2 );
+		foreach ( array( 'added_user_meta', 'updated_user_meta' ) as $hook ) {
+			add_action( $hook, array( __CLASS__, 'disabled_meta_changed' ), 10, 3 );
+		}
+	}
+
+	public static function guard_authentication( $user ) {
+		if ( $user instanceof WP_User && get_user_meta( $user->ID, self::META_DISABLED, true ) ) {
+			WP_Session_Tokens::get_instance( $user->ID )->destroy_all();
+			return new WP_Error( 'telepilot_user_disabled', __( 'This user account has been disabled by WP Telepilot.', 'wp-telepilot' ) );
+		}
+		return $user;
+	}
+
+	public static function guard_current_user( $user_id ) {
+		if ( $user_id && get_user_meta( $user_id, self::META_DISABLED, true ) ) {
+			WP_Session_Tokens::get_instance( $user_id )->destroy_all();
+			return 0;
+		}
+		return $user_id;
+	}
+
+	public static function application_passwords_available( $available, $user ) {
+		return $available && ! get_user_meta( $user->ID, self::META_DISABLED, true );
+	}
+
+	public static function guard_application_password( $error, $user ) {
+		$access = self::guard_authentication( $user );
+		if ( is_wp_error( $access ) ) { $error->add( $access->get_error_code(), $access->get_error_message() ); }
+	}
+
+	public static function disabled_meta_changed( $meta_id, $user_id, $key ) {
+		if ( self::META_DISABLED === $key && get_user_meta( $user_id, $key, true ) ) {
+			WP_Session_Tokens::get_instance( $user_id )->destroy_all();
+		}
+	}
+
 	public function __construct( Telepilot_Confirmation_Service $confirmation_service ) {
 		$this->confirmation_service = $confirmation_service;
 	}
@@ -427,10 +469,10 @@ class Telepilot_Users_Service {
 		);
 
 		$result = wp_update_user(
-			array(
+			wp_slash( array(
 				'ID'         => $user_id,
 				'user_email' => $email,
-			)
+			) )
 		);
 
 		if ( is_wp_error( $result ) ) {
@@ -472,10 +514,10 @@ class Telepilot_Users_Service {
 		);
 
 		$result = wp_update_user(
-			array(
+			wp_slash( array(
 				'ID'           => $user_id,
 				'display_name' => $display_name,
-			)
+			) )
 		);
 
 		if ( is_wp_error( $result ) ) {
@@ -644,6 +686,8 @@ class Telepilot_Users_Service {
 			return array();
 		}
 
+		if ( 'search' === $subcommand ) { return Telepilot_Pagination_Service::search_row( 'users', $search_term, $page, $total_pages ); }
+
 		$buttons = array();
 
 		if ( $page > 1 ) {
@@ -664,10 +708,6 @@ class Telepilot_Users_Service {
 	}
 
 	private function build_command( $subcommand, $search_term, $page ) {
-		if ( 'search' === $subcommand ) {
-			return trim( '/users search ' . $search_term . ' page:' . $page );
-		}
-
 		return '/users list page:' . $page;
 	}
 

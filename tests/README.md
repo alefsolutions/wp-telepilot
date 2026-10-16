@@ -14,6 +14,10 @@ Tests use a disposable WordPress database, never a live installation. All HTTP i
 
 CI covers minimum PHP/WordPress and the current stable WordPress on PHP 8.5. Releases require the full suite. Existing tags/releases are never replaced; beta publishing requires explicit workflow opt-in. Live staging transport/provider and visual checks remain separate from offline PHPUnit tests.
 
+The stabilization suite includes the twelve reproductions from the eleven-bug audit, with additional cases for authentication before `init`, re-enabling accounts, blocked queues beyond 100 jobs, competing claims, command ordering, validation errors, pagination ownership/expiry, Unicode callback byte lengths, complete privacy erasure and retries, text escaping, and default-category protection. Authentication workers use only the disposable database and block outbound HTTP.
+
+To test another core/test-library combination without replacing the minimum-version installation, set `TELEPILOT_TEST_WP_ROOT` to its extracted WordPress directory and `TELEPILOT_TEST_PHPUNIT_ROOT` to the matching `wp-phpunit/wp-phpunit` directory. Use the appropriate PHP binary and a separate disposable database. Set `TELEPILOT_TEST_MCP_PLUGIN` to the pinned official Adapter entrypoint for the current-version MCP transport test. Clear these overrides before generating minimum-version admin fixtures.
+
 ## Queue Migration Checks
 
 The suite reconstructs the historical NOT NULL `update_id` column and runs the real upgrade from v3, beta.1 and an already-current version. Run on actual MySQL 8 and MariaDB, not a database-version shim. CI includes both engines. Permission tests create and remove a uniquely named database user without ALTER rights; the disposable test administrator needs CREATE USER and GRANT privileges. No production users or credentials are involved.

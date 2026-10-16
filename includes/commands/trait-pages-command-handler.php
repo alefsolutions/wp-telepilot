@@ -17,6 +17,7 @@ trait Telepilot_Pages_Command_Handler {
 
 		if ( 'list' === $subcommand ) {
 			$pages = $this->pages_service->latest_page( $page );
+			if ( is_wp_error( $pages ) ) { return Telepilot_Telegram_Response_Builder::error( $pages->get_error_message(), array( 'code' => $pages->get_error_code() ) ); }
 			return Telepilot_Telegram_Response_Builder::success_html(
 				$this->pages_service->render_page_message( $pages, __( 'Recent Pages', 'wp-telepilot' ) ),
 				array(
@@ -38,6 +39,8 @@ trait Telepilot_Pages_Command_Handler {
 			}
 
 			$pages = $this->pages_service->search_page( $term, $page );
+
+			if ( is_wp_error( $pages ) ) { return Telepilot_Telegram_Response_Builder::error( $pages->get_error_message(), array( 'code' => $pages->get_error_code() ) ); }
 			return Telepilot_Telegram_Response_Builder::success_html(
 				$this->pages_service->render_page_message( $pages, sprintf( __( 'Page Search: %s', 'wp-telepilot' ), $term ) ),
 				array(
@@ -64,6 +67,7 @@ trait Telepilot_Pages_Command_Handler {
 
 		if ( 'drafts' === $subcommand ) {
 			$pages = $this->pages_service->drafts_page( $page );
+			if ( is_wp_error( $pages ) ) { return Telepilot_Telegram_Response_Builder::error( $pages->get_error_message(), array( 'code' => $pages->get_error_code() ) ); }
 			return Telepilot_Telegram_Response_Builder::success_html(
 				$this->pages_service->render_page_message( $pages, __( 'Draft Pages', 'wp-telepilot' ) ),
 				array(
@@ -80,6 +84,7 @@ trait Telepilot_Pages_Command_Handler {
 
 		if ( 'trashed' === $subcommand ) {
 			$pages = $this->pages_service->trashed_page( $page );
+			if ( is_wp_error( $pages ) ) { return Telepilot_Telegram_Response_Builder::error( $pages->get_error_message(), array( 'code' => $pages->get_error_code() ) ); }
 			return Telepilot_Telegram_Response_Builder::success_html(
 				$this->pages_service->render_page_message( $pages, __( 'Trashed Pages', 'wp-telepilot' ) ),
 				array(

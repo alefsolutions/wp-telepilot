@@ -26,6 +26,7 @@ trait Telepilot_Users_Command_Handler {
 
 		if ( 'list' === $subcommand ) {
 			$users = $this->users_service->recent_page( $page );
+			if ( is_wp_error( $users ) ) { return Telepilot_Telegram_Response_Builder::error( $users->get_error_message(), array( 'code' => $users->get_error_code() ) ); }
 			return Telepilot_Telegram_Response_Builder::success_html(
 				$this->users_service->render_page_message( $users, __( 'Recent Users', 'wp-telepilot' ) ),
 				array(
@@ -50,6 +51,8 @@ trait Telepilot_Users_Command_Handler {
 			}
 
 			$users = $this->users_service->search_page( $term, $page );
+
+			if ( is_wp_error( $users ) ) { return Telepilot_Telegram_Response_Builder::error( $users->get_error_message(), array( 'code' => $users->get_error_code() ) ); }
 
 			return Telepilot_Telegram_Response_Builder::success_html(
 				$this->users_service->render_page_message( $users, sprintf( __( 'User Search: %s', 'wp-telepilot' ), $term ) ),

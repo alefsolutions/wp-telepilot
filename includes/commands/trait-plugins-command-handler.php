@@ -34,6 +34,7 @@ trait Telepilot_Plugins_Command_Handler {
 
 		if ( in_array( $subcommand, array( 'list', 'installed' ), true ) ) {
 			$result = $this->plugins_service->list_page( $page );
+			if ( is_wp_error( $result ) ) { return Telepilot_Telegram_Response_Builder::error( $result->get_error_message(), array( 'code' => $result->get_error_code() ) ); }
 
 			return Telepilot_Telegram_Response_Builder::success_html(
 				$this->plugins_service->render_page_message( $result, __( 'Installed Plugins', 'wp-telepilot' ) ),
@@ -51,6 +52,7 @@ trait Telepilot_Plugins_Command_Handler {
 
 		if ( 'updates' === $subcommand ) {
 			$result = $this->plugins_service->updates_page( $page );
+			if ( is_wp_error( $result ) ) { return Telepilot_Telegram_Response_Builder::error( $result->get_error_message(), array( 'code' => $result->get_error_code() ) ); }
 
 			return Telepilot_Telegram_Response_Builder::success_html(
 				$this->plugins_service->render_page_message( $result, __( 'Plugin Updates', 'wp-telepilot' ) ),
@@ -102,6 +104,8 @@ trait Telepilot_Plugins_Command_Handler {
 			}
 
 			$result = $this->plugins_service->search_page( $term, $page );
+
+			if ( is_wp_error( $result ) ) { return Telepilot_Telegram_Response_Builder::error( $result->get_error_message(), array( 'code' => $result->get_error_code() ) ); }
 
 			return Telepilot_Telegram_Response_Builder::success_html(
 				$this->plugins_service->render_page_message( $result, sprintf( __( 'Plugin Search: %s', 'wp-telepilot' ), $term ) ),

@@ -253,13 +253,13 @@ class Telepilot_Comments_Service {
 			return new WP_Error( 'telepilot_reply_user_invalid', __( 'A valid WordPress user is required to reply.', 'wp-telepilot' ) );
 		}
 
-		$content = trim( (string) wp_unslash( $content ) );
+		$content = trim( (string) $content );
 		if ( '' === $content ) {
 			return new WP_Error( 'telepilot_reply_content_required', __( 'Reply content is required.', 'wp-telepilot' ) );
 		}
 
 		$reply_id = wp_insert_comment(
-			array(
+			wp_slash( array(
 				'comment_post_ID'      => (int) $comment->comment_post_ID,
 				'comment_parent'       => (int) $comment_id,
 				'user_id'              => (int) $wp_user->ID,
@@ -269,7 +269,7 @@ class Telepilot_Comments_Service {
 				'comment_content'      => wp_kses_post( $content ),
 				'comment_approved'     => 1,
 				'comment_type'         => '',
-			)
+			) )
 		);
 
 		if ( ! $reply_id ) {
@@ -441,6 +441,8 @@ class Telepilot_Comments_Service {
 			return array();
 		}
 
+		if ( 'search' === $subcommand ) { return Telepilot_Pagination_Service::search_row( 'comments', $search_term, $page, $total_pages ); }
+
 		$buttons = array();
 
 		if ( $page > 1 ) {
@@ -461,10 +463,6 @@ class Telepilot_Comments_Service {
 	}
 
 	private function build_command( $subcommand, $search_term, $page ) {
-		if ( 'search' === $subcommand ) {
-			return trim( '/comments search ' . $search_term . ' page:' . $page );
-		}
-
 		return '/comments ' . $subcommand . ' page:' . $page;
 	}
 

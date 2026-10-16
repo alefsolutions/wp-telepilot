@@ -32,6 +32,7 @@ trait Telepilot_Posts_Command_Handler {
 
 		if ( in_array( $subcommand, array( 'list', 'latest' ), true ) ) {
 			$result = $this->posts_service->latest_page( $page );
+			if ( is_wp_error( $result ) ) { return Telepilot_Telegram_Response_Builder::error( $result->get_error_message(), array( 'code' => $result->get_error_code() ) ); }
 			return Telepilot_Telegram_Response_Builder::success_html(
 				$this->posts_service->render_page_message( $result, __( 'Latest Posts', 'wp-telepilot' ) ),
 				array(
@@ -48,6 +49,7 @@ trait Telepilot_Posts_Command_Handler {
 
 		if ( 'drafts' === $subcommand ) {
 			$result = $this->posts_service->drafts_page( $page );
+			if ( is_wp_error( $result ) ) { return Telepilot_Telegram_Response_Builder::error( $result->get_error_message(), array( 'code' => $result->get_error_code() ) ); }
 			return Telepilot_Telegram_Response_Builder::success_html(
 				$this->posts_service->render_page_message( $result, __( 'Draft Posts', 'wp-telepilot' ) ),
 				array(
@@ -64,6 +66,7 @@ trait Telepilot_Posts_Command_Handler {
 
 		if ( 'trashed' === $subcommand ) {
 			$result = $this->posts_service->trashed_page( $page );
+			if ( is_wp_error( $result ) ) { return Telepilot_Telegram_Response_Builder::error( $result->get_error_message(), array( 'code' => $result->get_error_code() ) ); }
 			return Telepilot_Telegram_Response_Builder::success_html(
 				$this->posts_service->render_page_message( $result, __( 'Trashed Posts', 'wp-telepilot' ) ),
 				array(
@@ -85,6 +88,8 @@ trait Telepilot_Posts_Command_Handler {
 			}
 
 			$posts = $this->posts_service->search_page( $term, $page );
+
+			if ( is_wp_error( $posts ) ) { return Telepilot_Telegram_Response_Builder::error( $posts->get_error_message(), array( 'code' => $posts->get_error_code() ) ); }
 			return Telepilot_Telegram_Response_Builder::success_html(
 				$this->posts_service->render_page_message( $posts, sprintf( __( 'Post Search: %s', 'wp-telepilot' ), $term ) ),
 				array(
@@ -100,8 +105,10 @@ trait Telepilot_Posts_Command_Handler {
 		}
 
 		if ( 'stats' === $subcommand ) {
+			$stats = $this->posts_service->stats();
+			if ( is_wp_error( $stats ) ) { return Telepilot_Telegram_Response_Builder::error( $stats->get_error_message() ); }
 			return Telepilot_Telegram_Response_Builder::success_html(
-				$this->posts_service->render_stats_message( $this->posts_service->stats() ),
+				$this->posts_service->render_stats_message( $stats ),
 				array(
 					'command'      => '/posts',
 					'reply_markup' => $this->safe_reply_markup(

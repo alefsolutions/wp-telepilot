@@ -640,6 +640,8 @@ class Telepilot_Plugins_Service {
 			return array();
 		}
 
+		if ( 'search' === $subcommand ) { return Telepilot_Pagination_Service::search_row( 'plugins', $search_term, $page, $total_pages ); }
+
 		$buttons = array();
 
 		if ( $page > 1 ) {
@@ -660,10 +662,6 @@ class Telepilot_Plugins_Service {
 	}
 
 	private function build_command( $subcommand, $search_term, $page ) {
-		if ( 'search' === $subcommand ) {
-			return trim( '/plugins search ' . $search_term . ' page:' . $page );
-		}
-
 		if ( 'updates' === $subcommand ) {
 			return '/plugins updates page:' . $page;
 		}

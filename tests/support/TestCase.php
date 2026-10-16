@@ -23,4 +23,10 @@ abstract class Telepilot_TestCase extends WP_UnitTestCase {
             return array( 'headers' => array(), 'body' => wp_json_encode( $body ), 'response' => array( 'code' => $status, 'message' => 'Fixture' ), 'cookies' => array(), 'filename' => null );
         }, PHP_INT_MAX, 3 );
     }
+    protected function route($text, $actor) {
+        $property = new ReflectionProperty(Telepilot_Telegram_Service::class, 'command_router');
+        if (PHP_VERSION_ID < 80100) { $property->setAccessible(true); }
+        return $property->getValue(new Telepilot_Telegram_Service())->route(array('message'=>array('text'=>$text,'from'=>array('id'=>$actor['telegram_user_id']),'chat'=>array('id'=>$actor['chat_id'],'type'=>'private'))), $actor);
+    }
+
 }

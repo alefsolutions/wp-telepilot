@@ -107,11 +107,14 @@ class Telepilot_Telegram_Response_Builder {
 
 	public static function keyboard( $rows ) {
 		$inline_keyboard = array();
+		if ( ! is_array( $rows ) ) { return array(); }
 
 		foreach ( $rows as $row ) {
+			if ( ! is_array( $row ) ) { continue; }
 			$buttons = array();
 
 			foreach ( $row as $button ) {
+				if ( ! is_array( $button ) ) { continue; }
 				if ( empty( $button['text'] ) ) {
 					continue;
 				}
@@ -130,7 +133,11 @@ class Telepilot_Telegram_Response_Builder {
 					continue;
 				}
 
-				if ( empty( $button['callback_data'] ) ) {
+				if ( ! isset( $button['callback_data'] ) || '' === $button['callback_data'] ) {
+					continue;
+				}
+				if ( ! is_string( $button['callback_data'] ) || strlen( $button['callback_data'] ) > 64 ) {
+					Telepilot_Audit_Log_Repository::log( array( 'action_name' => 'telegram_callback_omitted', 'resource_type' => 'telegram_keyboard', 'was_successful' => 0, 'failure_reason' => 'Callback exceeds Telegram byte limit or is not a string.' ) );
 					continue;
 				}
 
@@ -152,6 +159,12 @@ class Telepilot_Telegram_Response_Builder {
 		return array(
 			'inline_keyboard' => $inline_keyboard,
 		);
+	}
+
+	public static function transport_keyboard( $markup ) {
+		if ( ! is_array( $markup ) || ! isset( $markup['inline_keyboard'] ) || ! is_array( $markup['inline_keyboard'] ) ) { return $markup; }
+		$keyboard = self::keyboard( $markup['inline_keyboard'] );
+		return $keyboard ?: self::empty_keyboard();
 	}
 
 	public static function append_rows( $keyboard, $rows ) {

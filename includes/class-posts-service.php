@@ -19,7 +19,8 @@ class Telepilot_Posts_Service {
 	}
 
 	private function operation_latest( $limit = 5 ) {
-		return $this->latest_page( 1, $limit )['items'];
+		$result = $this->latest_page( 1, $limit );
+		return is_wp_error( $result ) ? $result : $result['items'];
 	}
 
 	public function latest_page( $page = 1, $limit = self::PER_PAGE ) {
@@ -47,7 +48,8 @@ class Telepilot_Posts_Service {
 	}
 
 	private function operation_drafts( $limit = 5 ) {
-		return $this->drafts_page( 1, $limit )['items'];
+		$result = $this->drafts_page( 1, $limit );
+		return is_wp_error( $result ) ? $result : $result['items'];
 	}
 
 	public function drafts_page( $page = 1, $limit = self::PER_PAGE ) {
@@ -298,6 +300,8 @@ class Telepilot_Posts_Service {
 			return array();
 		}
 
+		if ( 'search' === $subcommand ) { return Telepilot_Pagination_Service::search_row( 'posts', $search_term, $page, $total_pages ); }
+
 		$buttons = array();
 
 		if ( $page > 1 ) {
@@ -318,10 +322,6 @@ class Telepilot_Posts_Service {
 	}
 
 	private function build_command( $subcommand, $search_term, $page ) {
-		if ( 'search' === $subcommand ) {
-			return trim( '/posts search ' . $search_term . ' page:' . $page );
-		}
-
 		if ( 'trashed' === $subcommand ) {
 			return '/posts trashed page:' . $page;
 		}
@@ -485,10 +485,10 @@ class Telepilot_Posts_Service {
 
 		$before_status = $post->post_status;
 		$result        = wp_update_post(
-			array(
+			wp_slash( array(
 				'ID'          => $post_id,
 				'post_status' => 'draft',
-			),
+			) ),
 			true
 		);
 
@@ -518,12 +518,12 @@ class Telepilot_Posts_Service {
 		}
 		$title  = sanitize_text_field( $title );
 		$post_id = wp_insert_post(
-			array(
+			wp_slash( array(
 				'post_type'   => 'post',
 				'post_status' => 'draft',
 				'post_title'  => $title,
 				'post_author' => get_current_user_id(),
-			),
+			) ),
 			true
 		);
 
@@ -870,13 +870,13 @@ class Telepilot_Posts_Service {
 
 		$gmt = $scheduled_at->setTimezone( new DateTimeZone( 'UTC' ) );
 		$result = wp_update_post(
-			array(
+			wp_slash( array(
 				'ID'            => $post_id,
 				'post_status'   => 'future',
 				'edit_date'     => true,
 				'post_date'     => $scheduled_at->format( 'Y-m-d H:i:s' ),
 				'post_date_gmt' => $gmt->format( 'Y-m-d H:i:s' ),
-			),
+			) ),
 			true
 		);
 
@@ -1010,10 +1010,10 @@ class Telepilot_Posts_Service {
 
 		$before_status = $post->post_status;
 		$result        = wp_update_post(
-			array(
+			wp_slash( array(
 				'ID'          => $post_id,
 				'post_status' => $status,
-			),
+			) ),
 			true
 		);
 
@@ -1043,12 +1043,12 @@ class Telepilot_Posts_Service {
 		);
 
 		$result = wp_update_post(
-			array_merge(
+			wp_slash( array_merge(
 				array(
 					'ID' => $post_id,
 				),
 				$fields
-			),
+			) ),
 			true
 		);
 

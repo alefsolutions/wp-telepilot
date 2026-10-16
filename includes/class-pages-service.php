@@ -100,7 +100,7 @@ class Telepilot_Pages_Service {
 		$lines = array( $heading );
 		foreach ( $pages as $page ) {
 			$lines[] = sprintf(
-				__( '[%1$d] %2$s [%3$s]', 'wp-telepilot' ),
+				/* translators: 1: page ID, 2: page title, 3: post status. */ __( '[%1$d] %2$s [%3$s]', 'wp-telepilot' ),
 				$page->ID,
 				html_entity_decode( get_the_title( $page ), ENT_QUOTES, get_bloginfo( 'charset' ) ),
 				$page->post_status
@@ -117,7 +117,7 @@ class Telepilot_Pages_Service {
 
 		$blocks   = array( Telepilot_Telegram_Response_Builder::bold( Telepilot_Telegram_Response_Builder::label( 'pages', $heading ) ) );
 		$blocks[] = Telepilot_Telegram_Response_Builder::italic(
-			sprintf( __( 'Page %1$d of %2$d | %3$d items', 'wp-telepilot' ), $result['page'], $result['total_pages'], isset( $result['total_items'] ) ? (int) $result['total_items'] : count( $result['items'] ) )
+			sprintf( /* translators: 1: current page number, 2: total number of pages, 3: total number of items. */ __( 'Page %1$d of %2$d | %3$d items', 'wp-telepilot' ), $result['page'], $result['total_pages'], isset( $result['total_items'] ) ? (int) $result['total_items'] : count( $result['items'] ) )
 		);
 
 		foreach ( $result['items'] as $page ) {
@@ -181,10 +181,10 @@ class Telepilot_Pages_Service {
 		$blocks[] = implode(
 			"\n",
 			array(
-				sprintf( __( 'Page: [%1$d] %2$s', 'wp-telepilot' ), $page->ID, Telepilot_Telegram_Response_Builder::escape( get_the_title( $page ) ) ),
-				sprintf( __( 'Status: %s', 'wp-telepilot' ), Telepilot_Telegram_Response_Builder::escape( $page->post_status ) ),
-				sprintf( __( 'Slug: %s', 'wp-telepilot' ), Telepilot_Telegram_Response_Builder::escape( $page->post_name ) ),
-				sprintf( __( 'Modified: %s', 'wp-telepilot' ), Telepilot_Telegram_Response_Builder::escape( get_the_modified_date( 'Y-m-d H:i:s', $page ) ) ),
+				sprintf( /* translators: 1: page ID, 2: page title. */ __( 'Page: [%1$d] %2$s', 'wp-telepilot' ), $page->ID, Telepilot_Telegram_Response_Builder::escape( get_the_title( $page ) ) ),
+				sprintf( /* translators: %s: post status. */ __( 'Status: %s', 'wp-telepilot' ), Telepilot_Telegram_Response_Builder::escape( $page->post_status ) ),
+				sprintf( /* translators: %s: page slug. */ __( 'Slug: %s', 'wp-telepilot' ), Telepilot_Telegram_Response_Builder::escape( $page->post_name ) ),
+				sprintf( /* translators: %s: last modification date and time. */ __( 'Modified: %s', 'wp-telepilot' ), Telepilot_Telegram_Response_Builder::escape( get_the_modified_date( 'Y-m-d H:i:s', $page ) ) ),
 			)
 		);
 		$taxonomy_lines = $this->build_page_taxonomy_lines( $page );
@@ -220,9 +220,9 @@ class Telepilot_Pages_Service {
 				implode(
 					"\n",
 					array(
-						sprintf( __( 'Page: [%1$d] %2$s', 'wp-telepilot' ), $page->ID, Telepilot_Telegram_Response_Builder::escape( $title ) ),
-						sprintf( __( 'Status: %s', 'wp-telepilot' ), Telepilot_Telegram_Response_Builder::escape( $this->humanize_status( $page->post_status ) ) ),
-						sprintf( __( 'Slug: %s', 'wp-telepilot' ), Telepilot_Telegram_Response_Builder::escape( $page->post_name ) ),
+						sprintf( /* translators: 1: page ID, 2: page title. */ __( 'Page: [%1$d] %2$s', 'wp-telepilot' ), $page->ID, Telepilot_Telegram_Response_Builder::escape( $title ) ),
+						sprintf( /* translators: %s: readable status label. */ __( 'Status: %s', 'wp-telepilot' ), Telepilot_Telegram_Response_Builder::escape( $this->humanize_status( $page->post_status ) ) ),
+						sprintf( /* translators: %s: page slug. */ __( 'Slug: %s', 'wp-telepilot' ), Telepilot_Telegram_Response_Builder::escape( $page->post_name ) ),
 					)
 				),
 				Telepilot_Telegram_Response_Builder::italic( __( 'Next steps: review details, change slug or status if needed, and publish when ready.', 'wp-telepilot' ) ),
@@ -438,7 +438,7 @@ class Telepilot_Pages_Service {
 
 		return Telepilot_Telegram_Response_Builder::append_rows(
 			Telepilot_Telegram_Response_Builder::confirmation_keyboard(
-				sprintf( __( 'Confirm %1$s [%2$d]', 'wp-telepilot' ), ucfirst( $action ), $page_id ),
+				sprintf( /* translators: 1: requested action, 2: page ID. */ __( 'Confirm %1$s [%2$d]', 'wp-telepilot' ), ucfirst( $action ), $page_id ),
 				'tp:page:' . $action . ':' . (int) $page_id . ':' . $token,
 				'/pages list'
 			),
@@ -458,42 +458,42 @@ class Telepilot_Pages_Service {
 
 			if ( 'publish' === $page_item->post_status ) {
 				$row[] = array(
-					'text' => Telepilot_Telegram_Response_Builder::label( 'preview', sprintf( __( 'Preview [%d]', 'wp-telepilot' ), $page_item->ID ) ),
+					'text' => Telepilot_Telegram_Response_Builder::label( 'preview', sprintf( /* translators: %d: page ID. */ __( 'Preview [%d]', 'wp-telepilot' ), $page_item->ID ) ),
 					'url'  => $this->get_preview_url( $page_item ),
 				);
 			} else {
 				$row[] = array(
-					'text' => Telepilot_Telegram_Response_Builder::label( 'edit', sprintf( __( 'Edit [%d]', 'wp-telepilot' ), $page_item->ID ) ),
+					'text' => Telepilot_Telegram_Response_Builder::label( 'edit', sprintf( /* translators: %d: page ID. */ __( 'Edit [%d]', 'wp-telepilot' ), $page_item->ID ) ),
 					'url'  => $this->get_admin_edit_url( $page_item->ID ),
 				);
 			}
 
 			if ( 'trash' === $page_item->post_status ) {
 				$row[] = array(
-					'text'          => Telepilot_Telegram_Response_Builder::label( 'restore', sprintf( __( 'Restore [%d]', 'wp-telepilot' ), $page_item->ID ) ),
+					'text'          => Telepilot_Telegram_Response_Builder::label( 'restore', sprintf( /* translators: %d: page ID. */ __( 'Restore [%d]', 'wp-telepilot' ), $page_item->ID ) ),
 					'callback_data' => '/pages restore ' . (int) $page_item->ID,
 				);
 				$row[] = array(
-					'text'          => Telepilot_Telegram_Response_Builder::label( 'delete', sprintf( __( 'Delete [%d]', 'wp-telepilot' ), $page_item->ID ) ),
+					'text'          => Telepilot_Telegram_Response_Builder::label( 'delete', sprintf( /* translators: %d: page ID. */ __( 'Delete [%d]', 'wp-telepilot' ), $page_item->ID ) ),
 					'callback_data' => '/pages delete ' . (int) $page_item->ID,
 				);
 			} else {
 				if ( 'publish' !== $page_item->post_status ) {
 					$row[] = array(
-						'text'          => Telepilot_Telegram_Response_Builder::label( 'publish', sprintf( __( 'Publish [%d]', 'wp-telepilot' ), $page_item->ID ) ),
+						'text'          => Telepilot_Telegram_Response_Builder::label( 'publish', sprintf( /* translators: %d: page ID. */ __( 'Publish [%d]', 'wp-telepilot' ), $page_item->ID ) ),
 						'callback_data' => '/pages publish ' . (int) $page_item->ID,
 					);
 				}
 
 				if ( 'draft' !== $page_item->post_status ) {
 					$row[] = array(
-						'text'          => Telepilot_Telegram_Response_Builder::label( 'draft', sprintf( __( 'Draft [%d]', 'wp-telepilot' ), $page_item->ID ) ),
+						'text'          => Telepilot_Telegram_Response_Builder::label( 'draft', sprintf( /* translators: %d: page ID. */ __( 'Draft [%d]', 'wp-telepilot' ), $page_item->ID ) ),
 						'callback_data' => '/pages draft ' . (int) $page_item->ID,
 					);
 				}
 
 				$row[] = array(
-					'text'          => Telepilot_Telegram_Response_Builder::label( 'trash', sprintf( __( 'Trash [%d]', 'wp-telepilot' ), $page_item->ID ) ),
+					'text'          => Telepilot_Telegram_Response_Builder::label( 'trash', sprintf( /* translators: %d: page ID. */ __( 'Trash [%d]', 'wp-telepilot' ), $page_item->ID ) ),
 					'callback_data' => '/pages trash ' . (int) $page_item->ID,
 				);
 			}
@@ -566,14 +566,14 @@ class Telepilot_Pages_Service {
 			Telepilot_Telegram_Response_Builder::label(
 				'pages',
 				sprintf(
-					__( '[%1$d] %2$s', 'wp-telepilot' ),
+					/* translators: 1: page ID, 2: page title. */ __( '[%1$d] %2$s', 'wp-telepilot' ),
 					$page->ID,
 					Telepilot_Telegram_Response_Builder::escape( $title )
 				)
 			),
-			sprintf( __( 'Status: %s', 'wp-telepilot' ), Telepilot_Telegram_Response_Builder::escape( $this->humanize_status( $page->post_status ) ) ),
-			sprintf( __( 'Author: %s', 'wp-telepilot' ), Telepilot_Telegram_Response_Builder::escape( $author ) ),
-			sprintf( __( 'Updated: %s', 'wp-telepilot' ), Telepilot_Telegram_Response_Builder::escape( get_post_modified_time( 'Y-m-d H:i:s', false, $page, true ) ) ),
+			sprintf( /* translators: %s: readable status label. */ __( 'Status: %s', 'wp-telepilot' ), Telepilot_Telegram_Response_Builder::escape( $this->humanize_status( $page->post_status ) ) ),
+			sprintf( /* translators: %s: author name. */ __( 'Author: %s', 'wp-telepilot' ), Telepilot_Telegram_Response_Builder::escape( $author ) ),
+			sprintf( /* translators: %s: last modification date and time. */ __( 'Updated: %s', 'wp-telepilot' ), Telepilot_Telegram_Response_Builder::escape( get_post_modified_time( 'Y-m-d H:i:s', false, $page, true ) ) ),
 		);
 
 		$lines = array_merge( $lines, $this->build_page_taxonomy_lines( $page ) );
@@ -609,7 +609,7 @@ class Telepilot_Pages_Service {
 			}
 
 			$label   = ! empty( $taxonomy_object->labels->name ) ? (string) $taxonomy_object->labels->name : ucfirst( str_replace( '_', ' ', (string) $taxonomy ) );
-			$lines[] = sprintf( __( '%1$s: %2$s', 'wp-telepilot' ), $label, Telepilot_Telegram_Response_Builder::escape( $summary ) );
+			$lines[] = sprintf( /* translators: 1: display label, 2: summary text. */ __( '%1$s: %2$s', 'wp-telepilot' ), $label, Telepilot_Telegram_Response_Builder::escape( $summary ) );
 		}
 
 		return $lines;

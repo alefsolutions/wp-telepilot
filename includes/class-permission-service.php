@@ -29,7 +29,7 @@ class Telepilot_Permission_Service {
 					Telepilot_Telegram_Response_Builder::bold( __( 'Link Required', 'wp-telepilot' ) ),
 					__( 'This Telegram account is not linked to a WordPress user yet.', 'wp-telepilot' ),
 					sprintf(
-						__( 'Generate a one-time code from your WordPress profile, then send %s in this private chat.', 'wp-telepilot' ),
+						/* translators: %s: Telegram account-linking command. */ __( 'Generate a one-time code from your WordPress profile, then send %s in this private chat.', 'wp-telepilot' ),
 						Telepilot_Telegram_Response_Builder::code( '/link CODE' )
 					),
 					Telepilot_Telegram_Response_Builder::italic( __( 'Tip: use /chatid if you need to confirm which Telegram chat you are in.', 'wp-telepilot' ) ),

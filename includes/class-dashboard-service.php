@@ -52,19 +52,19 @@ class Telepilot_Dashboard_Service {
 		$lines   = array();
 		$lines[] = Telepilot_Telegram_Response_Builder::bold( Telepilot_Telegram_Response_Builder::label( 'site', __( 'Site Overview', 'wp-telepilot' ) ) );
 		$lines[] = '';
-		$lines[] = Telepilot_Telegram_Response_Builder::label( 'site', sprintf( __( 'Site: %s', 'wp-telepilot' ), Telepilot_Telegram_Response_Builder::escape( $summary['site_name'] ) ) );
-		$lines[] = Telepilot_Telegram_Response_Builder::label( 'link', sprintf( __( 'URL: %s', 'wp-telepilot' ), Telepilot_Telegram_Response_Builder::escape( $summary['site_url'] ) ) );
-		$lines[] = Telepilot_Telegram_Response_Builder::label( 'site', sprintf( __( 'WordPress: %s', 'wp-telepilot' ), Telepilot_Telegram_Response_Builder::escape( $summary['wordpress_version'] ) ) );
-		$lines[] = Telepilot_Telegram_Response_Builder::label( 'settings', sprintf( __( 'PHP: %s', 'wp-telepilot' ), Telepilot_Telegram_Response_Builder::escape( $summary['php_version'] ) ) );
-		$lines[] = Telepilot_Telegram_Response_Builder::label( 'settings', sprintf( __( 'Database: %s', 'wp-telepilot' ), Telepilot_Telegram_Response_Builder::escape( $summary['database_version'] ) ) );
-		$lines[] = Telepilot_Telegram_Response_Builder::label( 'pages', sprintf( __( 'Theme: %s', 'wp-telepilot' ), Telepilot_Telegram_Response_Builder::escape( $summary['active_theme'] ) ) );
+		$lines[] = Telepilot_Telegram_Response_Builder::label( 'site', sprintf( /* translators: %s: site name. */ __( 'Site: %s', 'wp-telepilot' ), Telepilot_Telegram_Response_Builder::escape( $summary['site_name'] ) ) );
+		$lines[] = Telepilot_Telegram_Response_Builder::label( 'link', sprintf( /* translators: %s: site url. */ __( 'URL: %s', 'wp-telepilot' ), Telepilot_Telegram_Response_Builder::escape( $summary['site_url'] ) ) );
+		$lines[] = Telepilot_Telegram_Response_Builder::label( 'site', sprintf( /* translators: %s: wordpress version. */ __( 'WordPress: %s', 'wp-telepilot' ), Telepilot_Telegram_Response_Builder::escape( $summary['wordpress_version'] ) ) );
+		$lines[] = Telepilot_Telegram_Response_Builder::label( 'settings', sprintf( /* translators: %s: php version. */ __( 'PHP: %s', 'wp-telepilot' ), Telepilot_Telegram_Response_Builder::escape( $summary['php_version'] ) ) );
+		$lines[] = Telepilot_Telegram_Response_Builder::label( 'settings', sprintf( /* translators: %s: database version. */ __( 'Database: %s', 'wp-telepilot' ), Telepilot_Telegram_Response_Builder::escape( $summary['database_version'] ) ) );
+		$lines[] = Telepilot_Telegram_Response_Builder::label( 'pages', sprintf( /* translators: %s: active theme. */ __( 'Theme: %s', 'wp-telepilot' ), Telepilot_Telegram_Response_Builder::escape( $summary['active_theme'] ) ) );
 		$lines[] = '';
-		$lines[] = Telepilot_Telegram_Response_Builder::label( 'posts', sprintf( __( 'Posts in draft: %d', 'wp-telepilot' ), $summary['draft_posts_count'] ) );
-		$lines[] = Telepilot_Telegram_Response_Builder::label( 'comments', sprintf( __( 'Pending comments: %d', 'wp-telepilot' ), $summary['pending_comments'] ) );
-		$lines[] = Telepilot_Telegram_Response_Builder::label( 'plugins', sprintf( __( 'Active plugins: %d', 'wp-telepilot' ), $summary['active_plugins_count'] ) );
-		$lines[] = Telepilot_Telegram_Response_Builder::label( 'stats', sprintf( __( 'Site health: %s', 'wp-telepilot' ), Telepilot_Telegram_Response_Builder::escape( $summary['site_health'] ) ) );
+		$lines[] = Telepilot_Telegram_Response_Builder::label( 'posts', sprintf( /* translators: %d: draft posts count. */ __( 'Posts in draft: %d', 'wp-telepilot' ), $summary['draft_posts_count'] ) );
+		$lines[] = Telepilot_Telegram_Response_Builder::label( 'comments', sprintf( /* translators: %d: pending comments. */ __( 'Pending comments: %d', 'wp-telepilot' ), $summary['pending_comments'] ) );
+		$lines[] = Telepilot_Telegram_Response_Builder::label( 'plugins', sprintf( /* translators: %d: active plugins count. */ __( 'Active plugins: %d', 'wp-telepilot' ), $summary['active_plugins_count'] ) );
+		$lines[] = Telepilot_Telegram_Response_Builder::label( 'stats', sprintf( /* translators: %s: site health. */ __( 'Site health: %s', 'wp-telepilot' ), Telepilot_Telegram_Response_Builder::escape( $summary['site_health'] ) ) );
 		$lines[] = Telepilot_Telegram_Response_Builder::label( 'update', sprintf(
-			__( 'Updates: core %1$d, plugins %2$d, themes %3$d', 'wp-telepilot' ),
+			/* translators: 1: pending updates, 2: pending updates, 3: pending updates. */ __( 'Updates: core %1$d, plugins %2$d, themes %3$d', 'wp-telepilot' ),
 			$summary['pending_updates']['core'],
 			$summary['pending_updates']['plugins'],
 			$summary['pending_updates']['themes']
@@ -188,7 +188,7 @@ class Telepilot_Dashboard_Service {
 		$counts = get_transient( 'health-check-site-status-result' );
 		if ( is_string( $counts ) ) { $counts = json_decode( $counts, true ); }
 		if ( ! is_array( $counts ) || ! isset( $counts['critical'], $counts['recommended'] ) ) { return __( 'Not evaluated: open Tools > Site Health in WordPress.', 'wp-telepilot' ); }
-		return sprintf( __( 'Last Site Health results: %1$d critical, %2$d recommended improvements.', 'wp-telepilot' ), (int) $counts['critical'], (int) $counts['recommended'] );
+		return sprintf( /* translators: 1: critical, 2: recommended. */ __( 'Last Site Health results: %1$d critical, %2$d recommended improvements.', 'wp-telepilot' ), (int) $counts['critical'], (int) $counts['recommended'] );
 	}
 
 	private function get_plugin_counts() {

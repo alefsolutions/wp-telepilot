@@ -201,7 +201,7 @@ class Telepilot_Notification_Service {
 			$user = get_userdata( $user_id );
 		}
 
-		$username = $user instanceof WP_User ? $user->user_login : sprintf( __( 'User #%d', 'wp-telepilot' ), (int) $user_id );
+		$username = $user instanceof WP_User ? $user->user_login : sprintf( /* translators: %d: user ID. */ __( 'User #%d', 'wp-telepilot' ), (int) $user_id );
 		$email    = $user instanceof WP_User ? $user->user_email : '';
 
 		$this->send_standard_notification(
@@ -212,7 +212,7 @@ class Telepilot_Notification_Service {
 			array(
 				__( 'Username', 'wp-telepilot' )     => $username,
 				__( 'Email', 'wp-telepilot' )        => $email ? $email : __( 'Unknown', 'wp-telepilot' ),
-				__( 'Reassigned To', 'wp-telepilot' ) => $reassign ? sprintf( __( 'User #%d', 'wp-telepilot' ), (int) $reassign ) : __( 'No reassignment', 'wp-telepilot' ),
+				__( 'Reassigned To', 'wp-telepilot' ) => $reassign ? sprintf( /* translators: %d: reassign. */ __( 'User #%d', 'wp-telepilot' ), (int) $reassign ) : __( 'No reassignment', 'wp-telepilot' ),
 			),
 			array(),
 			array(

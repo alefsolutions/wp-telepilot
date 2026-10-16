@@ -65,6 +65,7 @@ class Telepilot_Audit_Log_Repository {
 		$record = Telepilot_Data_Redactor::redact( wp_parse_args( $data, $defaults ) );
 		$record['ip_address'] = null;
 
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery -- WordPress has no audit-table API; persist the redacted record through wpdb.
 		$wpdb->insert(
 			self::table_name(),
 			array(
@@ -91,11 +92,10 @@ class Telepilot_Audit_Log_Repository {
 
 		$limit = max( 1, absint( $limit ) );
 
+
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching -- The audit feed must immediately include new events and reflect privacy erasure.
 		return $wpdb->get_results(
-			$wpdb->prepare(
-				'SELECT * FROM ' . self::table_name() . ' ORDER BY created_at DESC LIMIT %d',
-				$limit
-			),
+			$wpdb->prepare( 'SELECT * FROM %i ORDER BY created_at DESC LIMIT %d', self::table_name(), $limit ),
 			ARRAY_A
 		);
 	}
@@ -103,11 +103,9 @@ class Telepilot_Audit_Log_Repository {
 	public static function latest_log_by_action( $action_name ) {
 		global $wpdb;
 
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching -- Read the latest event for operational diagnostics without retaining erased data in a cache.
 		return $wpdb->get_row(
-			$wpdb->prepare(
-				'SELECT * FROM ' . self::table_name() . ' WHERE action_name = %s ORDER BY created_at DESC LIMIT 1',
-				$action_name
-			),
+			$wpdb->prepare( 'SELECT * FROM %i WHERE action_name = %s ORDER BY created_at DESC LIMIT 1', self::table_name(), $action_name ),
 			ARRAY_A
 		);
 	}
@@ -118,11 +116,9 @@ class Telepilot_Audit_Log_Repository {
 		$retention_days = max( 1, absint( $retention_days ) );
 		$cutoff         = gmdate( 'Y-m-d H:i:s', strtotime( '-' . $retention_days . ' days' ) );
 
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching -- Retention cleanup deletes expired records from the plugin-owned audit table.
 		$wpdb->query(
-			$wpdb->prepare(
-				'DELETE FROM ' . self::table_name() . ' WHERE created_at < %s',
-				$cutoff
-			)
+			$wpdb->prepare( 'DELETE FROM %i WHERE created_at < %s', self::table_name(), $cutoff )
 		);
 	}
 
@@ -132,35 +128,13 @@ class Telepilot_Audit_Log_Repository {
 		$page       = max( 1, absint( $page ) );
 		$limit      = max( 1, absint( $limit ) );
 		$offset     = ( $page - 1 ) * $limit;
-		$conditions = array();
-		$args       = array();
+		if ( ! $wp_user_id && '' === (string) $telegram_user_id && '' === (string) $chat_id ) { return array(); }
 
-		if ( $wp_user_id ) {
-			$conditions[] = 'wp_user_id = %d';
-			$args[]       = absint( $wp_user_id );
-		}
-
-		if ( '' !== (string) $telegram_user_id ) {
-			$conditions[] = 'telegram_user_id = %s';
-			$args[]       = (string) $telegram_user_id;
-		}
-
-		if ( '' !== (string) $chat_id ) {
-			$conditions[] = 'chat_id = %s';
-			$args[]       = (string) $chat_id;
-		}
-
-		if ( empty( $conditions ) ) {
-			return array();
-		}
-
-		$args[] = $limit;
-		$args[] = $offset;
-
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching -- Privacy export reads current matching audit rows, including the latest erasure state.
 		return $wpdb->get_results(
 			$wpdb->prepare(
-				'SELECT * FROM ' . self::table_name() . ' WHERE ' . implode( ' OR ', $conditions ) . ' ORDER BY created_at DESC LIMIT %d OFFSET %d',
-				$args
+				"SELECT * FROM %i WHERE (%d<>0 AND wp_user_id=%d) OR (%s<>'' AND telegram_user_id=%s) OR (%s<>'' AND chat_id=%s) ORDER BY created_at DESC LIMIT %d OFFSET %d",
+				self::table_name(), absint( $wp_user_id ), absint( $wp_user_id ), (string) $telegram_user_id, (string) $telegram_user_id, (string) $chat_id, (string) $chat_id, $limit, $offset
 			),
 			ARRAY_A
 		);
@@ -168,14 +142,14 @@ class Telepilot_Audit_Log_Repository {
 
 	public static function anonymize_personal_logs( $wp_user_id, $telegram_user_id = '', $chat_id = '' ) {
 		global $wpdb;
-		$conditions = array(); $args = array();
-		if ( $wp_user_id ) { $conditions[] = 'wp_user_id=%d'; $args[] = (int) $wp_user_id; }
-		if ( '' !== (string) $telegram_user_id ) { $conditions[] = 'telegram_user_id=%s'; $args[] = (string) $telegram_user_id; }
-		if ( '' !== (string) $chat_id ) { $conditions[] = 'chat_id=%s'; $args[] = (string) $chat_id; }
-		if ( ! $conditions ) { return 0; }
+		if ( ! $wp_user_id && '' === (string) $telegram_user_id && '' === (string) $chat_id ) { return 0; }
 		$previous = $wpdb->suppress_errors();
 		try {
-			$updated = $wpdb->query( $wpdb->prepare( 'UPDATE ' . self::table_name() . ' SET wp_user_id=NULL,telegram_user_id=NULL,chat_id=NULL,before_state=NULL,after_state=NULL,ip_address=NULL,context=NULL WHERE ' . implode( ' OR ', $conditions ), $args ) );
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching -- Privacy erasure atomically anonymizes every matching custom-table row.
+			$updated = $wpdb->query( $wpdb->prepare(
+				"UPDATE %i SET wp_user_id=NULL,telegram_user_id=NULL,chat_id=NULL,before_state=NULL,after_state=NULL,ip_address=NULL,context=NULL WHERE (%d<>0 AND wp_user_id=%d) OR (%s<>'' AND telegram_user_id=%s) OR (%s<>'' AND chat_id=%s)",
+				self::table_name(), (int) $wp_user_id, (int) $wp_user_id, (string) $telegram_user_id, (string) $telegram_user_id, (string) $chat_id, (string) $chat_id
+			) );
 		} finally { $wpdb->suppress_errors( $previous ); }
 		return false === $updated ? new WP_Error( 'telepilot_privacy_audit_failed', __( 'Audit data could not be erased. Retry the erasure after database availability is restored.', 'wp-telepilot' ) ) : (int) $updated;
 	}

@@ -87,7 +87,7 @@ class Telepilot_Post_Editor_Service {
 			);
 		}
 
-		if ( 'POST' === strtoupper( isset( $_SERVER['REQUEST_METHOD'] ) ? $_SERVER['REQUEST_METHOD'] : '' ) ) {
+		if ( 'POST' === strtoupper( isset( $_SERVER['REQUEST_METHOD'] ) && is_string( $_SERVER['REQUEST_METHOD'] ) ? sanitize_key( wp_unslash( $_SERVER['REQUEST_METHOD'] ) ) : '' ) ) {
 			$this->handle_save_request( $token, $session, $post, $user );
 		}
 
@@ -97,9 +97,10 @@ class Telepilot_Post_Editor_Service {
 	private function handle_save_request( $token, $session, $post, $user ) {
 		check_admin_referer( 'telepilot_post_editor_' . $token );
 
-		$title   = isset( $_POST['telepilot_post_title'] ) ? sanitize_text_field( wp_unslash( $_POST['telepilot_post_title'] ) ) : $post->post_title;
-		$excerpt = isset( $_POST['telepilot_post_excerpt'] ) ? sanitize_textarea_field( wp_unslash( $_POST['telepilot_post_excerpt'] ) ) : $post->post_excerpt;
-		$content = isset( $_POST['telepilot_post_content'] ) ? wp_unslash( $_POST['telepilot_post_content'] ) : $post->post_content;
+		$title   = isset( $_POST['telepilot_post_title'] ) && is_string( $_POST['telepilot_post_title'] ) ? sanitize_text_field( wp_unslash( $_POST['telepilot_post_title'] ) ) : $post->post_title;
+		$excerpt = isset( $_POST['telepilot_post_excerpt'] ) && is_string( $_POST['telepilot_post_excerpt'] ) ? sanitize_textarea_field( wp_unslash( $_POST['telepilot_post_excerpt'] ) ) : $post->post_excerpt;
+		// phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- Raw rich content is filtered below according to the linked user's unfiltered_html capability.
+		$content = isset( $_POST['telepilot_post_content'] ) && is_string( $_POST['telepilot_post_content'] ) ? wp_unslash( $_POST['telepilot_post_content'] ) : $post->post_content;
 
 		if ( ! user_can( $user, 'unfiltered_html' ) ) {
 			$content = wp_kses_post( $content );
@@ -163,7 +164,7 @@ class Telepilot_Post_Editor_Service {
 		<head>
 			<meta charset="<?php bloginfo( 'charset' ); ?>">
 			<meta name="viewport" content="width=device-width, initial-scale=1">
-			<title><?php echo esc_html( sprintf( __( 'Edit Post: %s', 'wp-telepilot' ), $title ) ); ?></title>
+			<title><?php echo esc_html( sprintf( /* translators: %s: display title. */ __( 'Edit Post: %s', 'wp-telepilot' ), $title ) ); ?></title>
 			<style>
 				:root{--tp-ink:#1f2933;--tp-ink-strong:#111827;--tp-cyan:#0ea5d3;--tp-cyan-deep:#0b88af;--tp-cyan-soft:#e7f8fd;--tp-border:#d5dde3;--tp-panel:#ffffff;--tp-surface:#f3f7f9;--tp-muted:#52606d;--tp-danger:#b42318;--tp-danger-bg:#fef3f2;--tp-shadow:0 24px 70px rgba(15,23,42,.08)}
 				*{box-sizing:border-box}
@@ -221,7 +222,7 @@ class Telepilot_Post_Editor_Service {
 					</div>
 					<h1><?php echo esc_html( $title ); ?></h1>
 					<div class="meta">
-						<span class="pill"><?php echo esc_html( sprintf( __( 'Post [%d]', 'wp-telepilot' ), $post->ID ) ); ?></span>
+						<span class="pill"><?php echo esc_html( sprintf( /* translators: %d: post ID. */ __( 'Post [%d]', 'wp-telepilot' ), $post->ID ) ); ?></span>
 						<span class="pill"><?php echo esc_html( $status_label ); ?></span>
 					</div>
 					<p><?php esc_html_e( 'This secure browser editor is designed for longer post changes that are awkward to make in Telegram chat. Save here, then continue your workflow back in Telegram.', 'wp-telepilot' ); ?></p>
@@ -372,12 +373,17 @@ class Telepilot_Post_Editor_Service {
 	}
 
 	private function get_request_token() {
+		// Token lookup precedes session validation and the token-bound save nonce. GET only displays the editor.
+		// phpcs:ignore WordPress.Security.NonceVerification.Missing -- The save handler verifies the token-bound nonce before processing content.
 		if ( isset( $_POST['telepilot_post_editor_token'] ) ) {
-			return $this->normalize_token( wp_unslash( $_POST['telepilot_post_editor_token'] ) );
+			// phpcs:ignore WordPress.Security.NonceVerification.Missing -- Only read the token needed to locate the session and verify its nonce.
+			return is_string( $_POST['telepilot_post_editor_token'] ) ? $this->normalize_token( sanitize_text_field( wp_unslash( $_POST['telepilot_post_editor_token'] ) ) ) : '';
 		}
 
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only display uses an expiring, actor-bound editor token.
 		if ( isset( $_GET['token'] ) ) {
-			return $this->normalize_token( wp_unslash( $_GET['token'] ) );
+			// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Saving separately requires a token-bound nonce.
+			return is_string( $_GET['token'] ) ? $this->normalize_token( sanitize_text_field( wp_unslash( $_GET['token'] ) ) ) : '';
 		}
 
 		return '';
@@ -415,20 +421,8 @@ class Telepilot_Post_Editor_Service {
 		);
 	}
 
-	private function generate_token() {
-		do {
-			try {
-				$token = $this->normalize_token( bin2hex( random_bytes( 24 ) ) );
-			} catch ( Exception $exception ) {
-				$token = $this->normalize_token( wp_generate_password( 48, false, false ) );
-			}
-		} while ( '' === $token || get_transient( self::TOKEN_PREFIX . $token ) );
-
-		return $token;
-	}
-
 	private function normalize_token( $token ) {
-		return preg_replace( '/[^a-f0-9]/', '', strtolower( (string) $token ) );
+		return is_string( $token ) && preg_match( '/^[a-f0-9]{24}$/D', $token ) ? $token : '';
 	}
 
 	private function is_session_expired( $session ) {
@@ -474,7 +468,8 @@ class Telepilot_Post_Editor_Service {
 		Telepilot_DB_Transaction::begin();
 		try {
 			// Lock the actual row, not a possibly stale object-cache snapshot.
-			$row = $wpdb->get_row( $wpdb->prepare( "SELECT * FROM {$wpdb->posts} WHERE ID=%d FOR UPDATE", $session['post_id'] ) );
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching -- Lock the current post row while comparing its revision and atomically consuming its editor token.
+			$row = $wpdb->get_row( $wpdb->prepare( 'SELECT * FROM %i WHERE ID=%d FOR UPDATE', $wpdb->posts, $session['post_id'] ) );
 			if ( ! $row || 'post' !== $row->post_type || ! hash_equals( (string) $session['revision'], self::revision( $row ) ) ) {
 				Telepilot_DB_Transaction::rollback();
 				return new WP_Error( 'telepilot_editor_conflict', __( 'This post changed after the link was created. Your changes were not saved. Request a fresh link to review the latest version.', 'wp-telepilot' ) );

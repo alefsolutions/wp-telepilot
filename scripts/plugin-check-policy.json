@@ -1,0 +1,163 @@
+{
+  "plugin_check_version": "2.1.0",
+  "tool_archive_sha256": "6ff4bd2145f3befcf907df158cc466b1649dafed5686de8369907403c3013fc4",
+  "checks": "all default stable checks, including runtime; new-submission mode; no excluded checks or ignored codes",
+  "warnings": [
+    {
+      "file": "includes/class-linked-user-resolver.php",
+      "line": 38,
+      "column": 17,
+      "type": "WARNING",
+      "code": "WordPress.DB.SlowDBQuery.slow_db_query_meta_key",
+      "message": "Detected usage of meta_key, possible slow query.",
+      "source_sha256": "74fb6bbb5d156252cd18374736f59d0f10dbc0314ed50044175b18be5979bba2",
+      "reason": "The native WordPress user query resolves one Telegram identity (number=1, count_total=false). Authorization and linkage are rechecked for every request; changing storage is outside this compatibility-preserving cleanup."
+    },
+    {
+      "file": "includes/class-linked-user-resolver.php",
+      "line": 39,
+      "column": 17,
+      "type": "WARNING",
+      "code": "WordPress.DB.SlowDBQuery.slow_db_query_meta_value",
+      "message": "Detected usage of meta_value, possible slow query.",
+      "source_sha256": "6a02abdd3f36e8de7c9b5533f138be4504ce06c5d3b685b5c3f454260d4ac08c",
+      "reason": "The native WordPress user query resolves one Telegram identity (number=1, count_total=false). Authorization and linkage are rechecked for every request; changing storage is outside this compatibility-preserving cleanup."
+    },
+    {
+      "file": "includes/class-notification-service.php",
+      "line": 917,
+      "column": 17,
+      "type": "WARNING",
+      "code": "WordPress.DB.SlowDBQuery.slow_db_query_meta_key",
+      "message": "Detected usage of meta_key, possible slow query.",
+      "source_sha256": "fe0d8fa2abc29d1bb7e681787b2b890ecf2b8895fba97b44f08dabfebc405194",
+      "reason": "The native WordPress query enumerates linked notification recipients. Each recipient is then rechecked for active identity, private chat and the required capability. No custom metadata index or storage migration is introduced."
+    },
+    {
+      "file": "includes/class-settings-page.php",
+      "line": 108,
+      "column": 21,
+      "type": "WARNING",
+      "code": "WordPress.DB.SlowDBQuery.slow_db_query_meta_key",
+      "message": "Detected usage of meta_key, possible slow query.",
+      "source_sha256": "61b20977ea79e95cbf1d67b4eaf3b4fa7106c671ca09bbaa587f94c0a0debda3",
+      "reason": "The administrator overview counts linked users using the native WordPress metadata query and returns IDs only. This is an advisory performance finding, not an unprepared SQL query."
+    },
+    {
+      "file": "includes/class-telegram-service.php",
+      "line": 91,
+      "column": 36,
+      "type": "WARNING",
+      "code": "WordPress.DB.SlowDBQuery.slow_db_query_meta_key",
+      "message": "Detected usage of meta_key, possible slow query.",
+      "source_sha256": "8d7ea6f11a1c94785e3215ce426f987847bf21392c09ea6608594b1a3b5639ca",
+      "reason": "The native WordPress query resolves one linked notification chat (number=1). Current target permissions and linkage are revalidated before queuing and again before delivery."
+    },
+    {
+      "file": "includes/class-telegram-service.php",
+      "line": 91,
+      "column": 102,
+      "type": "WARNING",
+      "code": "WordPress.DB.SlowDBQuery.slow_db_query_meta_value",
+      "message": "Detected usage of meta_value, possible slow query.",
+      "source_sha256": "8d7ea6f11a1c94785e3215ce426f987847bf21392c09ea6608594b1a3b5639ca",
+      "reason": "The native WordPress query resolves one linked notification chat (number=1). Current target permissions and linkage are revalidated before queuing and again before delivery."
+    },
+    {
+      "file": "includes/class-user-linking-service.php",
+      "line": 68,
+      "column": 39,
+      "type": "WARNING",
+      "code": "WordPress.DB.SlowDBQuery.slow_db_query_meta_key",
+      "message": "Detected usage of meta_key, possible slow query.",
+      "source_sha256": "17bd0824268f9365a6666cb01b1ea34979020d4bdc898bb3475eb60be158fb49",
+      "reason": "The native WordPress query checks for an existing account with this Telegram identity before linking. It returns IDs only and must detect conflicting links; retain the existing user-metadata storage."
+    },
+    {
+      "file": "includes/class-user-linking-service.php",
+      "line": 68,
+      "column": 77,
+      "type": "WARNING",
+      "code": "WordPress.DB.SlowDBQuery.slow_db_query_meta_value",
+      "message": "Detected usage of meta_value, possible slow query.",
+      "source_sha256": "17bd0824268f9365a6666cb01b1ea34979020d4bdc898bb3475eb60be158fb49",
+      "reason": "The native WordPress query checks for an existing account with this Telegram identity before linking. It returns IDs only and must detect conflicting links; retain the existing user-metadata storage."
+    },
+    {
+      "file": "readme.txt",
+      "line": 0,
+      "column": 0,
+      "type": "WARNING",
+      "code": "trademarked_term",
+      "message": "The plugin name includes a restricted term. Your chosen plugin name - \"WP Telepilot\" - contains the restricted term \"wp\" which cannot be used at all in your plugin name.",
+      "source_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "reason": "Keep the existing branding: Plugin Check 2.1.0 Trademarks_Check::TRADEMARK_SLUGS explicitly comments that wp is allowed but generates a warning. Final naming approval belongs to the directory reviewers."
+    },
+    {
+      "file": "wp-telepilot.php",
+      "line": 0,
+      "column": 0,
+      "type": "WARNING",
+      "code": "trademarked_term",
+      "message": "The plugin name includes a restricted term. Your chosen plugin name - \"WP Telepilot\" - contains the restricted term \"wp\" which cannot be used at all in your plugin name.",
+      "source_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "reason": "Keep the existing name and slug: Plugin Check 2.1.0 explicitly identifies wp as allowed with a warning. No rename or installation migration is part of this cleanup."
+    },
+    {
+      "file": "wp-telepilot.php",
+      "line": 0,
+      "column": 0,
+      "type": "WARNING",
+      "code": "trademarked_term",
+      "message": "The plugin slug includes a restricted term. Your plugin slug - \"wp-telepilot\" - contains the restricted term \"wp\" which cannot be used at all in your plugin slug.",
+      "source_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "reason": "Keep the existing name and slug: Plugin Check 2.1.0 explicitly identifies wp as allowed with a warning. No rename or installation migration is part of this cleanup."
+    },
+    {
+      "file": "includes/ai/class-openai-provider.php",
+      "line": 5,
+      "column": 19,
+      "type": "WARNING",
+      "code": "PluginCheck.CodeAnalysis.AIProvider.DirectIntegration",
+      "message": "Direct integration with a third-party AI provider (api.openai.com) detected. Consider the WordPress AI Client (wp_ai_client_prompt()) introduced in WordPress 7.0.",
+      "source_sha256": "ba044ba7d7e15431279a3a24a6d69720defe77b96c6bc70c2fafd25dbe35a331",
+      "reason": "The WordPress AI Client is encouraged on 7.0+, while this plugin supports 6.6. Retain the opt-in provider through wp_remote_post with existing consent, encrypted keys, quotas and privacy controls; defer provider migration."
+    }
+  ],
+  "enabled_check_slugs": [
+    "ai_provider",
+    "code_obfuscation",
+    "direct_db",
+    "direct_db_queries",
+    "direct_file_access",
+    "enqueued_resources",
+    "enqueued_scripts_in_footer",
+    "enqueued_scripts_scope",
+    "enqueued_scripts_size",
+    "enqueued_styles_scope",
+    "enqueued_styles_size",
+    "external_admin_menu_links",
+    "file_type",
+    "i18n_usage",
+    "late_escaping",
+    "localhost",
+    "minified_files",
+    "no_unfiltered_uploads",
+    "non_blocking_scripts",
+    "offloading_files",
+    "performant_wp_query_params",
+    "php_error_reporting",
+    "plugin_content",
+    "plugin_header_fields",
+    "plugin_readme",
+    "plugin_review_phpcs",
+    "plugin_uninstall",
+    "plugin_updater",
+    "prefixing",
+    "safe_redirect",
+    "setting_sanitization",
+    "trademarks",
+    "wp_functions_compatibility",
+    "write_file"
+  ]
+}

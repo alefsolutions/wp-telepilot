@@ -148,7 +148,7 @@ class Telepilot_Settings_Page {
 							<?php endif; ?>
 							<div class="telepilot-hero-title">
 								<h1><?php echo esc_html( $product_name ); ?><?php esc_html_e( ' Control Center', 'wp-telepilot' ); ?></h1>
-								<span class="telepilot-status-pill is-good"><?php echo esc_html( sprintf( __( 'Version %s', 'wp-telepilot' ), $product_version ) ); ?></span>
+								<span class="telepilot-status-pill is-good"><?php echo esc_html( sprintf( /* translators: %s: product version. */ __( 'Version %s', 'wp-telepilot' ), $product_version ) ); ?></span>
 							</div>
 						</div>
 						<p class="telepilot-lead">
@@ -276,7 +276,7 @@ class Telepilot_Settings_Page {
 										<small>
 											<?php
 											echo $masked_ai_key
-												? esc_html( sprintf( __( 'Stored key: %s. Leave blank to keep it unchanged.', 'wp-telepilot' ), $masked_ai_key ) )
+												? esc_html( sprintf( /* translators: %s: masked ai key. */ __( 'Stored key: %s. Leave blank to keep it unchanged.', 'wp-telepilot' ), $masked_ai_key ) )
 												: esc_html__( 'Enter an OpenAI API key to enable the provider connection.', 'wp-telepilot' );
 											?>
 										</small>
@@ -343,7 +343,7 @@ class Telepilot_Settings_Page {
 									<strong><?php esc_html_e( 'Provider status:', 'wp-telepilot' ); ?></strong>
 									<?php echo esc_html( $ai_provider_status['message'] ); ?>
 									<?php if ( ! empty( $ai_provider_status['checked_at'] ) ) : ?>
-										<?php echo esc_html( ' ' . sprintf( __( '(checked %s)', 'wp-telepilot' ), $this->format_timestamp( (int) $ai_provider_status['checked_at'] ) ) ); ?>
+										<?php echo esc_html( ' ' . sprintf( /* translators: %s: formatted date and time. */ __( '(checked %s)', 'wp-telepilot' ), $this->format_timestamp( (int) $ai_provider_status['checked_at'] ) ) ); ?>
 									<?php endif; ?>
 								</div>
 
@@ -497,7 +497,7 @@ class Telepilot_Settings_Page {
 							</li>
 							<li class="<?php echo (int) $table_status['ready_count'] === (int) $table_status['total_count'] ? 'is-good' : 'is-warn'; ?>">
 								<span><?php esc_html_e( 'Database tables exist', 'wp-telepilot' ); ?></span>
-								<strong><?php echo esc_html( sprintf( __( '%1$d/%2$d', 'wp-telepilot' ), (int) $table_status['ready_count'], (int) $table_status['total_count'] ) ); ?></strong>
+								<strong><?php echo esc_html( sprintf( /* translators: 1: ready count, 2: total count. */ __( '%1$d/%2$d', 'wp-telepilot' ), (int) $table_status['ready_count'], (int) $table_status['total_count'] ) ); ?></strong>
 							</li>
 							<li class="<?php echo $queue_schema['ready'] ? 'is-good' : 'is-warn'; ?>">
 								<span><?php esc_html_e( 'AI continuation queue schema', 'wp-telepilot' ); ?></span>
@@ -602,7 +602,7 @@ class Telepilot_Settings_Page {
 								<strong>
 									<?php
 									echo isset( $diagnostics['last_command_duration_ms'] )
-										? esc_html( sprintf( __( '%d ms', 'wp-telepilot' ), (int) $diagnostics['last_command_duration_ms'] ) )
+										? esc_html( sprintf( /* translators: %d: last command duration ms. */ __( '%d ms', 'wp-telepilot' ), (int) $diagnostics['last_command_duration_ms'] ) )
 										: esc_html__( 'Unknown', 'wp-telepilot' );
 									?>
 								</strong>
@@ -653,22 +653,22 @@ class Telepilot_Settings_Page {
 							</li>
 						</ul>
 						<?php if ( ! empty( $diagnostics['last_webhook_auth_error'] ) ) : ?>
-							<p class="telepilot-inline-note"><?php echo esc_html( sprintf( __( 'Last webhook auth error: %s', 'wp-telepilot' ), $diagnostics['last_webhook_auth_error'] ) ); ?></p>
+							<p class="telepilot-inline-note"><?php echo esc_html( sprintf( /* translators: %s: last webhook auth error. */ __( 'Last webhook auth error: %s', 'wp-telepilot' ), $diagnostics['last_webhook_auth_error'] ) ); ?></p>
 						<?php endif; ?>
 						<?php if ( ! empty( $diagnostics['last_poll_error'] ) ) : ?>
-							<p class="telepilot-inline-note"><?php echo esc_html( sprintf( __( 'Last poll error: %s', 'wp-telepilot' ), $diagnostics['last_poll_error'] ) ); ?></p>
+							<p class="telepilot-inline-note"><?php echo esc_html( sprintf( /* translators: %s: last poll error. */ __( 'Last poll error: %s', 'wp-telepilot' ), $diagnostics['last_poll_error'] ) ); ?></p>
 						<?php endif; ?>
 						<?php if ( ! empty( $diagnostics['last_send_error_message'] ) ) : ?>
-							<p class="telepilot-inline-note"><?php echo esc_html( sprintf( __( 'Last Telegram API send error: %s', 'wp-telepilot' ), $diagnostics['last_send_error_message'] ) ); ?></p>
+							<p class="telepilot-inline-note"><?php echo esc_html( sprintf( /* translators: %s: last send error message. */ __( 'Last Telegram API send error: %s', 'wp-telepilot' ), $diagnostics['last_send_error_message'] ) ); ?></p>
 						<?php endif; ?>
 						<?php if ( ! empty( $diagnostics['last_link_attempt_detail'] ) ) : ?>
-							<p class="telepilot-inline-note"><?php echo esc_html( sprintf( __( 'Last link attempt detail: %s', 'wp-telepilot' ), $diagnostics['last_link_attempt_detail'] ) ); ?></p>
+							<p class="telepilot-inline-note"><?php echo esc_html( sprintf( /* translators: %s: last link attempt detail. */ __( 'Last link attempt detail: %s', 'wp-telepilot' ), $diagnostics['last_link_attempt_detail'] ) ); ?></p>
 						<?php endif; ?>
 						<?php if ( ! empty( $diagnostics['last_worker_trigger_error'] ) ) : ?>
-							<p class="telepilot-inline-note"><?php echo esc_html( sprintf( __( 'Last worker trigger error: %s', 'wp-telepilot' ), $diagnostics['last_worker_trigger_error'] ) ); ?></p>
+							<p class="telepilot-inline-note"><?php echo esc_html( sprintf( /* translators: %s: last worker trigger error. */ __( 'Last worker trigger error: %s', 'wp-telepilot' ), $diagnostics['last_worker_trigger_error'] ) ); ?></p>
 						<?php endif; ?>
 						<?php if ( ! empty( $diagnostics['last_background_job_error'] ) ) : ?>
-							<p class="telepilot-inline-note"><?php echo esc_html( sprintf( __( 'Last background job error: %s', 'wp-telepilot' ), $diagnostics['last_background_job_error'] ) ); ?></p>
+							<p class="telepilot-inline-note"><?php echo esc_html( sprintf( /* translators: %s: last background job error. */ __( 'Last background job error: %s', 'wp-telepilot' ), $diagnostics['last_background_job_error'] ) ); ?></p>
 						<?php endif; ?>
 						<?php if ( ! empty( $diagnostics['last_transport_self_test_status'] ) ) : ?>
 							<p class="telepilot-inline-note">
@@ -688,14 +688,14 @@ class Telepilot_Settings_Page {
 						<?php if ( ! $queue_schema['ready'] ) : ?>
 							<p class="telepilot-inline-note"><?php esc_html_e( 'Automatic repair retries are limited to once every five minutes. Manual retry does not resend failed AI requests.', 'wp-telepilot' ); ?></p>
 							<?php if ( $queue_schema['next_retry'] ) : ?>
-								<p class="telepilot-inline-note"><?php echo esc_html( sprintf( __( 'Automatic repair is eligible on the next request after %s.', 'wp-telepilot' ), $this->format_timestamp( $queue_schema['next_retry'] ) ) ); ?></p>
+								<p class="telepilot-inline-note"><?php echo esc_html( sprintf( /* translators: %s: formatted date and time. */ __( 'Automatic repair is eligible on the next request after %s.', 'wp-telepilot' ), $this->format_timestamp( $queue_schema['next_retry'] ) ) ); ?></p>
 							<?php endif; ?>
 							<?php if ( $queue_schema['correlation_id'] ) : ?>
-								<p class="telepilot-inline-note"><?php echo esc_html( sprintf( __( 'Repair failure: %1$s; database error: %2$s; reference: %3$s.', 'wp-telepilot' ), $queue_schema['error_category'], $queue_schema['database_errno'] ?? __( 'unavailable', 'wp-telepilot' ), $queue_schema['correlation_id'] ) ); ?></p>
+								<p class="telepilot-inline-note"><?php echo esc_html( sprintf( /* translators: 1: error category, 2: database error number, 3: diagnostic reference ID. */ __( 'Repair failure: %1$s; database error: %2$s; reference: %3$s.', 'wp-telepilot' ), $queue_schema['error_category'], $queue_schema['database_errno'] ?? __( 'unavailable', 'wp-telepilot' ), $queue_schema['correlation_id'] ) ); ?></p>
 							<?php endif; ?>
 						<?php endif; ?>
 						<?php if ( ! empty( $enqueue_failure['correlation_id'] ) ) : ?>
-							<p class="telepilot-inline-note"><?php echo esc_html( sprintf( __( 'Last enqueue failure: %1$s; database error: %2$s; reference: %3$s.', 'wp-telepilot' ), $enqueue_failure['error_category'], $enqueue_failure['database_errno'] ?? __( 'unavailable', 'wp-telepilot' ), $enqueue_failure['correlation_id'] ) ); ?></p>
+							<p class="telepilot-inline-note"><?php echo esc_html( sprintf( /* translators: 1: error category, 2: database error number, 3: diagnostic reference ID. */ __( 'Last enqueue failure: %1$s; database error: %2$s; reference: %3$s.', 'wp-telepilot' ), $enqueue_failure['error_category'], $enqueue_failure['database_errno'] ?? __( 'unavailable', 'wp-telepilot' ), $enqueue_failure['correlation_id'] ) ); ?></p>
 						<?php endif; ?>
 						<div class="telepilot-actions">
 							<form method="post" class="telepilot-button-row">
@@ -736,7 +736,7 @@ class Telepilot_Settings_Page {
 												<td><?php echo ! empty( $entry['recorded_at'] ) ? esc_html( $this->format_timestamp( (int) $entry['recorded_at'] ) ) : esc_html__( 'Unknown', 'wp-telepilot' ); ?></td>
 												<td><?php echo ! empty( $entry['command'] ) ? esc_html( $entry['command'] ) : '-'; ?></td>
 												<td><?php echo ! empty( $entry['transport'] ) ? esc_html( strtoupper( (string) $entry['transport'] ) ) : '-'; ?></td>
-												<td><?php echo isset( $entry['duration_ms'] ) ? esc_html( sprintf( __( '%d ms', 'wp-telepilot' ), (int) $entry['duration_ms'] ) ) : '-'; ?></td>
+												<td><?php echo isset( $entry['duration_ms'] ) ? esc_html( sprintf( /* translators: %d: duration in milliseconds. */ __( '%d ms', 'wp-telepilot' ), (int) $entry['duration_ms'] ) ) : '-'; ?></td>
 												<td><?php echo ! empty( $entry['dispatch_error'] ) ? esc_html__( 'Failed', 'wp-telepilot' ) : esc_html__( 'Sent', 'wp-telepilot' ); ?></td>
 											</tr>
 										<?php endforeach; ?>
@@ -864,10 +864,10 @@ class Telepilot_Settings_Page {
 				<td>
 					<p><?php echo $telegram_id ? esc_html( $telegram_id ) : esc_html__( 'Not linked yet.', 'wp-telepilot' ); ?></p>
 					<?php if ( $telegram_chat ) : ?>
-						<p class="description"><?php echo esc_html( sprintf( __( 'Chat ID: %s', 'wp-telepilot' ), $telegram_chat ) ); ?></p>
+						<p class="description"><?php echo esc_html( sprintf( /* translators: %s: Telegram chat ID. */ __( 'Chat ID: %s', 'wp-telepilot' ), $telegram_chat ) ); ?></p>
 					<?php endif; ?>
 					<?php if ( $telegram_name ) : ?>
-						<p class="description"><?php echo esc_html( sprintf( __( 'Telegram username: @%s', 'wp-telepilot' ), $telegram_name ) ); ?></p>
+						<p class="description"><?php echo esc_html( sprintf( /* translators: %s: Telegram username. */ __( 'Telegram username: @%s', 'wp-telepilot' ), $telegram_name ) ); ?></p>
 					<?php endif; ?>
 					<?php if ( $telegram_id ) : ?>
 						<p><button class="button button-secondary" type="submit" name="telepilot_unlink_telegram" value="1"><?php esc_html_e( 'Unlink Telegram', 'wp-telepilot' ); ?></button></p>
@@ -1006,7 +1006,7 @@ class Telepilot_Settings_Page {
 				'telepilot_admin_notice',
 				array(
 					'type'    => 'error',
-					'message' => sprintf( __( 'WP Telepilot saved your settings, but Telegram sync had issues: %s', 'wp-telepilot' ), implode( '; ', $errors ) ),
+					'message' => sprintf( /* translators: %s: error messages. */ __( 'WP Telepilot saved your settings, but Telegram sync had issues: %s', 'wp-telepilot' ), implode( '; ', $errors ) ),
 				),
 				60
 			);
@@ -1027,6 +1027,7 @@ class Telepilot_Settings_Page {
 	}
 
 	public function render_admin_notice() {
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only page routing for an admin notice; tools mutations separately verify their nonce and manage_options capability.
 		if ( empty( $_GET['page'] ) || 'telepilot' !== sanitize_key( wp_unslash( $_GET['page'] ) ) ) {
 			return;
 		}
@@ -1097,6 +1098,7 @@ class Telepilot_Settings_Page {
 		$missing = array();
 
 		foreach ( $tables as $table_name ) {
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching -- Administrator diagnostics must inspect the actual plugin-owned database tables.
 			$found = $wpdb->get_var( $wpdb->prepare( 'SHOW TABLES LIKE %s', $table_name ) );
 
 			if ( $found === $table_name ) {
@@ -1240,7 +1242,7 @@ class Telepilot_Settings_Page {
 		}
 
 		return sprintf(
-			__( '%1$s (%2$s ago)', 'wp-telepilot' ),
+			/* translators: 1: formatted date and time, 2: elapsed time. */ __( '%1$s (%2$s ago)', 'wp-telepilot' ),
 			wp_date( 'Y-m-d H:i:s', $timestamp ),
 			human_time_diff( $timestamp, current_time( 'timestamp', true ) )
 		);
@@ -1324,7 +1326,7 @@ class Telepilot_Settings_Page {
 			return;
 		}
 
-		if ( 'POST' !== strtoupper( isset( $_SERVER['REQUEST_METHOD'] ) ? $_SERVER['REQUEST_METHOD'] : '' ) ) {
+		if ( 'POST' !== strtoupper( isset( $_SERVER['REQUEST_METHOD'] ) && is_string( $_SERVER['REQUEST_METHOD'] ) ? sanitize_key( wp_unslash( $_SERVER['REQUEST_METHOD'] ) ) : '' ) ) {
 			return;
 		}
 

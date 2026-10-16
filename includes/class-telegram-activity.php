@@ -65,10 +65,12 @@ final class Telepilot_Telegram_Activity {
 		if ( $host === wp_parse_url( home_url(), PHP_URL_HOST ) || $host === wp_parse_url( rest_url(), PHP_URL_HOST ) ) { return; }
 		try {
 			$progress_option = defined( 'CURLOPT_XFERINFOFUNCTION' ) ? CURLOPT_XFERINFOFUNCTION : CURLOPT_PROGRESSFUNCTION;
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.curl_curl_setopt -- Configure progress on the WordPress HTTP API handle supplied by http_api_curl; this does not create a separate HTTP request.
 			curl_setopt( $handle, $progress_option, function () {
 				$this->refresh();
 				return 0; // Feedback failure must not abort the underlying transfer.
 			} );
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.curl_curl_setopt -- Configure progress on the WordPress HTTP API handle supplied by http_api_curl; this does not create a separate HTTP request.
 			curl_setopt( $handle, CURLOPT_NOPROGRESS, false );
 		} catch ( Throwable $error ) {
 			// Other HTTP transports retain the stage-based pulses.

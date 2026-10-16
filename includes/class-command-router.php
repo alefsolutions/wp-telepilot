@@ -227,9 +227,9 @@ class Telepilot_Command_Router {
 			$blocks[] = implode(
 				"\n",
 				array(
-					sprintf( __( 'Linked WordPress user: %s', 'wp-telepilot' ), Telepilot_Telegram_Response_Builder::escape( $identity['wp_user']->display_name ? $identity['wp_user']->display_name : $identity['wp_user']->user_login ) ),
-					sprintf( __( 'Roles: %s', 'wp-telepilot' ), Telepilot_Telegram_Response_Builder::escape( $roles ) ),
-					sprintf( __( 'Current chat ID: %s', 'wp-telepilot' ), Telepilot_Telegram_Response_Builder::code( $chat_id ) ),
+					sprintf( /* translators: %s: WordPress display name or login. */ __( 'Linked WordPress user: %s', 'wp-telepilot' ), Telepilot_Telegram_Response_Builder::escape( $identity['wp_user']->display_name ? $identity['wp_user']->display_name : $identity['wp_user']->user_login ) ),
+					sprintf( /* translators: %s: roles. */ __( 'Roles: %s', 'wp-telepilot' ), Telepilot_Telegram_Response_Builder::escape( $roles ) ),
+					sprintf( /* translators: %s: chat ID. */ __( 'Current chat ID: %s', 'wp-telepilot' ), Telepilot_Telegram_Response_Builder::code( $chat_id ) ),
 				)
 			);
 			$blocks[] = __( 'Use /menu to open the command hub or /site to view your site overview.', 'wp-telepilot' );
@@ -238,11 +238,11 @@ class Telepilot_Command_Router {
 			$blocks[] = implode(
 				"\n",
 				array(
-					sprintf( __( 'Current chat ID: %s', 'wp-telepilot' ), Telepilot_Telegram_Response_Builder::code( $chat_id ) ),
+					sprintf( /* translators: %s: chat ID. */ __( 'Current chat ID: %s', 'wp-telepilot' ), Telepilot_Telegram_Response_Builder::code( $chat_id ) ),
 					__( 'Next steps:', 'wp-telepilot' ),
 					__( '1. Add this chat ID to WP Telepilot Allowed Chat IDs if you use an allow list.', 'wp-telepilot' ),
 					__( '2. Generate a one-time link code from your WordPress profile.', 'wp-telepilot' ),
-					sprintf( __( '3. Send %s here to connect your Telegram account.', 'wp-telepilot' ), Telepilot_Telegram_Response_Builder::code( '/link CODE' ) ),
+					sprintf( /* translators: %s: Telegram account-linking command. */ __( '3. Send %s here to connect your Telegram account.', 'wp-telepilot' ), Telepilot_Telegram_Response_Builder::code( '/link CODE' ) ),
 				)
 			);
 			$blocks[] = Telepilot_Telegram_Response_Builder::italic( __( 'Use /help to review commands once you are linked.', 'wp-telepilot' ) );
@@ -463,7 +463,7 @@ class Telepilot_Command_Router {
 		);
 
 		return Telepilot_Telegram_Response_Builder::success(
-			sprintf( __( 'Setting `%1$s` has been %2$s.', 'wp-telepilot' ), $subcommand, isset( $result['label_text'] ) ? $result['label_text'] : __( 'updated', 'wp-telepilot' ) ),
+			sprintf( /* translators: 1: requested action, 2: action result. */ __( 'Setting `%1$s` has been %2$s.', 'wp-telepilot' ), $subcommand, isset( $result['label_text'] ) ? $result['label_text'] : __( 'updated', 'wp-telepilot' ) ),
 			array(
 				'command' => '/settings',
 			)
@@ -560,7 +560,7 @@ class Telepilot_Command_Router {
 
 		return Telepilot_Telegram_Response_Builder::success(
 			sprintf(
-				__( 'Notification `%1$s` has been %2$s.', 'wp-telepilot' ),
+				/* translators: 1: notification setting name, 2: action result. */ __( 'Notification `%1$s` has been %2$s.', 'wp-telepilot' ),
 				$result['key'],
 				$result['label_text']
 			),
@@ -576,18 +576,18 @@ class Telepilot_Command_Router {
 		$username         = ! empty( $identity['telegram_username'] ) ? (string) $identity['telegram_username'] : '';
 		$linked_status    = ! empty( $identity['wp_user'] ) && $identity['wp_user'] instanceof WP_User
 			? sprintf(
-				__( 'Linked WordPress user: %s', 'wp-telepilot' ),
+				/* translators: %s: WordPress display name or login. */ __( 'Linked WordPress user: %s', 'wp-telepilot' ),
 				Telepilot_Telegram_Response_Builder::escape( $identity['wp_user']->display_name ? $identity['wp_user']->display_name : $identity['wp_user']->user_login )
 			)
 			: __( 'Linked WordPress user: not linked yet.', 'wp-telepilot' );
 
 		$detail_lines = array(
-			sprintf( __( 'Chat ID: %s', 'wp-telepilot' ), Telepilot_Telegram_Response_Builder::code( $chat_id ) ),
-			sprintf( __( 'Telegram user ID: %s', 'wp-telepilot' ), Telepilot_Telegram_Response_Builder::code( $telegram_user_id ) ),
+			sprintf( /* translators: %s: chat ID. */ __( 'Chat ID: %s', 'wp-telepilot' ), Telepilot_Telegram_Response_Builder::code( $chat_id ) ),
+			sprintf( /* translators: %s: telegram user ID. */ __( 'Telegram user ID: %s', 'wp-telepilot' ), Telepilot_Telegram_Response_Builder::code( $telegram_user_id ) ),
 		);
 
 		if ( '' !== $username ) {
-			$detail_lines[] = sprintf( __( 'Telegram username: @%s', 'wp-telepilot' ), Telepilot_Telegram_Response_Builder::escape( $username ) );
+			$detail_lines[] = sprintf( /* translators: %s: username. */ __( 'Telegram username: @%s', 'wp-telepilot' ), Telepilot_Telegram_Response_Builder::escape( $username ) );
 		}
 
 		return Telepilot_Telegram_Response_Builder::success_html(
@@ -777,7 +777,7 @@ class Telepilot_Command_Router {
 			if ( is_wp_error( $result ) ) { return Telepilot_Telegram_Response_Builder::error( $result->get_error_message(), array( 'code' => $result->get_error_code() ) ); }
 
 			return Telepilot_Telegram_Response_Builder::success_html(
-				$this->comments_service->render_page_message( $result, sprintf( __( 'Comment Search: %s', 'wp-telepilot' ), $term ) ),
+				$this->comments_service->render_page_message( $result, sprintf( /* translators: %s: search keyword. */ __( 'Comment Search: %s', 'wp-telepilot' ), $term ) ),
 				array(
 					'command'      => '/comments',
 					'reply_markup' => $this->safe_reply_markup(
@@ -834,7 +834,7 @@ class Telepilot_Command_Router {
 			$this->log_comment_activity( $identity, 'comment_replied', $comment_id, 'reply', $result );
 
 			return Telepilot_Telegram_Response_Builder::success(
-				sprintf( __( 'Reply [%1$d] has been posted to comment [%2$d].', 'wp-telepilot' ), $result['reply']->comment_ID, $comment_id ),
+				sprintf( /* translators: 1: comment ID, 2: comment ID. */ __( 'Reply [%1$d] has been posted to comment [%2$d].', 'wp-telepilot' ), $result['reply']->comment_ID, $comment_id ),
 				array(
 					'command' => '/comments',
 				)
@@ -860,7 +860,7 @@ class Telepilot_Command_Router {
 			$this->log_comment_activity( $identity, 'comment_moderated', $comment_id, $subcommand, $result );
 
 			return Telepilot_Telegram_Response_Builder::success(
-				sprintf( __( 'Comment #%1$d has been %2$s.', 'wp-telepilot' ), $comment_id, $result['label'] ),
+				sprintf( /* translators: 1: comment ID, 2: action result. */ __( 'Comment #%1$d has been %2$s.', 'wp-telepilot' ), $comment_id, $result['label'] ),
 				array(
 					'command' => '/comments',
 				)
@@ -868,7 +868,7 @@ class Telepilot_Command_Router {
 		}
 
 		return Telepilot_Telegram_Response_Builder::success(
-			sprintf( __( 'Confirm moderation for comment [%1$d]: %2$s', 'wp-telepilot' ), $comment_id, $subcommand ),
+			sprintf( /* translators: 1: comment ID, 2: requested action. */ __( 'Confirm moderation for comment [%1$d]: %2$s', 'wp-telepilot' ), $comment_id, $subcommand ),
 			array(
 				'command'      => '/comments',
 				'reply_markup' => $this->safe_reply_markup(
@@ -918,7 +918,7 @@ class Telepilot_Command_Router {
 
 		return Telepilot_Telegram_Response_Builder::success(
 			sprintf(
-				/* translators: 1: comment id, 2: action label. */
+				/* translators: 1: comment id, 2: requested action. */
 				__( 'Comment #%1$d has been %2$s.', 'wp-telepilot' ),
 				$comment_id,
 				$result['label']
@@ -1015,7 +1015,7 @@ class Telepilot_Command_Router {
 		);
 
 		return Telepilot_Telegram_Response_Builder::success(
-			sprintf( __( 'Post #%1$d has been %2$s.', 'wp-telepilot' ), $post_id, $result['label'] ),
+			sprintf( /* translators: 1: post ID, 2: action result. */ __( 'Post #%1$d has been %2$s.', 'wp-telepilot' ), $post_id, $result['label'] ),
 			array( 'command' => '/posts' )
 		);
 	}
@@ -1108,7 +1108,7 @@ class Telepilot_Command_Router {
 					Telepilot_Telegram_Response_Builder::join_blocks(
 						array(
 							Telepilot_Telegram_Response_Builder::bold( __( 'Category Selection Closed', 'wp-telepilot' ) ),
-							sprintf( __( 'No category changes were saved for post [%d].', 'wp-telepilot' ), $post_id ),
+							sprintf( /* translators: %d: post ID. */ __( 'No category changes were saved for post [%d].', 'wp-telepilot' ), $post_id ),
 						)
 					),
 					array(
@@ -1451,7 +1451,7 @@ class Telepilot_Command_Router {
 		);
 
 		return Telepilot_Telegram_Response_Builder::success(
-			sprintf( __( 'Page #%1$d has been %2$s.', 'wp-telepilot' ), $page_id, $result['label'] ),
+			sprintf( /* translators: 1: page ID, 2: action result. */ __( 'Page #%1$d has been %2$s.', 'wp-telepilot' ), $page_id, $result['label'] ),
 			array( 'command' => '/pages' )
 		);
 	}
@@ -1537,7 +1537,7 @@ class Telepilot_Command_Router {
 
 			if ( is_wp_error( $items ) ) { return Telepilot_Telegram_Response_Builder::error( $items->get_error_message(), array( 'code' => $items->get_error_code() ) ); }
 			return Telepilot_Telegram_Response_Builder::success_html(
-				$this->media_service->render_page_message( $items, sprintf( __( 'Media Search: %s', 'wp-telepilot' ), $term ) ),
+				$this->media_service->render_page_message( $items, sprintf( /* translators: %s: search keyword. */ __( 'Media Search: %s', 'wp-telepilot' ), $term ) ),
 				array(
 					'command'      => '/media',
 					'reply_markup' => $this->safe_reply_markup(
@@ -1658,7 +1658,7 @@ class Telepilot_Command_Router {
 			);
 
 			return Telepilot_Telegram_Response_Builder::success(
-				sprintf( __( 'User #%1$d `%2$s` has been created.', 'wp-telepilot' ), $result['user']->ID, $result['user']->user_login ),
+				sprintf( /* translators: 1: user ID, 2: WordPress login name. */ __( 'User #%1$d `%2$s` has been created.', 'wp-telepilot' ), $result['user']->ID, $result['user']->user_login ),
 				array( 'command' => '/users' )
 			);
 		}
@@ -1681,7 +1681,7 @@ class Telepilot_Command_Router {
 			$this->log_user_action( $identity, 'user_disabled', $user_id, $result['before_state'], $result['after_state'] );
 
 			return Telepilot_Telegram_Response_Builder::success(
-				sprintf( __( 'User #%1$d has been %2$s.', 'wp-telepilot' ), $user_id, $result['label'] ),
+				sprintf( /* translators: 1: user ID, 2: action result. */ __( 'User #%1$d has been %2$s.', 'wp-telepilot' ), $user_id, $result['label'] ),
 				array( 'command' => '/users' )
 			);
 		}
@@ -1716,7 +1716,7 @@ class Telepilot_Command_Router {
 				Telepilot_Telegram_Response_Builder::bold( __( 'Password Reset Link Generated', 'wp-telepilot' ) ) .
 				"\n\n" .
 				sprintf(
-					__( 'User: #%1$d', 'wp-telepilot' ),
+					/* translators: %d: user ID. */ __( 'User: #%1$d', 'wp-telepilot' ),
 					$user_id
 				) .
 				"\n" .
@@ -1760,13 +1760,13 @@ class Telepilot_Command_Router {
 				Telepilot_Telegram_Response_Builder::bold( __( 'Password Reset Email Sent', 'wp-telepilot' ) ) .
 				"\n\n" .
 				sprintf(
-					__( 'User: #%1$d (%2$s)', 'wp-telepilot' ),
+					/* translators: 1: user ID, 2: WordPress login name. */ __( 'User: #%1$d (%2$s)', 'wp-telepilot' ),
 					$user_id,
 					Telepilot_Telegram_Response_Builder::escape( $result['user']->user_login )
 				) .
 				"\n" .
 				sprintf(
-					__( 'Email: %s', 'wp-telepilot' ),
+					/* translators: %s: email address. */ __( 'Email: %s', 'wp-telepilot' ),
 					Telepilot_Telegram_Response_Builder::escape( $result['user']->user_email )
 				),
 				array( 'command' => '/users' )
@@ -1808,13 +1808,13 @@ class Telepilot_Command_Router {
 				Telepilot_Telegram_Response_Builder::bold( __( 'Welcome Email Sent', 'wp-telepilot' ) ) .
 				"\n\n" .
 				sprintf(
-					__( 'User: #%1$d (%2$s)', 'wp-telepilot' ),
+					/* translators: 1: user ID, 2: WordPress login name. */ __( 'User: #%1$d (%2$s)', 'wp-telepilot' ),
 					$user_id,
 					Telepilot_Telegram_Response_Builder::escape( $result['user']->user_login )
 				) .
 				"\n" .
 				sprintf(
-					__( 'Email: %s', 'wp-telepilot' ),
+					/* translators: %s: email address. */ __( 'Email: %s', 'wp-telepilot' ),
 					Telepilot_Telegram_Response_Builder::escape( $result['user']->user_email )
 				),
 				array( 'command' => '/users' )
@@ -1843,7 +1843,7 @@ class Telepilot_Command_Router {
 			$this->log_user_action( $identity, 'user_role_changed', $user_id, $result['before_state'], $result['after_state'] );
 
 			return Telepilot_Telegram_Response_Builder::success(
-				sprintf( __( 'User #%1$d has been %2$s.', 'wp-telepilot' ), $user_id, $result['label'] ),
+				sprintf( /* translators: 1: user ID, 2: action result. */ __( 'User #%1$d has been %2$s.', 'wp-telepilot' ), $user_id, $result['label'] ),
 				array( 'command' => '/users' )
 			);
 		}
@@ -1866,7 +1866,7 @@ class Telepilot_Command_Router {
 			$this->log_user_action( $identity, 'user_deleted', $user_id, $result['before_state'], $result['after_state'] );
 
 			return Telepilot_Telegram_Response_Builder::success(
-				sprintf( __( 'User #%1$d has been %2$s.', 'wp-telepilot' ), $user_id, $result['label'] ),
+				sprintf( /* translators: 1: user ID, 2: action result. */ __( 'User #%1$d has been %2$s.', 'wp-telepilot' ), $user_id, $result['label'] ),
 				array( 'command' => '/users' )
 			);
 		}
@@ -1947,12 +1947,12 @@ class Telepilot_Command_Router {
 			Telepilot_Telegram_Response_Builder::bold( __( 'Plugin Action Completed', 'wp-telepilot' ) ) .
 			"\n\n" .
 			sprintf(
-				__( 'Plugin: [%1$s]', 'wp-telepilot' ),
+				/* translators: %s: display label. */ __( 'Plugin: [%1$s]', 'wp-telepilot' ),
 				Telepilot_Telegram_Response_Builder::escape( $label )
 			) .
 			"\n" .
 			sprintf(
-				__( 'Result: %s', 'wp-telepilot' ),
+				/* translators: %s: action result. */ __( 'Result: %s', 'wp-telepilot' ),
 				Telepilot_Telegram_Response_Builder::escape( $result['label'] )
 			),
 			array(
@@ -2019,7 +2019,7 @@ class Telepilot_Command_Router {
 			}
 
 			return Telepilot_Telegram_Response_Builder::success_html(
-				$this->taxonomies_service->render_terms_message( $result, sprintf( __( '%s List', 'wp-telepilot' ), ucfirst( $resource ) ) ),
+				$this->taxonomies_service->render_terms_message( $result, sprintf( /* translators: %s: resource type (categories or tags). */ __( '%s List', 'wp-telepilot' ), ucfirst( $resource ) ) ),
 				array(
 					'command'      => '/' . $resource,
 					'reply_markup' => $this->safe_reply_markup(
@@ -2035,7 +2035,7 @@ class Telepilot_Command_Router {
 		if ( 'search' === $subcommand ) {
 			$term = implode( ' ', array_slice( $args, 1 ) );
 			if ( '' === trim( $term ) ) {
-				return Telepilot_Telegram_Response_Builder::error( sprintf( __( 'Usage: `/%1$s search keyword`', 'wp-telepilot' ), $resource ) );
+				return Telepilot_Telegram_Response_Builder::error( sprintf( /* translators: %s: resource type (categories or tags). */ __( 'Usage: `/%1$s search keyword`', 'wp-telepilot' ), $resource ) );
 			}
 
 			$result = $this->taxonomies_service->list_terms( $taxonomy, $page, 5, $term );
@@ -2044,7 +2044,7 @@ class Telepilot_Command_Router {
 			}
 
 			return Telepilot_Telegram_Response_Builder::success_html(
-				$this->taxonomies_service->render_terms_message( $result, sprintf( __( '%1$s Search: %2$s', 'wp-telepilot' ), ucfirst( $resource ), $term ) ),
+				$this->taxonomies_service->render_terms_message( $result, sprintf( /* translators: 1: resource type (categories or tags), 2: search keyword. */ __( '%1$s Search: %2$s', 'wp-telepilot' ), ucfirst( $resource ), $term ) ),
 				array(
 					'command'      => '/' . $resource,
 					'reply_markup' => $this->safe_reply_markup(
@@ -2124,7 +2124,7 @@ class Telepilot_Command_Router {
 
 			$name = implode( ' ', array_slice( $args, 1 ) );
 			if ( '' === trim( $name ) ) {
-				return Telepilot_Telegram_Response_Builder::error( sprintf( __( 'Usage: `/%1$s create Name`', 'wp-telepilot' ), $resource ) );
+				return Telepilot_Telegram_Response_Builder::error( sprintf( /* translators: %s: resource type (categories or tags). */ __( 'Usage: `/%1$s create Name`', 'wp-telepilot' ), $resource ) );
 			}
 
 			$term = $this->taxonomies_service->create_term( $taxonomy, $name );
@@ -2147,7 +2147,7 @@ class Telepilot_Command_Router {
 			);
 
 			return Telepilot_Telegram_Response_Builder::success(
-				sprintf( __( '%1$s #%2$d `%3$s` has been created.', 'wp-telepilot' ), ucfirst( rtrim( $resource, 's' ) ), $term->term_id, $term->name ),
+				sprintf( /* translators: 1: resource type (categories or tags), 2: taxonomy term ID, 3: taxonomy term name. */ __( '%1$s #%2$d `%3$s` has been created.', 'wp-telepilot' ), ucfirst( rtrim( $resource, 's' ) ), $term->term_id, $term->name ),
 				array( 'command' => '/' . $resource )
 			);
 		}
@@ -2160,7 +2160,7 @@ class Telepilot_Command_Router {
 
 			$name = implode( ' ', array_slice( $args, 2 ) );
 			if ( '' === trim( $name ) ) {
-				return Telepilot_Telegram_Response_Builder::error( sprintf( __( 'Usage: `/%1$s rename 12 New Name`', 'wp-telepilot' ), $resource ) );
+				return Telepilot_Telegram_Response_Builder::error( sprintf( /* translators: %s: resource type (categories or tags). */ __( 'Usage: `/%1$s rename 12 New Name`', 'wp-telepilot' ), $resource ) );
 			}
 
 			$before_term = $this->taxonomies_service->get_term_details( $taxonomy, $term_id );
@@ -2179,7 +2179,7 @@ class Telepilot_Command_Router {
 			);
 
 			return Telepilot_Telegram_Response_Builder::success(
-				sprintf( __( '%1$s #%2$d has been renamed to `%3$s`.', 'wp-telepilot' ), ucfirst( rtrim( $resource, 's' ) ), $term->term_id, $term->name ),
+				sprintf( /* translators: 1: resource type (categories or tags), 2: taxonomy term ID, 3: taxonomy term name. */ __( '%1$s #%2$d has been renamed to `%3$s`.', 'wp-telepilot' ), ucfirst( rtrim( $resource, 's' ) ), $term->term_id, $term->name ),
 				array( 'command' => '/' . $resource )
 			);
 		}
@@ -2192,7 +2192,7 @@ class Telepilot_Command_Router {
 
 			$slug = implode( ' ', array_slice( $args, 2 ) );
 			if ( '' === trim( $slug ) ) {
-				return Telepilot_Telegram_Response_Builder::error( sprintf( __( 'Usage: `/%1$s slug 12 new-slug`', 'wp-telepilot' ), $resource ) );
+				return Telepilot_Telegram_Response_Builder::error( sprintf( /* translators: %s: resource type (categories or tags). */ __( 'Usage: `/%1$s slug 12 new-slug`', 'wp-telepilot' ), $resource ) );
 			}
 
 			$before_term = $this->taxonomies_service->get_term_details( $taxonomy, $term_id );
@@ -2211,7 +2211,7 @@ class Telepilot_Command_Router {
 			);
 
 			return Telepilot_Telegram_Response_Builder::success(
-				sprintf( __( '%1$s #%2$d slug has been updated.', 'wp-telepilot' ), ucfirst( rtrim( $resource, 's' ) ), $term->term_id ),
+				sprintf( /* translators: 1: resource type (categories or tags), 2: taxonomy term ID. */ __( '%1$s #%2$d slug has been updated.', 'wp-telepilot' ), ucfirst( rtrim( $resource, 's' ) ), $term->term_id ),
 				array( 'command' => '/' . $resource )
 			);
 		}
@@ -2224,7 +2224,7 @@ class Telepilot_Command_Router {
 
 			$description = implode( ' ', array_slice( $args, 2 ) );
 			if ( '' === trim( $description ) ) {
-				return Telepilot_Telegram_Response_Builder::error( sprintf( __( 'Usage: `/%1$s description 12 New description`', 'wp-telepilot' ), $resource ) );
+				return Telepilot_Telegram_Response_Builder::error( sprintf( /* translators: %s: resource type (categories or tags). */ __( 'Usage: `/%1$s description 12 New description`', 'wp-telepilot' ), $resource ) );
 			}
 
 			$before_term = $this->taxonomies_service->get_term_details( $taxonomy, $term_id );
@@ -2243,7 +2243,7 @@ class Telepilot_Command_Router {
 			);
 
 			return Telepilot_Telegram_Response_Builder::success(
-				sprintf( __( '%1$s #%2$d description has been updated.', 'wp-telepilot' ), ucfirst( rtrim( $resource, 's' ) ), $term->term_id ),
+				sprintf( /* translators: 1: resource type (categories or tags), 2: taxonomy term ID. */ __( '%1$s #%2$d description has been updated.', 'wp-telepilot' ), ucfirst( rtrim( $resource, 's' ) ), $term->term_id ),
 				array( 'command' => '/' . $resource )
 			);
 		}
@@ -2280,7 +2280,7 @@ class Telepilot_Command_Router {
 			);
 
 			return Telepilot_Telegram_Response_Builder::success(
-				sprintf( __( 'Category #%1$d parent has been updated.', 'wp-telepilot' ), $term->term_id ),
+				sprintf( /* translators: %d: taxonomy term ID. */ __( 'Category #%1$d parent has been updated.', 'wp-telepilot' ), $term->term_id ),
 				array( 'command' => '/' . $resource )
 			);
 		}
@@ -2337,8 +2337,8 @@ class Telepilot_Command_Router {
 			return Telepilot_Telegram_Response_Builder::success(
 				sprintf(
 					$replacement_term_id
-						? __( 'Confirm reassignment and delete for %1$s #%2$d', 'wp-telepilot' )
-						: __( 'Confirm delete for %1$s #%2$d', 'wp-telepilot' ),
+						? /* translators: 1: resource type (categories or tags), 2: taxonomy term ID. */ __( 'Confirm reassignment and delete for %1$s #%2$d', 'wp-telepilot' )
+						: /* translators: 1: resource type (categories or tags), 2: taxonomy term ID. */ __( 'Confirm delete for %1$s #%2$d', 'wp-telepilot' ),
 					rtrim( $resource, 's' ),
 					$term_id
 				),
@@ -2416,8 +2416,8 @@ class Telepilot_Command_Router {
 			return Telepilot_Telegram_Response_Builder::success(
 				sprintf(
 					'post_tag' === $taxonomy
-						? __( 'Tag #%1$d `%2$s` was reassigned to [%3$d] %4$s for %5$d item(s), then deleted.', 'wp-telepilot' )
-						: __( 'Category #%1$d `%2$s` was reassigned to [%3$d] %4$s for %5$d item(s), then deleted.', 'wp-telepilot' ),
+						? /* translators: 1: taxonomy term ID, 2: taxonomy term name, 3: taxonomy term ID, 4: taxonomy term name, 5: affected objects. */ __( 'Tag #%1$d `%2$s` was reassigned to [%3$d] %4$s for %5$d item(s), then deleted.', 'wp-telepilot' )
+						: /* translators: 1: taxonomy term ID, 2: taxonomy term name, 3: taxonomy term ID, 4: taxonomy term name, 5: affected objects. */ __( 'Category #%1$d `%2$s` was reassigned to [%3$d] %4$s for %5$d item(s), then deleted.', 'wp-telepilot' ),
 					$term_id,
 					$term->name,
 					$replacement_term->term_id,
@@ -2448,7 +2448,7 @@ class Telepilot_Command_Router {
 
 		return Telepilot_Telegram_Response_Builder::success(
 			sprintf(
-				'post_tag' === $taxonomy ? __( 'Tag #%1$d `%2$s` has been deleted.', 'wp-telepilot' ) : __( 'Category #%1$d `%2$s` has been deleted.', 'wp-telepilot' ),
+				'post_tag' === $taxonomy ? /* translators: 1: taxonomy term ID, 2: taxonomy term name. */ __( 'Tag #%1$d `%2$s` has been deleted.', 'wp-telepilot' ) : /* translators: 1: taxonomy term ID, 2: taxonomy term name. */ __( 'Category #%1$d `%2$s` has been deleted.', 'wp-telepilot' ),
 				$term_id,
 				$term->name
 			),
@@ -2499,16 +2499,16 @@ class Telepilot_Command_Router {
 
 		return Telepilot_Telegram_Response_Builder::join_blocks(
 			array(
-				Telepilot_Telegram_Response_Builder::bold( sprintf( __( 'Cannot delete %s in place', 'wp-telepilot' ), $singular ) ),
+				Telepilot_Telegram_Response_Builder::bold( sprintf( /* translators: %s: resource type (category or tag). */ __( 'Cannot delete %s in place', 'wp-telepilot' ), $singular ) ),
 				implode(
 					"\n",
 					array(
-						sprintf( __( '%1$s: [%2$d] %3$s', 'wp-telepilot' ), ucfirst( $singular ), $term->term_id, Telepilot_Telegram_Response_Builder::escape( $term->name ) ),
-						sprintf( __( 'Attached content: %d item(s)', 'wp-telepilot' ), (int) $usage_count ),
+						sprintf( /* translators: 1: resource type (category or tag), 2: taxonomy term ID, 3: taxonomy term name. */ __( '%1$s: [%2$d] %3$s', 'wp-telepilot' ), ucfirst( $singular ), $term->term_id, Telepilot_Telegram_Response_Builder::escape( $term->name ) ),
+						sprintf( /* translators: %d: usage count. */ __( 'Attached content: %d item(s)', 'wp-telepilot' ), (int) $usage_count ),
 					)
 				),
 				__( 'Reassign the attached content to another term first, then delete the original.', 'wp-telepilot' ),
-				sprintf( __( 'Example: %s', 'wp-telepilot' ), $examples ),
+				sprintf( /* translators: %s: examples. */ __( 'Example: %s', 'wp-telepilot' ), $examples ),
 			)
 		);
 	}
@@ -2569,7 +2569,7 @@ class Telepilot_Command_Router {
 				array(
 					Telepilot_Telegram_Response_Builder::bold( __( 'Command Not Recognized', 'wp-telepilot' ) ),
 					sprintf(
-						__( 'I could not match %s.', 'wp-telepilot' ),
+						/* translators: %s: command string. */ __( 'I could not match %s.', 'wp-telepilot' ),
 						Telepilot_Telegram_Response_Builder::code( $command_string )
 					),
 					$help_message,
@@ -2589,7 +2589,7 @@ class Telepilot_Command_Router {
 			Telepilot_Telegram_Response_Builder::join_blocks(
 				array(
 					Telepilot_Telegram_Response_Builder::bold( __( 'Command Not Recognized', 'wp-telepilot' ) ),
-					sprintf( __( 'I could not match %s.', 'wp-telepilot' ), $command_label ),
+					sprintf( /* translators: %s: command label. */ __( 'I could not match %s.', 'wp-telepilot' ), $command_label ),
 					__( 'Use /menu or /help to see what this bot can do.', 'wp-telepilot' ),
 				)
 			),

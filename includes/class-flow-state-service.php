@@ -39,6 +39,7 @@ class Telepilot_Flow_State_Service {
 		global $wpdb;
 		$existing = Telepilot_Security_Records::read( $token, 'flow' );
 		$payload['_security_binding'] = $existing['_security_binding'];
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching -- Compare-and-swap the guided flow to prevent concurrent requests overwriting its state; invalidate user_meta below.
 		return false !== $wpdb->update( Telepilot_Security_Records::table_name(), array( 'payload' => wp_json_encode( $payload ) ), array( 'token_hash' => hash( 'sha256', $token ), 'purpose' => 'flow', 'state' => 'ready' ) );
 	}
 

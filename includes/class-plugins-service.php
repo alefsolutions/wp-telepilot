@@ -50,7 +50,7 @@ class Telepilot_Plugins_Service {
 
 		$blocks   = array( Telepilot_Telegram_Response_Builder::bold( Telepilot_Telegram_Response_Builder::label( 'plugins', $heading ) ) );
 		$blocks[] = Telepilot_Telegram_Response_Builder::italic(
-			sprintf( __( 'Page %1$d of %2$d | %3$d items', 'wp-telepilot' ), $result['page'], $result['total_pages'], isset( $result['total_items'] ) ? (int) $result['total_items'] : count( $result['items'] ) )
+			sprintf( /* translators: 1: current page number, 2: total number of pages, 3: total number of items. */ __( 'Page %1$d of %2$d | %3$d items', 'wp-telepilot' ), $result['page'], $result['total_pages'], isset( $result['total_items'] ) ? (int) $result['total_items'] : count( $result['items'] ) )
 		);
 
 		foreach ( $result['items'] as $plugin ) {
@@ -68,22 +68,22 @@ class Telepilot_Plugins_Service {
 			Telepilot_Telegram_Response_Builder::label(
 				'plugins',
 				sprintf(
-					__( '[%1$d] %2$s', 'wp-telepilot' ),
+					/* translators: 1: plugin list number, 2: plugin name. */ __( '[%1$d] %2$s', 'wp-telepilot' ),
 					isset( $plugin['list_number'] ) ? (int) $plugin['list_number'] : 0,
 					Telepilot_Telegram_Response_Builder::escape( $plugin['name'] )
 				)
 			),
-			sprintf( __( 'Identifier: [%s]', 'wp-telepilot' ), Telepilot_Telegram_Response_Builder::escape( $plugin['identifier'] ) ),
-			sprintf( __( 'Status: %s', 'wp-telepilot' ), Telepilot_Telegram_Response_Builder::escape( $status ) ),
-			sprintf( __( 'Version: %s', 'wp-telepilot' ), Telepilot_Telegram_Response_Builder::escape( $plugin['version'] ) ),
+			sprintf( /* translators: %s: plugin identifier. */ __( 'Identifier: [%s]', 'wp-telepilot' ), Telepilot_Telegram_Response_Builder::escape( $plugin['identifier'] ) ),
+			sprintf( /* translators: %s: current status. */ __( 'Status: %s', 'wp-telepilot' ), Telepilot_Telegram_Response_Builder::escape( $status ) ),
+			sprintf( /* translators: %s: plugin version. */ __( 'Version: %s', 'wp-telepilot' ), Telepilot_Telegram_Response_Builder::escape( $plugin['version'] ) ),
 		);
 
 		if ( ! empty( $plugin['author'] ) ) {
-			$lines[] = sprintf( __( 'Author: %s', 'wp-telepilot' ), Telepilot_Telegram_Response_Builder::escape( wp_strip_all_tags( $plugin['author'] ) ) );
+			$lines[] = sprintf( /* translators: %s: author name. */ __( 'Author: %s', 'wp-telepilot' ), Telepilot_Telegram_Response_Builder::escape( wp_strip_all_tags( $plugin['author'] ) ) );
 		}
 
 		if ( ! empty( $plugin['update_version'] ) ) {
-			$lines[] = sprintf( __( 'Update available: %s', 'wp-telepilot' ), Telepilot_Telegram_Response_Builder::escape( $plugin['update_version'] ) );
+			$lines[] = sprintf( /* translators: %s: update version. */ __( 'Update available: %s', 'wp-telepilot' ), Telepilot_Telegram_Response_Builder::escape( $plugin['update_version'] ) );
 		}
 
 		if ( ! empty( $plugin['is_self'] ) ) {
@@ -102,19 +102,19 @@ class Telepilot_Plugins_Service {
 		$lines  = array(
 			Telepilot_Telegram_Response_Builder::bold( Telepilot_Telegram_Response_Builder::label( 'plugins', __( 'Plugin Details', 'wp-telepilot' ) ) ),
 			'',
-			sprintf( __( 'Name: %s', 'wp-telepilot' ), Telepilot_Telegram_Response_Builder::escape( $plugin['name'] ) ),
-			sprintf( __( 'Identifier: [%s]', 'wp-telepilot' ), Telepilot_Telegram_Response_Builder::escape( $plugin['identifier'] ) ),
-			sprintf( __( 'Status: %s', 'wp-telepilot' ), Telepilot_Telegram_Response_Builder::escape( $status ) ),
-			sprintf( __( 'Version: %s', 'wp-telepilot' ), Telepilot_Telegram_Response_Builder::escape( $plugin['version'] ) ),
-			sprintf( __( 'File: %s', 'wp-telepilot' ), Telepilot_Telegram_Response_Builder::escape( $plugin['file'] ) ),
+			sprintf( /* translators: %s: plugin name. */ __( 'Name: %s', 'wp-telepilot' ), Telepilot_Telegram_Response_Builder::escape( $plugin['name'] ) ),
+			sprintf( /* translators: %s: plugin identifier. */ __( 'Identifier: [%s]', 'wp-telepilot' ), Telepilot_Telegram_Response_Builder::escape( $plugin['identifier'] ) ),
+			sprintf( /* translators: %s: current status. */ __( 'Status: %s', 'wp-telepilot' ), Telepilot_Telegram_Response_Builder::escape( $status ) ),
+			sprintf( /* translators: %s: plugin version. */ __( 'Version: %s', 'wp-telepilot' ), Telepilot_Telegram_Response_Builder::escape( $plugin['version'] ) ),
+			sprintf( /* translators: %s: plugin file path. */ __( 'File: %s', 'wp-telepilot' ), Telepilot_Telegram_Response_Builder::escape( $plugin['file'] ) ),
 		);
 
 		if ( ! empty( $plugin['author'] ) ) {
-			$lines[] = sprintf( __( 'Author: %s', 'wp-telepilot' ), Telepilot_Telegram_Response_Builder::escape( wp_strip_all_tags( $plugin['author'] ) ) );
+			$lines[] = sprintf( /* translators: %s: author name. */ __( 'Author: %s', 'wp-telepilot' ), Telepilot_Telegram_Response_Builder::escape( wp_strip_all_tags( $plugin['author'] ) ) );
 		}
 
 		if ( ! empty( $plugin['update_version'] ) ) {
-			$lines[] = sprintf( __( 'Update available: %s', 'wp-telepilot' ), Telepilot_Telegram_Response_Builder::escape( $plugin['update_version'] ) );
+			$lines[] = sprintf( /* translators: %s: update version. */ __( 'Update available: %s', 'wp-telepilot' ), Telepilot_Telegram_Response_Builder::escape( $plugin['update_version'] ) );
 		}
 
 		if ( ! empty( $plugin['is_self'] ) ) {
@@ -173,7 +173,7 @@ class Telepilot_Plugins_Service {
 			$list_number = isset( $plugin['list_number'] ) ? (int) $plugin['list_number'] : 0;
 			$row         = array(
 				array(
-					'text'          => Telepilot_Telegram_Response_Builder::label( 'details', sprintf( __( 'Details [%d]', 'wp-telepilot' ), $list_number ) ),
+					'text'          => Telepilot_Telegram_Response_Builder::label( 'details', sprintf( /* translators: %d: plugin list number. */ __( 'Details [%d]', 'wp-telepilot' ), $list_number ) ),
 					'callback_data' => '/plugins details ' . $identifier,
 				),
 			);
@@ -185,23 +185,23 @@ class Telepilot_Plugins_Service {
 
 			if ( ! empty( $plugin['update_version'] ) ) {
 				$row[] = array(
-					'text'          => Telepilot_Telegram_Response_Builder::label( 'update', sprintf( __( 'Update [%d]', 'wp-telepilot' ), $list_number ) ),
+					'text'          => Telepilot_Telegram_Response_Builder::label( 'update', sprintf( /* translators: %d: plugin list number. */ __( 'Update [%d]', 'wp-telepilot' ), $list_number ) ),
 					'callback_data' => '/plugins update ' . $identifier,
 				);
 			} elseif ( $plugin['is_active'] ) {
 				$row[] = array(
-					'text'          => Telepilot_Telegram_Response_Builder::label( 'disable', sprintf( __( 'Deactivate [%d]', 'wp-telepilot' ), $list_number ) ),
+					'text'          => Telepilot_Telegram_Response_Builder::label( 'disable', sprintf( /* translators: %d: plugin list number. */ __( 'Deactivate [%d]', 'wp-telepilot' ), $list_number ) ),
 					'callback_data' => '/plugins deactivate ' . $identifier,
 				);
 			} else {
 				$row[] = array(
-					'text'          => Telepilot_Telegram_Response_Builder::label( 'enable', sprintf( __( 'Activate [%d]', 'wp-telepilot' ), $list_number ) ),
+					'text'          => Telepilot_Telegram_Response_Builder::label( 'enable', sprintf( /* translators: %d: plugin list number. */ __( 'Activate [%d]', 'wp-telepilot' ), $list_number ) ),
 					'callback_data' => '/plugins activate ' . $identifier,
 				);
 			}
 
 			$row[] = array(
-				'text'          => Telepilot_Telegram_Response_Builder::label( 'delete', sprintf( __( 'Delete [%d]', 'wp-telepilot' ), $list_number ) ),
+				'text'          => Telepilot_Telegram_Response_Builder::label( 'delete', sprintf( /* translators: %d: plugin list number. */ __( 'Delete [%d]', 'wp-telepilot' ), $list_number ) ),
 				'callback_data' => '/plugins delete ' . $identifier,
 			);
 
@@ -234,7 +234,7 @@ class Telepilot_Plugins_Service {
 
 		return Telepilot_Telegram_Response_Builder::append_rows(
 			Telepilot_Telegram_Response_Builder::confirmation_keyboard(
-				sprintf( __( 'Confirm %1$s [%2$s]', 'wp-telepilot' ), ucfirst( $action ), $label ),
+				sprintf( /* translators: 1: requested action, 2: display label. */ __( 'Confirm %1$s [%2$s]', 'wp-telepilot' ), ucfirst( $action ), $label ),
 				'tp:plugin:confirm:' . $token,
 				'/plugins list'
 			),

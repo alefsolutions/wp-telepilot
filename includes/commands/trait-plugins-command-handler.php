@@ -108,7 +108,7 @@ trait Telepilot_Plugins_Command_Handler {
 			if ( is_wp_error( $result ) ) { return Telepilot_Telegram_Response_Builder::error( $result->get_error_message(), array( 'code' => $result->get_error_code() ) ); }
 
 			return Telepilot_Telegram_Response_Builder::success_html(
-				$this->plugins_service->render_page_message( $result, sprintf( __( 'Plugin Search: %s', 'wp-telepilot' ), $term ) ),
+				$this->plugins_service->render_page_message( $result, sprintf( /* translators: %s: search keyword. */ __( 'Plugin Search: %s', 'wp-telepilot' ), $term ) ),
 				array(
 					'command'      => '/plugins',
 					'reply_markup' => $this->safe_reply_markup(
@@ -182,12 +182,12 @@ trait Telepilot_Plugins_Command_Handler {
 			}
 		}
 
-		$message = sprintf( __( 'Confirm %1$s for plugin [%2$s]', 'wp-telepilot' ), $subcommand, $identifier );
+		$message = sprintf( /* translators: 1: requested action, 2: plugin identifier. */ __( 'Confirm %1$s for plugin [%2$s]', 'wp-telepilot' ), $subcommand, $identifier );
 		if ( 'delete' === $subcommand ) {
 			$message = Telepilot_Telegram_Response_Builder::join_blocks(
 				array(
 					Telepilot_Telegram_Response_Builder::bold( __( 'Delete Plugin?', 'wp-telepilot' ) ),
-					sprintf( __( 'Plugin: [%s]', 'wp-telepilot' ), Telepilot_Telegram_Response_Builder::escape( $identifier ) ),
+					sprintf( /* translators: %s: plugin identifier. */ __( 'Plugin: [%s]', 'wp-telepilot' ), Telepilot_Telegram_Response_Builder::escape( $identifier ) ),
 					__( 'Deleting a plugin removes its files from WordPress. Make sure it is not needed before you continue.', 'wp-telepilot' ),
 				)
 			);

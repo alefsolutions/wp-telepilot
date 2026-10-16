@@ -91,7 +91,7 @@ trait Telepilot_Posts_Command_Handler {
 
 			if ( is_wp_error( $posts ) ) { return Telepilot_Telegram_Response_Builder::error( $posts->get_error_message(), array( 'code' => $posts->get_error_code() ) ); }
 			return Telepilot_Telegram_Response_Builder::success_html(
-				$this->posts_service->render_page_message( $posts, sprintf( __( 'Post Search: %s', 'wp-telepilot' ), $term ) ),
+				$this->posts_service->render_page_message( $posts, sprintf( /* translators: %s: search keyword. */ __( 'Post Search: %s', 'wp-telepilot' ), $term ) ),
 				array(
 					'command'      => '/posts',
 					'reply_markup' => $this->safe_reply_markup(
@@ -188,21 +188,21 @@ trait Telepilot_Posts_Command_Handler {
 			$message_lines[] = Telepilot_Telegram_Response_Builder::bold( __( 'Post Editor Ready', 'wp-telepilot' ) );
 			$message_lines[] = '';
 			$message_lines[] = sprintf(
-				__( 'Post: [%1$d] %2$s', 'wp-telepilot' ),
+				/* translators: 1: post ID, 2: post title. */ __( 'Post: [%1$d] %2$s', 'wp-telepilot' ),
 				$post_id,
 				Telepilot_Telegram_Response_Builder::escape( $post ? get_the_title( $post ) : __( 'Post', 'wp-telepilot' ) )
 			);
 			$message_lines[] = sprintf(
-				__( 'Editor link: %s', 'wp-telepilot' ),
+				/* translators: %s: formatted link to the secure editor. */ __( 'Editor link: %s', 'wp-telepilot' ),
 				Telepilot_Telegram_Response_Builder::link( __( 'Open secure editor', 'wp-telepilot' ), $link['url'] )
 			);
 			$message_lines[] = sprintf(
-				__( 'Expires: %s', 'wp-telepilot' ),
+				/* translators: %s: formatted date and time. */ __( 'Expires: %s', 'wp-telepilot' ),
 				Telepilot_Telegram_Response_Builder::escape( wp_date( 'Y-m-d H:i:s T', (int) $link['expires_at'] ) )
 			);
 			if ( $preview_url ) {
 				$message_lines[] = sprintf(
-					__( 'Preview: %s', 'wp-telepilot' ),
+					/* translators: %s: formatted link to the requested admin or preview page. */ __( 'Preview: %s', 'wp-telepilot' ),
 					Telepilot_Telegram_Response_Builder::link( __( 'Open published post', 'wp-telepilot' ), $preview_url )
 				);
 			}
@@ -240,7 +240,7 @@ trait Telepilot_Posts_Command_Handler {
 			$this->log_content_action( $identity, 'post_state_changed', 'post', $post_id, 'publish', $result );
 
 			return Telepilot_Telegram_Response_Builder::success(
-				sprintf( __( 'Post #%1$d has been %2$s.', 'wp-telepilot' ), $post_id, $result['label'] ),
+				sprintf( /* translators: 1: post ID, 2: action result. */ __( 'Post #%1$d has been %2$s.', 'wp-telepilot' ), $post_id, $result['label'] ),
 				array( 'command' => '/posts' )
 			);
 		}
@@ -271,7 +271,7 @@ trait Telepilot_Posts_Command_Handler {
 			return Telepilot_Telegram_Response_Builder::success_html(
 				Telepilot_Telegram_Response_Builder::bold( __( 'Post Title Updated', 'wp-telepilot' ) ) .
 				"\n\n" .
-				sprintf( __( 'Post: [%1$d] %2$s', 'wp-telepilot' ), $post_id, Telepilot_Telegram_Response_Builder::escape( get_the_title( $result['post'] ) ) ),
+				sprintf( /* translators: 1: post ID, 2: post title. */ __( 'Post: [%1$d] %2$s', 'wp-telepilot' ), $post_id, Telepilot_Telegram_Response_Builder::escape( get_the_title( $result['post'] ) ) ),
 				array( 'command' => '/posts' )
 			);
 		}
@@ -300,7 +300,7 @@ trait Telepilot_Posts_Command_Handler {
 			$this->log_content_action( $identity, 'post_updated', 'post', $post_id, 'excerpt', $result );
 
 			return Telepilot_Telegram_Response_Builder::success(
-				sprintf( __( 'Post #%1$d excerpt has been updated.', 'wp-telepilot' ), $post_id ),
+				sprintf( /* translators: %d: post ID. */ __( 'Post #%1$d excerpt has been updated.', 'wp-telepilot' ), $post_id ),
 				array( 'command' => '/posts' )
 			);
 		}
@@ -338,7 +338,7 @@ trait Telepilot_Posts_Command_Handler {
 			$this->log_content_action( $identity, 'post_updated', 'post', $post_id, $subcommand, $result );
 
 			return Telepilot_Telegram_Response_Builder::success(
-				sprintf( __( 'Post #%1$d %2$s have been updated.', 'wp-telepilot' ), $post_id, 'categories' === $subcommand ? __( 'categories', 'wp-telepilot' ) : __( 'tags', 'wp-telepilot' ) ),
+				sprintf( /* translators: 1: post ID, 2: requested action. */ __( 'Post #%1$d %2$s have been updated.', 'wp-telepilot' ), $post_id, 'categories' === $subcommand ? __( 'categories', 'wp-telepilot' ) : __( 'tags', 'wp-telepilot' ) ),
 				array( 'command' => '/posts' )
 			);
 		}
@@ -371,7 +371,7 @@ trait Telepilot_Posts_Command_Handler {
 			$this->log_content_action( $identity, 'post_state_changed', 'post', $post_id, 'schedule', $result );
 
 			return Telepilot_Telegram_Response_Builder::success(
-				sprintf( __( 'Post #%1$d has been scheduled for %2$s.', 'wp-telepilot' ), $post_id, $result['scheduled_at'] ),
+				sprintf( /* translators: 1: post ID, 2: scheduled at. */ __( 'Post #%1$d has been scheduled for %2$s.', 'wp-telepilot' ), $post_id, $result['scheduled_at'] ),
 				array( 'command' => '/posts' )
 			);
 		}
@@ -388,7 +388,7 @@ trait Telepilot_Posts_Command_Handler {
 			}
 
 			return Telepilot_Telegram_Response_Builder::success(
-				sprintf( __( 'Confirm draft for post [%d]', 'wp-telepilot' ), $post_id ),
+				sprintf( /* translators: %d: post ID. */ __( 'Confirm draft for post [%d]', 'wp-telepilot' ), $post_id ),
 				array(
 					'command'      => '/posts',
 					'reply_markup' => $this->safe_reply_markup(
@@ -414,7 +414,7 @@ trait Telepilot_Posts_Command_Handler {
 			}
 
 			return Telepilot_Telegram_Response_Builder::success(
-				sprintf( __( 'Confirm %1$s for post [%2$d]', 'wp-telepilot' ), $subcommand, $post_id ),
+				sprintf( /* translators: 1: requested action, 2: post ID. */ __( 'Confirm %1$s for post [%2$d]', 'wp-telepilot' ), $subcommand, $post_id ),
 				array(
 					'command'      => '/posts',
 					'reply_markup' => $this->safe_reply_markup(

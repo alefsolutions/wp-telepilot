@@ -344,7 +344,7 @@ class Telepilot_Telegram_Service {
 				Telepilot_Telegram_Response_Builder::join_blocks(
 					array(
 						Telepilot_Telegram_Response_Builder::bold( __( 'Chat Not Authorized', 'wp-telepilot' ) ),
-						sprintf( __( 'Current chat ID: %s', 'wp-telepilot' ), Telepilot_Telegram_Response_Builder::code( $chat_id ) ),
+						sprintf( /* translators: %s: chat ID. */ __( 'Current chat ID: %s', 'wp-telepilot' ), Telepilot_Telegram_Response_Builder::code( $chat_id ) ),
 						__( 'Add this chat ID to Allowed Chat IDs in WP Telepilot settings, then send /start again.', 'wp-telepilot' ),
 					)
 				),
@@ -1202,7 +1202,7 @@ class Telepilot_Telegram_Service {
 		$body        = json_decode( wp_remote_retrieve_body( $response ), true );
 		$message     = is_array( $body ) && ! empty( $body['message'] )
 			? (string) $body['message']
-			: sprintf( __( 'HTTP %d response received.', 'wp-telepilot' ), $status_code );
+			: sprintf( /* translators: %d: status code. */ __( 'HTTP %d response received.', 'wp-telepilot' ), $status_code );
 
 		return array(
 			'ok'          => in_array( $status_code, $success_codes, true ),
@@ -1221,6 +1221,7 @@ class Telepilot_Telegram_Service {
 		);
 
 		if ( $this->is_local_loopback_url( $url ) ) {
+			// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound -- This is the existing WordPress core local-SSL filter, not a new plugin-owned hook.
 			$args['sslverify'] = (bool) apply_filters( 'https_local_ssl_verify', false );
 		}
 

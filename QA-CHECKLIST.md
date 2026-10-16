@@ -4,6 +4,13 @@
 
 Use this checklist before release candidates, version bumps, or production rollout changes.
 
+## WordPress.org submission package
+
+- Build the ZIP and run the pinned Plugin Check workflow against its extraction, including runtime checks.
+- Require zero errors and only the twelve occurrence-specific warnings reviewed in `scripts/plugin-check-policy.json`; review changes rather than broadening exclusions automatically.
+- Retain `dist/plugin-check-report.json` and its package SHA256 with the candidate. See `tests/README.md` for reproduction and the rationale for retained warnings and inline exceptions.
+- Complete the live checks below before publication; automated checks do not replace manual directory review.
+
 ## Environment and setup
 
 - Activate the plugin on a clean WordPress install with HTTPS enabled.
@@ -55,6 +62,6 @@ Use this checklist before release candidates, version bumps, or production rollo
 
 ## Uninstall behavior
 
-- With uninstall cleanup disabled, delete the plugin and confirm Telepilot data remains in the database for reinstall scenarios.
+- With uninstall cleanup disabled, confirm durable settings and linked accounts remain while queued payloads, execution results and security tokens are revoked.
 - With uninstall cleanup enabled, delete the plugin and confirm custom tables, options, user meta, and Telepilot transients are removed.
 - Confirm uninstall clears scheduled hooks and attempts to remove the Telegram webhook.

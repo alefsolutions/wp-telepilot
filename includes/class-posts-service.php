@@ -126,8 +126,14 @@ class Telepilot_Posts_Service {
 
 	private function operation_stats() {
 		global $wpdb;
-		$where = current_user_can( 'edit_others_posts' ) ? '' : $wpdb->prepare( ' AND post_author=%d', get_current_user_id() );
-		$rows = $wpdb->get_results( "SELECT post_status,COUNT(*) AS total FROM {$wpdb->posts} WHERE post_type='post'$where GROUP BY post_status" );
+		$all_authors = current_user_can( 'edit_others_posts' );
+		$cache_key = 'post_stats:' . get_current_blog_id() . ':' . get_current_user_id() . ':' . (int) $all_authors . ':' . get_option( 'telepilot_posts_cache_version', '1' );
+		$rows = wp_cache_get( $cache_key, 'telepilot' );
+		if ( false === $rows ) {
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery -- Author-scoped aggregate counts use a site/user/capability/generation cache with native mutation invalidation.
+			$rows = $wpdb->get_results( $wpdb->prepare( "SELECT post_status,COUNT(*) AS total FROM %i WHERE post_type='post' AND (%d=1 OR post_author=%d) GROUP BY post_status", $wpdb->posts, (int) $all_authors, get_current_user_id() ) );
+			wp_cache_set( $cache_key, $rows, 'telepilot', 60 );
+		}
 		$counts = new stdClass();
 		foreach ( $rows as $row ) { $counts->{$row->post_status} = (int) $row->total; }
 
@@ -148,7 +154,7 @@ class Telepilot_Posts_Service {
 		$lines   = array( $heading );
 		foreach ( $posts as $post ) {
 			$lines[] = sprintf(
-				__( '[%1$d] %2$s [%3$s]', 'wp-telepilot' ),
+				/* translators: 1: post ID, 2: post title, 3: post status. */ __( '[%1$d] %2$s [%3$s]', 'wp-telepilot' ),
 				$post->ID,
 				html_entity_decode( get_the_title( $post ), ENT_QUOTES, get_bloginfo( 'charset' ) ),
 				$post->post_status
@@ -165,7 +171,7 @@ class Telepilot_Posts_Service {
 
 		$blocks   = array( Telepilot_Telegram_Response_Builder::bold( Telepilot_Telegram_Response_Builder::label( 'posts', $heading ) ) );
 		$blocks[] = Telepilot_Telegram_Response_Builder::italic(
-			sprintf( __( 'Page %1$d of %2$d | %3$d items', 'wp-telepilot' ), $result['page'], $result['total_pages'], isset( $result['total_items'] ) ? (int) $result['total_items'] : count( $result['items'] ) )
+			sprintf( /* translators: 1: current page number, 2: total number of pages, 3: total number of items. */ __( 'Page %1$d of %2$d | %3$d items', 'wp-telepilot' ), $result['page'], $result['total_pages'], isset( $result['total_items'] ) ? (int) $result['total_items'] : count( $result['items'] ) )
 		);
 
 		foreach ( $result['items'] as $post ) {
@@ -182,11 +188,11 @@ class Telepilot_Posts_Service {
 			"\n",
 			array(
 				__( 'Post Stats', 'wp-telepilot' ),
-				sprintf( __( 'Published: %d', 'wp-telepilot' ), $stats['publish'] ),
-				sprintf( __( 'Drafts: %d', 'wp-telepilot' ), $stats['draft'] ),
-				sprintf( __( 'Pending: %d', 'wp-telepilot' ), $stats['pending'] ),
-				sprintf( __( 'Scheduled: %d', 'wp-telepilot' ), $stats['future'] ),
-				sprintf( __( 'Trash: %d', 'wp-telepilot' ), $stats['trash'] ),
+				sprintf( /* translators: %d: published item count. */ __( 'Published: %d', 'wp-telepilot' ), $stats['publish'] ),
+				sprintf( /* translators: %d: draft count. */ __( 'Drafts: %d', 'wp-telepilot' ), $stats['draft'] ),
+				sprintf( /* translators: %d: pending item count. */ __( 'Pending: %d', 'wp-telepilot' ), $stats['pending'] ),
+				sprintf( /* translators: %d: scheduled item count. */ __( 'Scheduled: %d', 'wp-telepilot' ), $stats['future'] ),
+				sprintf( /* translators: %d: trashed item count. */ __( 'Trash: %d', 'wp-telepilot' ), $stats['trash'] ),
 			)
 		);
 	}
@@ -229,11 +235,11 @@ class Telepilot_Posts_Service {
 			if ( 'trash' === $post->post_status || 'trashed' === $subcommand ) {
 				$rows[] = array(
 					array(
-						'text'          => Telepilot_Telegram_Response_Builder::label( 'restore', sprintf( __( 'Restore [%d]', 'wp-telepilot' ), $post->ID ) ),
+						'text'          => Telepilot_Telegram_Response_Builder::label( 'restore', sprintf( /* translators: %d: post ID. */ __( 'Restore [%d]', 'wp-telepilot' ), $post->ID ) ),
 						'callback_data' => '/posts restore ' . (int) $post->ID,
 					),
 					array(
-						'text'          => Telepilot_Telegram_Response_Builder::label( 'delete', sprintf( __( 'Delete [%d]', 'wp-telepilot' ), $post->ID ) ),
+						'text'          => Telepilot_Telegram_Response_Builder::label( 'delete', sprintf( /* translators: %d: post ID. */ __( 'Delete [%d]', 'wp-telepilot' ), $post->ID ) ),
 						'callback_data' => '/posts delete ' . (int) $post->ID,
 					),
 				);
@@ -242,11 +248,11 @@ class Telepilot_Posts_Service {
 
 			$rows[] = array(
 				array(
-					'text'          => Telepilot_Telegram_Response_Builder::label( 'edit', sprintf( __( 'Open Editor [%d]', 'wp-telepilot' ), $post->ID ) ),
+					'text'          => Telepilot_Telegram_Response_Builder::label( 'edit', sprintf( /* translators: %d: post ID. */ __( 'Open Editor [%d]', 'wp-telepilot' ), $post->ID ) ),
 					'callback_data' => '/posts open ' . (int) $post->ID,
 				),
 				array(
-					'text'          => Telepilot_Telegram_Response_Builder::label( 'categories', sprintf( __( 'Categories [%d]', 'wp-telepilot' ), $post->ID ) ),
+					'text'          => Telepilot_Telegram_Response_Builder::label( 'categories', sprintf( /* translators: %d: post ID. */ __( 'Categories [%d]', 'wp-telepilot' ), $post->ID ) ),
 					'callback_data' => '/posts categories ' . (int) $post->ID,
 				),
 			);
@@ -254,11 +260,11 @@ class Telepilot_Posts_Service {
 			if ( 'publish' === $post->post_status ) {
 				$rows[] = array(
 					array(
-						'text'          => Telepilot_Telegram_Response_Builder::label( 'draft', sprintf( __( 'Draft [%d]', 'wp-telepilot' ), $post->ID ) ),
+						'text'          => Telepilot_Telegram_Response_Builder::label( 'draft', sprintf( /* translators: %d: post ID. */ __( 'Draft [%d]', 'wp-telepilot' ), $post->ID ) ),
 						'callback_data' => '/posts draft ' . (int) $post->ID,
 					),
 					array(
-						'text'          => Telepilot_Telegram_Response_Builder::label( 'trash', sprintf( __( 'Trash [%d]', 'wp-telepilot' ), $post->ID ) ),
+						'text'          => Telepilot_Telegram_Response_Builder::label( 'trash', sprintf( /* translators: %d: post ID. */ __( 'Trash [%d]', 'wp-telepilot' ), $post->ID ) ),
 						'callback_data' => '/posts trash ' . (int) $post->ID,
 					),
 				);
@@ -267,11 +273,11 @@ class Telepilot_Posts_Service {
 
 			$rows[] = array(
 				array(
-					'text'          => Telepilot_Telegram_Response_Builder::label( 'publish', sprintf( __( 'Publish [%d]', 'wp-telepilot' ), $post->ID ) ),
+					'text'          => Telepilot_Telegram_Response_Builder::label( 'publish', sprintf( /* translators: %d: post ID. */ __( 'Publish [%d]', 'wp-telepilot' ), $post->ID ) ),
 					'callback_data' => '/posts publish ' . (int) $post->ID,
 				),
 				array(
-					'text'          => Telepilot_Telegram_Response_Builder::label( 'trash', sprintf( __( 'Trash [%d]', 'wp-telepilot' ), $post->ID ) ),
+					'text'          => Telepilot_Telegram_Response_Builder::label( 'trash', sprintf( /* translators: %d: post ID. */ __( 'Trash [%d]', 'wp-telepilot' ), $post->ID ) ),
 					'callback_data' => '/posts trash ' . (int) $post->ID,
 				),
 			);
@@ -344,15 +350,15 @@ class Telepilot_Posts_Service {
 			Telepilot_Telegram_Response_Builder::label(
 				'posts',
 				sprintf(
-					__( '[%1$d] %2$s', 'wp-telepilot' ),
+					/* translators: 1: post ID, 2: display title. */ __( '[%1$d] %2$s', 'wp-telepilot' ),
 					$post->ID,
 					Telepilot_Telegram_Response_Builder::escape( $title )
 				)
 			),
-			sprintf( __( 'Status: %s', 'wp-telepilot' ), Telepilot_Telegram_Response_Builder::escape( $this->humanize_status( $post->post_status ) ) ),
-			sprintf( __( 'Author: %s', 'wp-telepilot' ), Telepilot_Telegram_Response_Builder::escape( $author ) ),
-			sprintf( __( 'Date: %s', 'wp-telepilot' ), Telepilot_Telegram_Response_Builder::escape( get_post_time( 'Y-m-d H:i:s', false, $post, true ) ) ),
-			sprintf( __( 'Updated: %s', 'wp-telepilot' ), Telepilot_Telegram_Response_Builder::escape( get_post_modified_time( 'Y-m-d H:i:s', false, $post, true ) ) ),
+			sprintf( /* translators: %s: readable status label. */ __( 'Status: %s', 'wp-telepilot' ), Telepilot_Telegram_Response_Builder::escape( $this->humanize_status( $post->post_status ) ) ),
+			sprintf( /* translators: %s: author name. */ __( 'Author: %s', 'wp-telepilot' ), Telepilot_Telegram_Response_Builder::escape( $author ) ),
+			sprintf( /* translators: %s: post date and time. */ __( 'Date: %s', 'wp-telepilot' ), Telepilot_Telegram_Response_Builder::escape( get_post_time( 'Y-m-d H:i:s', false, $post, true ) ) ),
+			sprintf( /* translators: %s: last modification date and time. */ __( 'Updated: %s', 'wp-telepilot' ), Telepilot_Telegram_Response_Builder::escape( get_post_modified_time( 'Y-m-d H:i:s', false, $post, true ) ) ),
 		);
 
 		$lines = array_merge( $lines, $this->build_post_taxonomy_lines( $post ) );
@@ -370,11 +376,11 @@ class Telepilot_Posts_Service {
 		$tags       = $this->format_taxonomy_term_summary( $post->ID, 'post_tag' );
 
 		if ( '' !== $categories ) {
-			$lines[] = sprintf( __( 'Categories: %s', 'wp-telepilot' ), Telepilot_Telegram_Response_Builder::escape( $categories ) );
+			$lines[] = sprintf( /* translators: %s: categories. */ __( 'Categories: %s', 'wp-telepilot' ), Telepilot_Telegram_Response_Builder::escape( $categories ) );
 		}
 
 		if ( '' !== $tags ) {
-			$lines[] = sprintf( __( 'Tags: %s', 'wp-telepilot' ), Telepilot_Telegram_Response_Builder::escape( $tags ) );
+			$lines[] = sprintf( /* translators: %s: tags. */ __( 'Tags: %s', 'wp-telepilot' ), Telepilot_Telegram_Response_Builder::escape( $tags ) );
 		}
 
 		return $lines;
@@ -643,7 +649,7 @@ class Telepilot_Posts_Service {
 
 		if ( $category_term instanceof WP_Term ) {
 			$blocks[] = sprintf(
-				__( 'Send the post title now to create a draft in category [%1$d] %2$s.', 'wp-telepilot' ),
+				/* translators: 1: taxonomy term ID, 2: taxonomy term name. */ __( 'Send the post title now to create a draft in category [%1$d] %2$s.', 'wp-telepilot' ),
 				$category_term->term_id,
 				Telepilot_Telegram_Response_Builder::escape( $category_term->name )
 			);
@@ -671,9 +677,9 @@ class Telepilot_Posts_Service {
 				implode(
 					"\n",
 					array(
-						sprintf( __( 'Post: [%1$d] %2$s', 'wp-telepilot' ), $post->ID, Telepilot_Telegram_Response_Builder::escape( $title ) ),
-						sprintf( __( 'Status: %s', 'wp-telepilot' ), Telepilot_Telegram_Response_Builder::escape( $this->humanize_status( $post->post_status ) ) ),
-						sprintf( __( 'Categories: %s', 'wp-telepilot' ), Telepilot_Telegram_Response_Builder::escape( $summary ) ),
+						sprintf( /* translators: 1: post ID, 2: display title. */ __( 'Post: [%1$d] %2$s', 'wp-telepilot' ), $post->ID, Telepilot_Telegram_Response_Builder::escape( $title ) ),
+						sprintf( /* translators: %s: readable status label. */ __( 'Status: %s', 'wp-telepilot' ), Telepilot_Telegram_Response_Builder::escape( $this->humanize_status( $post->post_status ) ) ),
+						sprintf( /* translators: %s: summary text. */ __( 'Categories: %s', 'wp-telepilot' ), Telepilot_Telegram_Response_Builder::escape( $summary ) ),
 					)
 				),
 				Telepilot_Telegram_Response_Builder::italic( __( 'Next steps: edit the body, adjust categories, or publish when you are ready.', 'wp-telepilot' ) ),
@@ -696,14 +702,14 @@ class Telepilot_Posts_Service {
 				implode(
 					"\n",
 					array(
-						sprintf( __( 'Post: [%1$d] %2$s', 'wp-telepilot' ), $post->ID, Telepilot_Telegram_Response_Builder::escape( $title ) ),
-						sprintf( __( 'Status: %s', 'wp-telepilot' ), Telepilot_Telegram_Response_Builder::escape( $this->humanize_status( $post->post_status ) ) ),
+						sprintf( /* translators: 1: post ID, 2: display title. */ __( 'Post: [%1$d] %2$s', 'wp-telepilot' ), $post->ID, Telepilot_Telegram_Response_Builder::escape( $title ) ),
+						sprintf( /* translators: %s: readable status label. */ __( 'Status: %s', 'wp-telepilot' ), Telepilot_Telegram_Response_Builder::escape( $this->humanize_status( $post->post_status ) ) ),
 						sprintf(
-							__( 'Page %1$d of %2$d', 'wp-telepilot' ),
+							/* translators: 1: current page number, 2: total number of pages. */ __( 'Page %1$d of %2$d', 'wp-telepilot' ),
 							isset( $categories_result['page'] ) ? (int) $categories_result['page'] : 1,
 							isset( $categories_result['total_pages'] ) ? (int) $categories_result['total_pages'] : 1
 						),
-						sprintf( __( 'Selected: %s', 'wp-telepilot' ), Telepilot_Telegram_Response_Builder::escape( $summary ) ),
+						sprintf( /* translators: %s: summary text. */ __( 'Selected: %s', 'wp-telepilot' ), Telepilot_Telegram_Response_Builder::escape( $summary ) ),
 					)
 				),
 				Telepilot_Telegram_Response_Builder::italic( __( 'Toggle the categories below, then tap Done to save the selection to this post.', 'wp-telepilot' ) ),
@@ -726,8 +732,8 @@ class Telepilot_Posts_Service {
 				implode(
 					"\n",
 					array(
-						sprintf( __( 'Post: [%1$d] %2$s', 'wp-telepilot' ), $post->ID, Telepilot_Telegram_Response_Builder::escape( $title ) ),
-						sprintf( __( 'Categories: %s', 'wp-telepilot' ), Telepilot_Telegram_Response_Builder::escape( $summary ) ),
+						sprintf( /* translators: 1: post ID, 2: display title. */ __( 'Post: [%1$d] %2$s', 'wp-telepilot' ), $post->ID, Telepilot_Telegram_Response_Builder::escape( $title ) ),
+						sprintf( /* translators: %s: summary text. */ __( 'Categories: %s', 'wp-telepilot' ), Telepilot_Telegram_Response_Builder::escape( $summary ) ),
 					)
 				),
 				Telepilot_Telegram_Response_Builder::italic( __( 'Continue with the editor, keep refining the draft, or publish when ready.', 'wp-telepilot' ) ),
@@ -784,7 +790,7 @@ class Telepilot_Posts_Service {
 		if ( $post instanceof WP_Post ) {
 			$rows[] = array(
 				array(
-					'text'          => Telepilot_Telegram_Response_Builder::button_label( 'confirm', sprintf( __( 'Done [%d]', 'wp-telepilot' ), $post->ID ) ),
+					'text'          => Telepilot_Telegram_Response_Builder::button_label( 'confirm', sprintf( /* translators: %d: post ID. */ __( 'Done [%d]', 'wp-telepilot' ), $post->ID ) ),
 					'callback_data' => sprintf( 'tp:postflow:applycat:%s', $state_token ),
 				),
 				array(
@@ -798,7 +804,7 @@ class Telepilot_Posts_Service {
 					'callback_data' => sprintf( 'tp:postflow:cancelcat:%s', $state_token ),
 				),
 				array(
-					'text'          => Telepilot_Telegram_Response_Builder::label( 'edit', sprintf( __( 'Open Editor [%d]', 'wp-telepilot' ), $post->ID ) ),
+					'text'          => Telepilot_Telegram_Response_Builder::label( 'edit', sprintf( /* translators: %d: post ID. */ __( 'Open Editor [%d]', 'wp-telepilot' ), $post->ID ) ),
 					'callback_data' => '/posts open ' . (int) $post->ID,
 				),
 			);
@@ -816,11 +822,11 @@ class Telepilot_Posts_Service {
 		if ( $post instanceof WP_Post ) {
 			$rows[] = array(
 				array(
-					'text'          => Telepilot_Telegram_Response_Builder::label( 'categories', sprintf( __( 'Categories [%d]', 'wp-telepilot' ), $post->ID ) ),
+					'text'          => Telepilot_Telegram_Response_Builder::label( 'categories', sprintf( /* translators: %d: post ID. */ __( 'Categories [%d]', 'wp-telepilot' ), $post->ID ) ),
 					'callback_data' => '/posts categories ' . (int) $post->ID,
 				),
 				array(
-					'text'          => Telepilot_Telegram_Response_Builder::label( 'edit', sprintf( __( 'Open Editor [%d]', 'wp-telepilot' ), $post->ID ) ),
+					'text'          => Telepilot_Telegram_Response_Builder::label( 'edit', sprintf( /* translators: %d: post ID. */ __( 'Open Editor [%d]', 'wp-telepilot' ), $post->ID ) ),
 					'callback_data' => '/posts open ' . (int) $post->ID,
 				),
 			);
@@ -828,22 +834,22 @@ class Telepilot_Posts_Service {
 			if ( 'publish' === $post->post_status ) {
 				$rows[] = array(
 					array(
-						'text'          => Telepilot_Telegram_Response_Builder::label( 'draft', sprintf( __( 'Draft [%d]', 'wp-telepilot' ), $post->ID ) ),
+						'text'          => Telepilot_Telegram_Response_Builder::label( 'draft', sprintf( /* translators: %d: post ID. */ __( 'Draft [%d]', 'wp-telepilot' ), $post->ID ) ),
 						'callback_data' => '/posts draft ' . (int) $post->ID,
 					),
 					array(
-						'text'          => Telepilot_Telegram_Response_Builder::label( 'trash', sprintf( __( 'Trash [%d]', 'wp-telepilot' ), $post->ID ) ),
+						'text'          => Telepilot_Telegram_Response_Builder::label( 'trash', sprintf( /* translators: %d: post ID. */ __( 'Trash [%d]', 'wp-telepilot' ), $post->ID ) ),
 						'callback_data' => '/posts trash ' . (int) $post->ID,
 					),
 				);
 			} else {
 				$rows[] = array(
 					array(
-						'text'          => Telepilot_Telegram_Response_Builder::label( 'publish', sprintf( __( 'Publish [%d]', 'wp-telepilot' ), $post->ID ) ),
+						'text'          => Telepilot_Telegram_Response_Builder::label( 'publish', sprintf( /* translators: %d: post ID. */ __( 'Publish [%d]', 'wp-telepilot' ), $post->ID ) ),
 						'callback_data' => '/posts publish ' . (int) $post->ID,
 					),
 					array(
-						'text'          => Telepilot_Telegram_Response_Builder::label( 'trash', sprintf( __( 'Trash [%d]', 'wp-telepilot' ), $post->ID ) ),
+						'text'          => Telepilot_Telegram_Response_Builder::label( 'trash', sprintf( /* translators: %d: post ID. */ __( 'Trash [%d]', 'wp-telepilot' ), $post->ID ) ),
 						'callback_data' => '/posts trash ' . (int) $post->ID,
 					),
 				);
@@ -994,7 +1000,7 @@ class Telepilot_Posts_Service {
 
 		return Telepilot_Telegram_Response_Builder::append_rows(
 			Telepilot_Telegram_Response_Builder::confirmation_keyboard(
-				sprintf( __( 'Confirm %1$s [%2$d]', 'wp-telepilot' ), $action_label, $post_id ),
+				sprintf( /* translators: 1: action label, 2: post ID. */ __( 'Confirm %1$s [%2$d]', 'wp-telepilot' ), $action_label, $post_id ),
 				'tp:post:' . $action . ':' . (int) $post_id . ':' . $token,
 				'/posts list'
 			),

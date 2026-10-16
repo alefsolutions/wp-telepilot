@@ -13,7 +13,8 @@ class Telepilot_Site_Health {
 		if ( ! $queue_schema['ready'] ) { $issues[] = 'AI continuation queue schema is not verified. ' . $queue_schema['message']; }
 		if ( ! empty( $settings['bot_token'] ) && 'webhook' === ( $settings['transport_mode'] ?? 'webhook' ) && empty( $settings['webhook_secret'] ) ) { $issues[] = 'Webhook authentication secret is missing.'; }
 		if ( ! wp_next_scheduled( 'telepilot_hourly_maintenance' ) ) { $issues[] = 'Retention maintenance is not scheduled.'; }
-		$uncertain = (int) $wpdb->get_var( "SELECT COUNT(*) FROM " . Telepilot_Jobs_Repository::table_name() . " WHERE status='uncertain'" );
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching -- Site Health checks actual queue-table availability rather than cached readiness.
+		$uncertain = (int) $wpdb->get_var( $wpdb->prepare( 'SELECT COUNT(*) FROM %i WHERE status=\'uncertain\'', Telepilot_Jobs_Repository::table_name() ) );
 		if ( $uncertain ) { $issues[] = sprintf( '%d uncertain operations need Queue Recovery review.', $uncertain ); }
 		if ( Telepilot_AI_Settings::is_enabled() && ! Telepilot_AI_Settings::has_api_key() ) { $issues[] = 'AI is enabled without a decryptable authenticated API key.'; }
 		$mcp = ( new Telepilot_MCP_Integration_Service() )->get_status();

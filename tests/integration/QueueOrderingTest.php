@@ -50,7 +50,7 @@ class QueueOrderingTest extends Telepilot_TestCase {
         for($i=0;$i<101;$i++) { $last=$this->enqueue_fixture('race-'.$i); }
         $races=0;
         $lose=static function($query) use(&$races) {
-            if(0===strpos($query,'INSERT IGNORE INTO '.Telepilot_Jobs_Repository::locks_table()) && $races++<100) { return 'SELECT 1 WHERE 0'; }
+            if(0===strpos(str_replace('`', '', $query),'INSERT IGNORE INTO '.Telepilot_Jobs_Repository::locks_table()) && $races++<100) { return 'SELECT 1 WHERE 0'; }
             return $query;
         };
         add_filter('query',$lose);

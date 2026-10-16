@@ -16,15 +16,18 @@ class Telepilot_AI_Confirmation_Manager {
 		$preview = $this->preview( $ability, $arguments, $target );
 		if ( mb_strlen( $preview ) > 2800 ) { return new WP_Error( 'telepilot_preview_too_long', 'The exact changes are too long to confirm safely in chat. Use the posts browser editor instead.' ); }
 		$lock = 'telepilot-proposal-' . md5( get_current_blog_id() . ':' . $identity['wp_user']->ID );
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching -- Proposal quotas and single-use confirmation state must reflect current security records.
 		if ( '1' !== (string) $wpdb->get_var( $wpdb->prepare( 'SELECT GET_LOCK(%s,0)', $lock ) ) ) { return new WP_Error( 'telepilot_proposal_busy', 'Another proposal is being prepared. Try again.' ); }
 		try {
-			$count = (int) $wpdb->get_var( $wpdb->prepare( 'SELECT COUNT(*) FROM ' . Telepilot_Security_Records::table_name() . ' WHERE actor_id=%d AND purpose IN (%s,%s) AND state=%s AND expires_at>%s', $identity['wp_user']->ID, 'ai_proposal', 'ai_confirm', 'ready', gmdate( 'Y-m-d H:i:s' ) ) );
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching -- Proposal quotas and single-use confirmation state must reflect current security records.
+			$count = (int) $wpdb->get_var( $wpdb->prepare( 'SELECT COUNT(*) FROM %i WHERE actor_id=%d AND purpose IN (%s,%s) AND state=%s AND expires_at>%s', Telepilot_Security_Records::table_name(), $identity['wp_user']->ID, 'ai_proposal', 'ai_confirm', 'ready', gmdate( 'Y-m-d H:i:s' ) ) );
 			if ( $count >= min( 3, (int) Telepilot_AI_Settings::get_settings()['ai_max_pending_confirmations'] ) ) { return new WP_Error( 'telepilot_proposal_limit', 'Cancel or finish an existing proposal first. At most three proposals may be pending.' ); }
 			$payload = array( 'session_id' => $session['session_id'], 'chat_id' => (string) $identity['chat_id'], 'telegram_user_id' => (string) $identity['telegram_user_id'], 'wordpress_user_id' => $identity['wp_user']->ID, 'site_id' => get_current_blog_id(), 'tool_name' => $tool_name, 'ability' => $ability, 'arguments' => $arguments, 'target' => $target, 'summary' => $preview, 'expires_at' => time() + 300, 'high_risk' => in_array( $ability, array( 'telepilot/publish-post', 'telepilot/unpublish-post', 'telepilot/activate-plugin', 'telepilot/deactivate-plugin', 'telepilot/update-plugin' ), true ) );
 			$id = Telepilot_Security_Records::issue( 'ai_proposal', $payload, $identity['wp_user']->ID, 300 );
 			if ( ! $id ) { return new WP_Error( 'telepilot_proposal_save_failed', 'The proposal could not be saved. No action ran.' ); }
 			$payload['action_id'] = $id;
 			return $payload;
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching -- Proposal quotas and single-use confirmation state must reflect current security records.
 		} finally { $wpdb->get_var( $wpdb->prepare( 'SELECT RELEASE_LOCK(%s)', $lock ) ); }
 	}
 
@@ -89,9 +92,11 @@ class Telepilot_AI_Confirmation_Manager {
 
 	public static function cancel_session_actions( $session_id, $actor_id = 0 ) {
 		global $wpdb;
-		$rows = $wpdb->get_results( $wpdb->prepare( 'SELECT token_hash,payload FROM ' . Telepilot_Security_Records::table_name() . ' WHERE actor_id=%d AND purpose IN (%s,%s) AND state=%s', $actor_id ?: get_current_user_id(), 'ai_proposal', 'ai_confirm', 'ready' ), ARRAY_A );
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching -- Revocation must consume every current proposal for this session immediately.
+		$rows = $wpdb->get_results( $wpdb->prepare( 'SELECT token_hash,payload FROM %i WHERE actor_id=%d AND purpose IN (%s,%s) AND state=%s', Telepilot_Security_Records::table_name(), $actor_id ?: get_current_user_id(), 'ai_proposal', 'ai_confirm', 'ready' ), ARRAY_A );
 		foreach ( $rows as $row ) {
 			$payload = json_decode( $row['payload'], true );
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching -- Revocation must consume every current proposal for this session immediately.
 			if ( ( $payload['session_id'] ?? '' ) === $session_id ) { $wpdb->update( Telepilot_Security_Records::table_name(), array( 'state' => 'consumed', 'payload' => '{}' ), array( 'token_hash' => $row['token_hash'], 'state' => 'ready' ) ); }
 		}
 	}
@@ -108,14 +113,27 @@ class Telepilot_AI_Confirmation_Manager {
 		global $wpdb;
 		$post_id = (int) ( $args['post_id'] ?? $result['data']['post_id'] ?? 0 );
 		if ( $post_id ) {
-			$row = $wpdb->get_row( $wpdb->prepare( "SELECT * FROM $wpdb->posts WHERE ID=%d" . ( $lock ? ' FOR UPDATE' : '' ), $post_id ), ARRAY_A );
+			if ( $lock ) {
+				// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching -- Confirmation revision checks and FOR UPDATE locks require fresh rows and taxonomy state.
+				$row = $wpdb->get_row( $wpdb->prepare( "SELECT * FROM %i WHERE ID=%d FOR UPDATE", $wpdb->posts, $post_id ), ARRAY_A );
+			} else {
+				// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching -- Confirmation revision checks and FOR UPDATE locks require fresh rows and taxonomy state.
+				$row = $wpdb->get_row( $wpdb->prepare( 'SELECT * FROM %i WHERE ID=%d', $wpdb->posts, $post_id ), ARRAY_A );
+			}
 			if ( ! $row || 'post' !== $row['post_type'] ) { return new WP_Error( 'telepilot_target_missing', 'The post no longer exists.' ); }
 			clean_post_cache( $post_id );
-			$row['_terms'] = $wpdb->get_col( $wpdb->prepare( "SELECT term_taxonomy_id FROM $wpdb->term_relationships WHERE object_id=%d ORDER BY term_taxonomy_id", $post_id ) );
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching -- Confirmation revision checks and FOR UPDATE locks require fresh rows and taxonomy state.
+			$row['_terms'] = $wpdb->get_col( $wpdb->prepare( 'SELECT term_taxonomy_id FROM %i WHERE object_id=%d ORDER BY term_taxonomy_id', $wpdb->term_relationships, $post_id ) );
 			return array( 'id' => $post_id, 'title' => $row['post_title'], 'status' => $row['post_status'], 'excerpt' => $row['post_excerpt'], 'revision' => hash( 'sha256', wp_json_encode( $row ) ) );
 		}
 		if ( ! empty( $args['comment_id'] ) ) {
-			$row = $wpdb->get_row( $wpdb->prepare( "SELECT * FROM $wpdb->comments WHERE comment_ID=%d" . ( $lock ? ' FOR UPDATE' : '' ), $args['comment_id'] ), ARRAY_A );
+			if ( $lock ) {
+				// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching -- Confirmation revision checks and FOR UPDATE locks require fresh rows and taxonomy state.
+				$row = $wpdb->get_row( $wpdb->prepare( "SELECT * FROM %i WHERE comment_ID=%d FOR UPDATE", $wpdb->comments, $args['comment_id'] ), ARRAY_A );
+			} else {
+				// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching -- Confirmation revision checks and FOR UPDATE locks require fresh rows and taxonomy state.
+				$row = $wpdb->get_row( $wpdb->prepare( 'SELECT * FROM %i WHERE comment_ID=%d', $wpdb->comments, $args['comment_id'] ), ARRAY_A );
+			}
 			if ( ! $row ) { return new WP_Error( 'telepilot_target_missing', 'The comment no longer exists.' ); }
 			clean_comment_cache( (int) $row['comment_ID'] );
 			return array( 'id' => (int) $row['comment_ID'], 'title' => $row['comment_author'], 'status' => $row['comment_approved'], 'revision' => hash( 'sha256', wp_json_encode( $row ) ) );

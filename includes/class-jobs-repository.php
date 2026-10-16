@@ -64,11 +64,13 @@ class Telepilot_Jobs_Repository {
 	public static function enqueue( $update_id, $transport, $payload, $command_name = '', $placeholder = array(), $options = array() ) {
 		global $wpdb;
 		$now = gmdate( 'Y-m-d H:i:s' );
-		if ( $update_id && $wpdb->get_var( $wpdb->prepare( 'SELECT id FROM ' . self::table_name() . ' WHERE update_id=%d', $update_id ) ) ) {
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching -- Durable custom-table inbox insertion and update-ID deduplication must observe committed database state.
+		if ( $update_id && $wpdb->get_var( $wpdb->prepare( 'SELECT id FROM %i WHERE update_id=%d', self::table_name(), $update_id ) ) ) {
 			return 'duplicate';
 		}
 		Telepilot_DB_Transaction::begin();
 		$previous_errors = $wpdb->suppress_errors();
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery -- Durable custom-table inbox insertion and update-ID deduplication must observe committed database state.
 		$inserted = $wpdb->insert( self::table_name(), array(
 			'update_id' => $update_id ? absint( $update_id ) : null,
 			'transport' => sanitize_key( $transport ),
@@ -86,7 +88,8 @@ class Telepilot_Jobs_Repository {
 		if ( false === $inserted ) {
 			$details = self::capture_database_failure( 'queue_insert' );
 			$wpdb->suppress_errors( $previous_errors );
-			$duplicate = $update_id && $wpdb->get_var( $wpdb->prepare( 'SELECT id FROM ' . self::table_name() . ' WHERE update_id=%d', $update_id ) );
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching -- Durable custom-table inbox insertion and update-ID deduplication must observe committed database state.
+			$duplicate = $update_id && $wpdb->get_var( $wpdb->prepare( 'SELECT id FROM %i WHERE update_id=%d', self::table_name(), $update_id ) );
 			Telepilot_DB_Transaction::rollback();
 			if ( $duplicate ) { return 'duplicate'; }
 			if ( ! $update_id && 'null_constraint' === $details['error_category'] ) { delete_option( Telepilot_Queue_Schema::REVISION_OPTION ); }
@@ -95,6 +98,7 @@ class Telepilot_Jobs_Repository {
 		}
 		$id = (int) $wpdb->insert_id;
 		$result = $options['result'] ?? null;
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery -- Durable custom-table inbox insertion and update-ID deduplication must observe committed database state.
 		if ( false === $wpdb->insert( self::operations_table(), array( 'job_id' => $id, 'state' => null === $result ? 'accepted' : 'completed', 'result' => null === $result ? null : wp_json_encode( $result ), 'created_at' => $now, 'updated_at' => $now ) ) ) {
 			$details = self::capture_database_failure( 'operation_insert' );
 			$wpdb->suppress_errors( $previous_errors );
@@ -110,6 +114,7 @@ class Telepilot_Jobs_Repository {
 	/** Capture immediately: even a duplicate check or rollback clears the driver error. */
 	public static function capture_database_failure( $stage ) {
 		global $wpdb;
+		// phpcs:ignore WordPress.DB.RestrictedFunctions.mysql_mysqli_errno -- wpdb exposes no portable driver errno API; capture the numeric error before any query or rollback clears it, without logging SQL or credentials.
 		$errno = $wpdb->dbh instanceof mysqli ? mysqli_errno( $wpdb->dbh ) : 0;
 		$categories = array( 1048 => 'null_constraint', 1062 => 'duplicate_key', 1142 => 'permission_denied', 1146 => 'missing_table', 1205 => 'lock_timeout', 1213 => 'deadlock', 2006 => 'connection_lost', 2013 => 'connection_lost' );
 		return array( 'error_category' => $categories[$errno] ?? ( $errno ? 'database_error' : 'insert_validation' ), 'database_errno' => $errno ?: null, 'correlation_id' => wp_generate_uuid4(), 'stage' => sanitize_key( $stage ) );
@@ -122,7 +127,8 @@ class Telepilot_Jobs_Repository {
 
 	public static function get( $id ) {
 		global $wpdb;
-		return $wpdb->get_row( $wpdb->prepare( 'SELECT j.*, o.state AS execution_state, o.result AS outcome FROM ' . self::table_name() . ' j LEFT JOIN ' . self::operations_table() . ' o ON o.job_id=j.id WHERE j.id=%d', $id ), ARRAY_A );
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching -- Read the current durable execution outcome and lease; caching could replay an already completed mutation.
+		return $wpdb->get_row( $wpdb->prepare( 'SELECT j.*, o.state AS execution_state, o.result AS outcome FROM %i j LEFT JOIN %i o ON o.job_id=j.id WHERE j.id=%d', self::table_name(), self::operations_table(), $id ), ARRAY_A );
 	}
 
 	public static function claim_pending_jobs( $limit = 1, $lock_timeout = 180 ) {
@@ -133,28 +139,39 @@ class Telepilot_Jobs_Repository {
 		$operations = self::operations_table();
 		$locks = self::locks_table();
 		// Expiry must also progress in quarantined chats; completed outcomes are never re-executed.
-		$expired = $wpdb->query( $wpdb->prepare( "UPDATE $table j INNER JOIN $operations o ON o.job_id=j.id SET j.status='cancelled',j.last_error='Request expired before execution.',j.updated_at=%s WHERE j.status='pending' AND o.state='accepted' AND j.stale_after IS NOT NULL AND j.stale_after<=%s", $now, $now ) );
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching -- Atomic custom-table queue selection and chat leases require current state across competing workers.
+		$expired = $wpdb->query( $wpdb->prepare( 'UPDATE %i j INNER JOIN %i o ON o.job_id=j.id SET j.status=\'cancelled\',j.last_error=\'Request expired before execution.\',j.updated_at=%s WHERE j.status=\'pending\' AND o.state=\'accepted\' AND j.stale_after IS NOT NULL AND j.stale_after<=%s', $table, $operations, $now, $now ) );
 		if ( false === $expired ) { return array(); }
-		$rank = "CASE WHEN j.transport IN ('webhook','polling') AND o.state='accepted' THEN 0 WHEN j.transport='ai_continuation' AND o.state='accepted' THEN 1 WHEN j.transport='notification' THEN 3 ELSE 2 END";
 		$cursor = null;
 		do {
-			$after = $cursor ? $wpdb->prepare( " AND ($rank,j.priority,j.available_at,j.id)>(%d,%d,%s,%d)", $cursor['queue_rank'], $cursor['priority'], $cursor['available_at'], $cursor['id'] ) : '';
-			$jobs = $wpdb->get_results( $wpdb->prepare( "SELECT j.*,o.state AS execution_state,o.result AS outcome,$rank AS queue_rank FROM $table j INNER JOIN $operations o ON j.id=o.job_id
-				WHERE j.status='pending' AND j.available_at<=%s
-				AND NOT EXISTS (SELECT 1 FROM $table q WHERE q.placeholder_chat_id <=> j.placeholder_chat_id AND q.status='uncertain')
-				AND NOT EXISTS (SELECT 1 FROM $locks l WHERE l.chat_id=COALESCE(j.placeholder_chat_id,''))
-				AND (NOT (j.transport IN ('webhook','polling') AND o.state='accepted') OR NOT EXISTS (
-					SELECT 1 FROM $table h INNER JOIN $operations ho ON ho.job_id=h.id WHERE h.placeholder_chat_id <=> j.placeholder_chat_id AND h.id<j.id AND h.transport IN ('webhook','polling') AND h.status IN ('pending','processing') AND ho.state IN ('accepted','executing')))
-				$after ORDER BY queue_rank,j.priority,j.available_at,j.id LIMIT 100", $now ), ARRAY_A );
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching -- Atomic custom-table queue selection and chat leases require current state across competing workers.
+			$jobs = $wpdb->get_results(
+				$wpdb->prepare(
+					"SELECT j.*,o.state AS execution_state,o.result AS outcome,CASE WHEN j.transport IN ('webhook','polling') AND o.state='accepted' THEN 0 WHEN j.transport='ai_continuation' AND o.state='accepted' THEN 1 WHEN j.transport='notification' THEN 3 ELSE 2 END AS queue_rank FROM %i j INNER JOIN %i o ON j.id=o.job_id
+					WHERE j.status='pending' AND j.available_at<=%s
+					AND NOT EXISTS (SELECT 1 FROM %i q WHERE q.placeholder_chat_id <=> j.placeholder_chat_id AND q.status='uncertain')
+					AND NOT EXISTS (SELECT 1 FROM %i l WHERE l.chat_id=COALESCE(j.placeholder_chat_id,''))
+					AND (NOT (j.transport IN ('webhook','polling') AND o.state='accepted') OR NOT EXISTS (
+						SELECT 1 FROM %i h INNER JOIN %i ho ON ho.job_id=h.id WHERE h.placeholder_chat_id <=> j.placeholder_chat_id AND h.id<j.id AND h.transport IN ('webhook','polling') AND h.status IN ('pending','processing') AND ho.state IN ('accepted','executing')))
+					AND (%d=0 OR (CASE WHEN j.transport IN ('webhook','polling') AND o.state='accepted' THEN 0 WHEN j.transport='ai_continuation' AND o.state='accepted' THEN 1 WHEN j.transport='notification' THEN 3 ELSE 2 END,j.priority,j.available_at,j.id)>(%d,%d,%s,%d))
+					ORDER BY queue_rank,j.priority,j.available_at,j.id LIMIT 100",
+					$table, $operations, $now, $table, $locks, $table, $operations,
+					$cursor ? 1 : 0, $cursor['queue_rank'] ?? 0, $cursor['priority'] ?? 0, $cursor['available_at'] ?? $now, $cursor['id'] ?? 0
+				),
+				ARRAY_A
+			);
 			if ( ! is_array( $jobs ) ) { return array(); }
 			foreach ( $jobs as $job ) {
 				$cursor = $job;
 				$chat = (string) $job['placeholder_chat_id'];
 				$owner = wp_generate_uuid4();
-				$locked = $wpdb->query( $wpdb->prepare( 'INSERT IGNORE INTO ' . self::locks_table() . ' (chat_id,job_id,owner,expires_at) VALUES (%s,%d,%s,%s)', $chat, $job['id'], $owner, gmdate( 'Y-m-d H:i:s', time() + max( 60, (int) $lock_timeout ) ) ) );
+				// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching -- Atomic custom-table queue selection and chat leases require current state across competing workers.
+				$locked = $wpdb->query( $wpdb->prepare( 'INSERT IGNORE INTO %i (chat_id,job_id,owner,expires_at) VALUES (%s,%d,%s,%s)', self::locks_table(), $chat, $job['id'], $owner, gmdate( 'Y-m-d H:i:s', time() + max( 60, (int) $lock_timeout ) ) ) );
 				if ( 1 !== $locked ) { continue; }
 				// A different worker may have quarantined this chat after candidate selection.
-				if ( $wpdb->get_var( $wpdb->prepare( "SELECT id FROM $table WHERE COALESCE(placeholder_chat_id,'')=%s AND status='uncertain' LIMIT 1", $chat ) ) ) { self::release_lock( $job['id'], $owner ); continue; }
+				// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching -- Atomic custom-table queue selection and chat leases require current state across competing workers.
+				if ( $wpdb->get_var( $wpdb->prepare( 'SELECT id FROM %i WHERE COALESCE(placeholder_chat_id,\'\')=%s AND status=\'uncertain\' LIMIT 1', $table, $chat ) ) ) { self::release_lock( $job['id'], $owner ); continue; }
+				// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching -- Atomic custom-table queue selection and chat leases require current state across competing workers.
 				$claimed = $wpdb->update( self::table_name(), array( 'status' => 'processing', 'lease_token' => $owner, 'locked_at' => $now, 'updated_at' => $now ), array( 'id' => $job['id'], 'status' => 'pending' ) );
 				if ( ! $claimed ) { self::release_lock( $job['id'], $owner ); continue; }
 				$job['lease_token'] = $owner;
@@ -168,16 +185,19 @@ class Telepilot_Jobs_Repository {
 
 	public static function begin_execution( $id, $owner ) {
 		global $wpdb;
-		return 1 === $wpdb->query( $wpdb->prepare( 'UPDATE ' . self::operations_table() . ' o INNER JOIN ' . self::table_name() . ' j ON j.id=o.job_id SET o.state=%s,o.updated_at=%s WHERE j.id=%d AND j.status=%s AND j.lease_token=%s AND o.state=%s', 'executing', gmdate( 'Y-m-d H:i:s' ), $id, 'processing', $owner, 'accepted' ) );
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching -- Atomically transition execution only for the current lease owner.
+		return 1 === $wpdb->query( $wpdb->prepare( 'UPDATE %i o INNER JOIN %i j ON j.id=o.job_id SET o.state=%s,o.updated_at=%s WHERE j.id=%d AND j.status=%s AND j.lease_token=%s AND o.state=%s', self::operations_table(), self::table_name(), 'executing', gmdate( 'Y-m-d H:i:s' ), $id, 'processing', $owner, 'accepted' ) );
 	}
 
 	public static function save_outcome( $id, $owner, $result ) {
 		global $wpdb;
-		return 1 === $wpdb->query( $wpdb->prepare( 'UPDATE ' . self::operations_table() . ' o INNER JOIN ' . self::table_name() . ' j ON j.id=o.job_id SET o.state=%s,o.result=%s,o.updated_at=%s WHERE j.id=%d AND j.status=%s AND j.lease_token=%s AND o.state=%s', 'completed', wp_json_encode( $result ), gmdate( 'Y-m-d H:i:s' ), $id, 'processing', $owner, 'executing' ) );
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching -- Persist the durable execution outcome atomically before retryable delivery.
+		return 1 === $wpdb->query( $wpdb->prepare( 'UPDATE %i o INNER JOIN %i j ON j.id=o.job_id SET o.state=%s,o.result=%s,o.updated_at=%s WHERE j.id=%d AND j.status=%s AND j.lease_token=%s AND o.state=%s', self::operations_table(), self::table_name(), 'completed', wp_json_encode( $result ), gmdate( 'Y-m-d H:i:s' ), $id, 'processing', $owner, 'executing' ) );
 	}
 
 	public static function save_placeholder( $id, $owner, $placeholder ) {
 		global $wpdb;
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching -- Persist the delivery target only for the current lease owner.
 		return $wpdb->update( self::table_name(), array( 'placeholder_message_id' => absint( $placeholder['message_id'] ?? 0 ) ), array( 'id' => $id, 'lease_token' => $owner, 'status' => 'processing' ) );
 	}
 
@@ -191,6 +211,7 @@ class Telepilot_Jobs_Repository {
 		if ( 'completed' !== $job['execution_state'] ) { return self::mark_uncertain( $id, $owner ); }
 		$attempts = (int) $job['attempts'] + 1;
 		$status = $attempts >= 3 ? 'failed' : 'pending';
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching -- Persist delivery retry state without replaying the completed WordPress operation.
 		$updated = $wpdb->update( self::table_name(), array( 'status' => $status, 'attempts' => $attempts, 'last_error' => sanitize_text_field( $error ), 'available_at' => gmdate( 'Y-m-d H:i:s', time() + min( 300, 15 * $attempts ) ), 'locked_at' => null, 'lease_token' => null, 'updated_at' => gmdate( 'Y-m-d H:i:s' ) ), array( 'id' => $id, 'lease_token' => $owner, 'status' => 'processing' ) );
 		self::release_lock( $id, $owner );
 		return (bool) $updated;
@@ -199,6 +220,7 @@ class Telepilot_Jobs_Repository {
 	private static function finish( $id, $owner, $status, $error = '' ) {
 		global $wpdb;
 		if ( ! $owner ) { return false; }
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching -- Atomically finalize only the current worker lease.
 		$updated = $wpdb->update( self::table_name(), array( 'status' => $status, 'last_error' => $error, 'locked_at' => null, 'lease_token' => null, 'updated_at' => gmdate( 'Y-m-d H:i:s' ) ), array( 'id' => $id, 'lease_token' => $owner, 'status' => 'processing' ) );
 		self::release_lock( $id, $owner );
 		return (bool) $updated;
@@ -206,19 +228,22 @@ class Telepilot_Jobs_Repository {
 
 	private static function release_lock( $id, $owner ) {
 		global $wpdb;
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching -- Release the custom chat lease only for its current owner.
 		$wpdb->delete( self::locks_table(), array( 'job_id' => $id, 'owner' => $owner ) );
 	}
 
 	public static function cancel( $id, $reason = 'Cancelled.' ) {
 		global $wpdb;
 		// Never cancel a live worker. Uncertain jobs require an administrator's reconciliation.
-		return (bool) $wpdb->query( $wpdb->prepare( 'UPDATE ' . self::table_name() . ' SET status=%s,last_error=%s,updated_at=%s WHERE id=%d AND status IN (%s,%s,%s)', 'cancelled', $reason, gmdate( 'Y-m-d H:i:s' ), $id, 'pending', 'failed', 'uncertain' ) );
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching -- Cancel only non-running durable jobs; a cached status could race a live worker.
+		return (bool) $wpdb->query( $wpdb->prepare( 'UPDATE %i SET status=%s,last_error=%s,updated_at=%s WHERE id=%d AND status IN (%s,%s,%s)', self::table_name(), 'cancelled', $reason, gmdate( 'Y-m-d H:i:s' ), $id, 'pending', 'failed', 'uncertain' ) );
 	}
 
 	public static function recover_expired() {
 		global $wpdb;
 		$now = gmdate( 'Y-m-d H:i:s' );
-		$expired = $wpdb->get_results( $wpdb->prepare( 'SELECT * FROM ' . self::locks_table() . ' WHERE expires_at<=%s', $now ), ARRAY_A );
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching -- Expired chat leases must be read fresh before execution is reconciled.
+		$expired = $wpdb->get_results( $wpdb->prepare( 'SELECT * FROM %i WHERE expires_at<=%s', self::locks_table(), $now ), ARRAY_A );
 		foreach ( $expired as $lock ) {
 			$job = self::get( $lock['job_id'] );
 			if ( $job && 'completed' === $job['execution_state'] ) {
@@ -240,7 +265,8 @@ class Telepilot_Jobs_Repository {
 	public static function status_counts() {
 		global $wpdb;
 		$counts = array_fill_keys( array( 'pending', 'processing', 'failed', 'complete', 'stale', 'uncertain', 'cancelled' ), 0 );
-		foreach ( $wpdb->get_results( 'SELECT status,COUNT(*) AS total FROM ' . self::table_name() . ' GROUP BY status', ARRAY_A ) as $row ) {
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching -- Queue diagnostics must show current durable states, including quarantined jobs.
+		foreach ( $wpdb->get_results( $wpdb->prepare( 'SELECT status,COUNT(*) AS total FROM %i GROUP BY status', self::table_name() ), ARRAY_A ) as $row ) {
 			$counts[ $row['status'] ] = (int) $row['total'];
 		}
 		return $counts;
@@ -250,27 +276,32 @@ class Telepilot_Jobs_Repository {
 
 	public static function personal_jobs( $actor_id, $page = 1, $limit = 50 ) {
 		global $wpdb;
-		return $wpdb->get_results( $wpdb->prepare( 'SELECT id,status,command_name,payload,created_at FROM ' . self::table_name() . ' WHERE actor_id=%d ORDER BY id LIMIT %d OFFSET %d', $actor_id, $limit, ( max( 1, (int) $page ) - 1 ) * $limit ), ARRAY_A );
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching -- Privacy export reads current custom-table payloads rather than cached personal data.
+		return $wpdb->get_results( $wpdb->prepare( 'SELECT id,status,command_name,payload,created_at FROM %i WHERE actor_id=%d ORDER BY id LIMIT %d OFFSET %d', self::table_name(), $actor_id, $limit, ( max( 1, (int) $page ) - 1 ) * $limit ), ARRAY_A );
 	}
 
 	public static function erase_actor( $actor_id ) {
 		global $wpdb;
-		return $wpdb->query( $wpdb->prepare( "UPDATE " . self::table_name() . " j LEFT JOIN " . self::operations_table() . " o ON j.id=o.job_id SET j.payload='',j.actor_id=0,j.placeholder_chat_id=NULL,j.lease_token=NULL,j.status=IF(j.status='processing','uncertain','cancelled'),o.result=NULL WHERE j.actor_id=%d", $actor_id ) );
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching -- Erase all current queued personal data with one atomic custom-table update.
+		return $wpdb->query( $wpdb->prepare( 'UPDATE %i j LEFT JOIN %i o ON j.id=o.job_id SET j.payload=\'\',j.actor_id=0,j.placeholder_chat_id=NULL,j.lease_token=NULL,j.status=IF(j.status=\'processing\',\'uncertain\',\'cancelled\'),o.result=NULL WHERE j.actor_id=%d', self::table_name(), self::operations_table(), $actor_id ) );
 	}
 
 	public static function stop_pending() {
 		global $wpdb;
-		$wpdb->query( "UPDATE " . self::table_name() . " SET status=IF(status='processing','uncertain','cancelled'),lease_token=NULL,last_error='Plugin deactivated; pending access revoked.' WHERE status IN ('pending','processing')" );
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching -- Lifecycle revocation must immediately quarantine active work and cancel pending jobs.
+		$wpdb->query( $wpdb->prepare( 'UPDATE %i SET status=IF(status=\'processing\',\'uncertain\',\'cancelled\'),lease_token=NULL,last_error=\'Plugin deactivated; pending access revoked.\' WHERE status IN (\'pending\',\'processing\')', self::table_name() ) );
 	}
 
 	public static function quarantine_legacy() {
 		global $wpdb;
-		$wpdb->query( "UPDATE " . self::table_name() . " j LEFT JOIN " . self::operations_table() . " o ON j.id=o.job_id SET j.status='uncertain',j.last_error='Legacy request quarantined; inspect the target before cancellation.' WHERE o.job_id IS NULL AND j.status IN ('pending','processing','failed')" );
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching -- One-time upgrade quarantine prevents replay of requests lacking durable outcomes.
+		$wpdb->query( $wpdb->prepare( 'UPDATE %i j LEFT JOIN %i o ON j.id=o.job_id SET j.status=\'uncertain\',j.last_error=\'Legacy request quarantined; inspect the target before cancellation.\' WHERE o.job_id IS NULL AND j.status IN (\'pending\',\'processing\',\'failed\')', self::table_name(), self::operations_table() ) );
 	}
 
 	public static function purge_payloads() {
 		global $wpdb;
 		$now = time();
-		$wpdb->query( $wpdb->prepare( "UPDATE " . self::table_name() . " j LEFT JOIN " . self::operations_table() . " o ON j.id=o.job_id SET j.payload='',o.result=NULL WHERE (j.status IN ('complete','cancelled','stale','uncertain') AND j.updated_at<=%s) OR (j.status IN ('pending','failed') AND o.state='completed' AND j.created_at<=%s)", gmdate( 'Y-m-d H:i:s', $now - 23 * HOUR_IN_SECONDS ), gmdate( 'Y-m-d H:i:s', $now - 167 * HOUR_IN_SECONDS ) ) );
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching -- Retention maintenance removes expired payloads directly from both custom tables.
+		$wpdb->query( $wpdb->prepare( 'UPDATE %i j LEFT JOIN %i o ON j.id=o.job_id SET j.payload=\'\',o.result=NULL WHERE (j.status IN (\'complete\',\'cancelled\',\'stale\',\'uncertain\') AND j.updated_at<=%s) OR (j.status IN (\'pending\',\'failed\') AND o.state=\'completed\' AND j.created_at<=%s)', self::table_name(), self::operations_table(), gmdate( 'Y-m-d H:i:s', $now - 23 * HOUR_IN_SECONDS ), gmdate( 'Y-m-d H:i:s', $now - 167 * HOUR_IN_SECONDS ) ) );
 	}
 }

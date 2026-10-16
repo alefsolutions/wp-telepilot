@@ -95,7 +95,7 @@ class Telepilot_Taxonomies_Service {
 		$blocks   = array( Telepilot_Telegram_Response_Builder::bold( Telepilot_Telegram_Response_Builder::label( $icon_key, $heading ) ) );
 		$blocks[] = Telepilot_Telegram_Response_Builder::italic(
 			sprintf(
-				__( 'Page %1$d of %2$d | %3$d items', 'wp-telepilot' ),
+				/* translators: 1: current page number, 2: total number of pages, 3: total number of items. */ __( 'Page %1$d of %2$d | %3$d items', 'wp-telepilot' ),
 				$result['page'],
 				$result['total_pages'],
 				isset( $result['total_items'] ) ? (int) $result['total_items'] : count( $result['items'] )
@@ -116,22 +116,22 @@ class Telepilot_Taxonomies_Service {
 		$singular = $this->resource_singular( $resource );
 		$lines    = array();
 
-		$lines[] = Telepilot_Telegram_Response_Builder::bold( Telepilot_Telegram_Response_Builder::label( $resource, sprintf( __( '%s Commands', 'wp-telepilot' ), ucfirst( $resource ) ) ) );
-		$lines[] = Telepilot_Telegram_Response_Builder::code( '/' . $resource . ' list' ) . ' ' . sprintf( __( 'Show %s', 'wp-telepilot' ), $resource );
-		$lines[] = Telepilot_Telegram_Response_Builder::code( '/' . $resource . ' search keyword' ) . ' ' . sprintf( __( 'Search %s', 'wp-telepilot' ), $resource );
-		$lines[] = Telepilot_Telegram_Response_Builder::code( '/' . $resource . ' details 12' ) . ' ' . sprintf( __( 'Show %s details', 'wp-telepilot' ), $singular );
-		$lines[] = Telepilot_Telegram_Response_Builder::code( '/' . $resource . ' create Name' ) . ' ' . sprintf( __( 'Create a new %s', 'wp-telepilot' ), $singular );
-		$lines[] = Telepilot_Telegram_Response_Builder::code( '/' . $resource . ' rename 12 New Name' ) . ' ' . sprintf( __( 'Rename a %s', 'wp-telepilot' ), $singular );
-		$lines[] = Telepilot_Telegram_Response_Builder::code( '/' . $resource . ' slug 12 new-slug' ) . ' ' . sprintf( __( 'Update a %s slug', 'wp-telepilot' ), $singular );
-		$lines[] = Telepilot_Telegram_Response_Builder::code( '/' . $resource . ' description 12 New description' ) . ' ' . sprintf( __( 'Update a %s description', 'wp-telepilot' ), $singular );
+		$lines[] = Telepilot_Telegram_Response_Builder::bold( Telepilot_Telegram_Response_Builder::label( $resource, sprintf( /* translators: %s: resource type (categories or tags). */ __( '%s Commands', 'wp-telepilot' ), ucfirst( $resource ) ) ) );
+		$lines[] = Telepilot_Telegram_Response_Builder::code( '/' . $resource . ' list' ) . ' ' . sprintf( /* translators: %s: resource type (categories or tags). */ __( 'Show %s', 'wp-telepilot' ), $resource );
+		$lines[] = Telepilot_Telegram_Response_Builder::code( '/' . $resource . ' search keyword' ) . ' ' . sprintf( /* translators: %s: resource type (categories or tags). */ __( 'Search %s', 'wp-telepilot' ), $resource );
+		$lines[] = Telepilot_Telegram_Response_Builder::code( '/' . $resource . ' details 12' ) . ' ' . sprintf( /* translators: %s: resource type (category or tag). */ __( 'Show %s details', 'wp-telepilot' ), $singular );
+		$lines[] = Telepilot_Telegram_Response_Builder::code( '/' . $resource . ' create Name' ) . ' ' . sprintf( /* translators: %s: resource type (category or tag). */ __( 'Create a new %s', 'wp-telepilot' ), $singular );
+		$lines[] = Telepilot_Telegram_Response_Builder::code( '/' . $resource . ' rename 12 New Name' ) . ' ' . sprintf( /* translators: %s: resource type (category or tag). */ __( 'Rename a %s', 'wp-telepilot' ), $singular );
+		$lines[] = Telepilot_Telegram_Response_Builder::code( '/' . $resource . ' slug 12 new-slug' ) . ' ' . sprintf( /* translators: %s: resource type (category or tag). */ __( 'Update a %s slug', 'wp-telepilot' ), $singular );
+		$lines[] = Telepilot_Telegram_Response_Builder::code( '/' . $resource . ' description 12 New description' ) . ' ' . sprintf( /* translators: %s: resource type (category or tag). */ __( 'Update a %s description', 'wp-telepilot' ), $singular );
 
 		if ( 'categories' === $resource ) {
 			$lines[] = Telepilot_Telegram_Response_Builder::code( '/categories parent 12 3' ) . ' ' . __( 'Assign a parent category, or use `none` to clear it', 'wp-telepilot' );
 			$lines[] = Telepilot_Telegram_Response_Builder::code( '/categories post 12' ) . ' ' . __( 'Start a new post in a category', 'wp-telepilot' );
 		}
 
-		$lines[] = Telepilot_Telegram_Response_Builder::code( '/' . $resource . ' delete 12' ) . ' ' . sprintf( __( 'Delete a %s after confirmation when it is unused', 'wp-telepilot' ), $singular );
-		$lines[] = Telepilot_Telegram_Response_Builder::code( '/' . $resource . ' delete 12 reassign 3' ) . ' ' . sprintf( __( 'Reassign attached content to another %s, then delete the original', 'wp-telepilot' ), $singular );
+		$lines[] = Telepilot_Telegram_Response_Builder::code( '/' . $resource . ' delete 12' ) . ' ' . sprintf( /* translators: %s: resource type (category or tag). */ __( 'Delete a %s after confirmation when it is unused', 'wp-telepilot' ), $singular );
+		$lines[] = Telepilot_Telegram_Response_Builder::code( '/' . $resource . ' delete 12 reassign 3' ) . ' ' . sprintf( /* translators: %s: resource type (category or tag). */ __( 'Reassign attached content to another %s, then delete the original', 'wp-telepilot' ), $singular );
 		$lines[] = Telepilot_Telegram_Response_Builder::italic( __( 'Tip: use the bracketed term ID from list results when updating or deleting.', 'wp-telepilot' ) );
 
 		return Telepilot_Telegram_Response_Builder::join_blocks( $lines );
@@ -144,16 +144,16 @@ class Telepilot_Taxonomies_Service {
 
 		$resource = $this->normalize_resource( $resource );
 		$lines    = array(
-			Telepilot_Telegram_Response_Builder::bold( Telepilot_Telegram_Response_Builder::label( $resource, sprintf( __( '%s Details', 'wp-telepilot' ), ucfirst( $this->resource_singular( $resource ) ) ) ) ),
+			Telepilot_Telegram_Response_Builder::bold( Telepilot_Telegram_Response_Builder::label( $resource, sprintf( /* translators: %s: resource type (category or tag). */ __( '%s Details', 'wp-telepilot' ), ucfirst( $this->resource_singular( $resource ) ) ) ) ),
 			'',
-			sprintf( __( 'Name: %s', 'wp-telepilot' ), Telepilot_Telegram_Response_Builder::escape( $term->name ) ),
-			sprintf( __( 'ID: [%d]', 'wp-telepilot' ), $term->term_id ),
-			sprintf( __( 'Slug: %s', 'wp-telepilot' ), Telepilot_Telegram_Response_Builder::escape( $term->slug ) ),
-			sprintf( __( 'Count: %d', 'wp-telepilot' ), (int) $term->count ),
+			sprintf( /* translators: %s: taxonomy term name. */ __( 'Name: %s', 'wp-telepilot' ), Telepilot_Telegram_Response_Builder::escape( $term->name ) ),
+			sprintf( /* translators: %d: taxonomy term ID. */ __( 'ID: [%d]', 'wp-telepilot' ), $term->term_id ),
+			sprintf( /* translators: %s: slug. */ __( 'Slug: %s', 'wp-telepilot' ), Telepilot_Telegram_Response_Builder::escape( $term->slug ) ),
+			sprintf( /* translators: %d: count. */ __( 'Count: %d', 'wp-telepilot' ), (int) $term->count ),
 		);
 
 		if ( '' !== (string) $term->description ) {
-			$lines[] = sprintf( __( 'Description: %s', 'wp-telepilot' ), Telepilot_Telegram_Response_Builder::escape( $term->description ) );
+			$lines[] = sprintf( /* translators: %s: description. */ __( 'Description: %s', 'wp-telepilot' ), Telepilot_Telegram_Response_Builder::escape( $term->description ) );
 		}
 
 		if ( 'categories' === $resource ) {
@@ -166,7 +166,7 @@ class Telepilot_Taxonomies_Service {
 				}
 			}
 
-			$lines[] = sprintf( __( 'Parent: %s', 'wp-telepilot' ), Telepilot_Telegram_Response_Builder::escape( $parent_label ) );
+			$lines[] = sprintf( /* translators: %s: parent label. */ __( 'Parent: %s', 'wp-telepilot' ), Telepilot_Telegram_Response_Builder::escape( $parent_label ) );
 		}
 
 		return implode( "\n", $lines );
@@ -460,20 +460,20 @@ class Telepilot_Taxonomies_Service {
 		foreach ( $result['items'] as $term ) {
 			$row = array(
 				array(
-					'text'          => Telepilot_Telegram_Response_Builder::label( 'details', sprintf( __( 'Details [%d]', 'wp-telepilot' ), $term->term_id ) ),
+					'text'          => Telepilot_Telegram_Response_Builder::label( 'details', sprintf( /* translators: %d: taxonomy term ID. */ __( 'Details [%d]', 'wp-telepilot' ), $term->term_id ) ),
 					'callback_data' => '/' . $resource . ' details ' . (int) $term->term_id,
 				),
 			);
 
 			if ( $allow_post_creation && 'categories' === $resource ) {
 				$row[] = array(
-					'text'          => Telepilot_Telegram_Response_Builder::label( 'posts', sprintf( __( 'New Post [%d]', 'wp-telepilot' ), $term->term_id ) ),
+					'text'          => Telepilot_Telegram_Response_Builder::label( 'posts', sprintf( /* translators: %d: taxonomy term ID. */ __( 'New Post [%d]', 'wp-telepilot' ), $term->term_id ) ),
 					'callback_data' => '/categories post ' . (int) $term->term_id,
 				);
 			}
 
 			$row[] = array(
-				'text'          => Telepilot_Telegram_Response_Builder::label( 'delete', sprintf( __( 'Delete [%d]', 'wp-telepilot' ), $term->term_id ) ),
+				'text'          => Telepilot_Telegram_Response_Builder::label( 'delete', sprintf( /* translators: %d: taxonomy term ID. */ __( 'Delete [%d]', 'wp-telepilot' ), $term->term_id ) ),
 				'callback_data' => '/' . $resource . ' delete ' . (int) $term->term_id,
 			);
 
@@ -507,7 +507,7 @@ class Telepilot_Taxonomies_Service {
 
 		return Telepilot_Telegram_Response_Builder::append_rows(
 			Telepilot_Telegram_Response_Builder::confirmation_keyboard(
-				sprintf( __( 'Confirm delete [%d]', 'wp-telepilot' ), $term_id ),
+				sprintf( /* translators: %d: taxonomy term ID. */ __( 'Confirm delete [%d]', 'wp-telepilot' ), $term_id ),
 				'tp:term:' . $taxonomy . ':delete:' . (int) $term_id . ':' . $token,
 				$cancel_command
 			),
@@ -553,21 +553,21 @@ class Telepilot_Taxonomies_Service {
 			Telepilot_Telegram_Response_Builder::label(
 				$resource,
 				sprintf(
-					__( '[%1$d] %2$s', 'wp-telepilot' ),
+					/* translators: 1: taxonomy term ID, 2: taxonomy term name. */ __( '[%1$d] %2$s', 'wp-telepilot' ),
 					$term->term_id,
 					Telepilot_Telegram_Response_Builder::escape( $term->name )
 				)
 			),
-			sprintf( __( 'Slug: %s', 'wp-telepilot' ), Telepilot_Telegram_Response_Builder::escape( $term->slug ) ),
-			sprintf( __( 'Count: %d', 'wp-telepilot' ), (int) $term->count ),
+			sprintf( /* translators: %s: slug. */ __( 'Slug: %s', 'wp-telepilot' ), Telepilot_Telegram_Response_Builder::escape( $term->slug ) ),
+			sprintf( /* translators: %d: count. */ __( 'Count: %d', 'wp-telepilot' ), (int) $term->count ),
 		);
 
 		if ( 'category' === $taxonomy ) {
-			$lines[] = sprintf( __( 'Parent: %s', 'wp-telepilot' ), Telepilot_Telegram_Response_Builder::escape( $this->get_parent_term_label( $term ) ) );
+			$lines[] = sprintf( /* translators: %s: parent term name. */ __( 'Parent: %s', 'wp-telepilot' ), Telepilot_Telegram_Response_Builder::escape( $this->get_parent_term_label( $term ) ) );
 		}
 
 		if ( '' !== (string) $term->description ) {
-			$lines[] = sprintf( __( 'Description: %s', 'wp-telepilot' ), Telepilot_Telegram_Response_Builder::escape( wp_html_excerpt( $term->description, 120, '...' ) ) );
+			$lines[] = sprintf( /* translators: %s: description. */ __( 'Description: %s', 'wp-telepilot' ), Telepilot_Telegram_Response_Builder::escape( wp_html_excerpt( $term->description, 120, '...' ) ) );
 		}
 
 		return implode( "\n", $lines );

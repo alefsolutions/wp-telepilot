@@ -55,7 +55,7 @@ trait Telepilot_Users_Command_Handler {
 			if ( is_wp_error( $users ) ) { return Telepilot_Telegram_Response_Builder::error( $users->get_error_message(), array( 'code' => $users->get_error_code() ) ); }
 
 			return Telepilot_Telegram_Response_Builder::success_html(
-				$this->users_service->render_page_message( $users, sprintf( __( 'User Search: %s', 'wp-telepilot' ), $term ) ),
+				$this->users_service->render_page_message( $users, sprintf( /* translators: %s: search keyword. */ __( 'User Search: %s', 'wp-telepilot' ), $term ) ),
 				array(
 					'command'      => '/users',
 					'reply_markup' => $this->safe_reply_markup(
@@ -126,7 +126,7 @@ trait Telepilot_Users_Command_Handler {
 			}
 
 			return Telepilot_Telegram_Response_Builder::success(
-				sprintf( __( 'Confirm create user `%1$s` with role `%2$s`', 'wp-telepilot' ), $username, $role ),
+				sprintf( /* translators: 1: username, 2: role. */ __( 'Confirm create user `%1$s` with role `%2$s`', 'wp-telepilot' ), $username, $role ),
 				array(
 					'command'      => '/users',
 					'reply_markup' => $this->safe_reply_markup(
@@ -169,7 +169,7 @@ trait Telepilot_Users_Command_Handler {
 			$this->log_user_action( $identity, 'user_email_updated', $user_id, $result['before_state'], $result['after_state'] );
 
 			return Telepilot_Telegram_Response_Builder::success(
-				sprintf( __( 'User #%1$d email has been updated.', 'wp-telepilot' ), $user_id ),
+				sprintf( /* translators: %d: user ID. */ __( 'User #%1$d email has been updated.', 'wp-telepilot' ), $user_id ),
 				array( 'command' => '/users' )
 			);
 		}
@@ -193,7 +193,7 @@ trait Telepilot_Users_Command_Handler {
 			$this->log_user_action( $identity, 'user_display_name_updated', $user_id, $result['before_state'], $result['after_state'] );
 
 			return Telepilot_Telegram_Response_Builder::success(
-				sprintf( __( 'User #%1$d display name has been updated.', 'wp-telepilot' ), $user_id ),
+				sprintf( /* translators: %d: user ID. */ __( 'User #%1$d display name has been updated.', 'wp-telepilot' ), $user_id ),
 				array( 'command' => '/users' )
 			);
 		}
@@ -205,7 +205,7 @@ trait Telepilot_Users_Command_Handler {
 			}
 
 			return Telepilot_Telegram_Response_Builder::success(
-				sprintf( __( 'Confirm disable for user [%d]', 'wp-telepilot' ), $user_id ),
+				sprintf( /* translators: %d: user ID. */ __( 'Confirm disable for user [%d]', 'wp-telepilot' ), $user_id ),
 				array(
 					'command'      => '/users',
 					'reply_markup' => $this->safe_reply_markup(
@@ -232,7 +232,7 @@ trait Telepilot_Users_Command_Handler {
 			$this->log_user_action( $identity, 'user_enabled', $user_id, $result['before_state'], $result['after_state'] );
 
 			return Telepilot_Telegram_Response_Builder::success(
-				sprintf( __( 'User #%1$d has been %2$s.', 'wp-telepilot' ), $user_id, $result['label'] ),
+				sprintf( /* translators: 1: user ID, 2: action result. */ __( 'User #%1$d has been %2$s.', 'wp-telepilot' ), $user_id, $result['label'] ),
 				array( 'command' => '/users' )
 			);
 		}
@@ -244,7 +244,7 @@ trait Telepilot_Users_Command_Handler {
 			}
 
 			return Telepilot_Telegram_Response_Builder::success(
-				sprintf( __( 'Confirm password reset for user [%d]', 'wp-telepilot' ), $user_id ),
+				sprintf( /* translators: %d: user ID. */ __( 'Confirm password reset for user [%d]', 'wp-telepilot' ), $user_id ),
 				array(
 					'command'      => '/users',
 					'reply_markup' => $this->safe_reply_markup(
@@ -264,7 +264,7 @@ trait Telepilot_Users_Command_Handler {
 			}
 
 			return Telepilot_Telegram_Response_Builder::success(
-				sprintf( __( 'Confirm password reset email for user [%d]', 'wp-telepilot' ), $user_id ),
+				sprintf( /* translators: %d: user ID. */ __( 'Confirm password reset email for user [%d]', 'wp-telepilot' ), $user_id ),
 				array(
 					'command'      => '/users',
 					'reply_markup' => $this->safe_reply_markup(
@@ -284,7 +284,7 @@ trait Telepilot_Users_Command_Handler {
 			}
 
 			return Telepilot_Telegram_Response_Builder::success(
-				sprintf( __( 'Confirm welcome email resend for user [%d]', 'wp-telepilot' ), $user_id ),
+				sprintf( /* translators: %d: user ID. */ __( 'Confirm welcome email resend for user [%d]', 'wp-telepilot' ), $user_id ),
 				array(
 					'command'      => '/users',
 					'reply_markup' => $this->safe_reply_markup(
@@ -313,7 +313,7 @@ trait Telepilot_Users_Command_Handler {
 			}
 
 			return Telepilot_Telegram_Response_Builder::success(
-				sprintf( __( 'Confirm role change for user #%1$d to `%2$s`', 'wp-telepilot' ), $user_id, $role ),
+				sprintf( /* translators: 1: user ID, 2: role. */ __( 'Confirm role change for user #%1$d to `%2$s`', 'wp-telepilot' ), $user_id, $role ),
 				array(
 					'command'      => '/users',
 					'reply_markup' => $this->safe_reply_markup(
@@ -336,8 +336,8 @@ trait Telepilot_Users_Command_Handler {
 
 			return Telepilot_Telegram_Response_Builder::success(
 				$reassign_id
-					? sprintf( __( 'Confirm delete for user [%1$d] and reassign content to user [%2$d]', 'wp-telepilot' ), $user_id, $reassign_id )
-					: sprintf( __( 'Confirm delete for user [%d]', 'wp-telepilot' ), $user_id ),
+					? sprintf( /* translators: 1: user ID, 2: user ID receiving reassigned content. */ __( 'Confirm delete for user [%1$d] and reassign content to user [%2$d]', 'wp-telepilot' ), $user_id, $reassign_id )
+					: sprintf( /* translators: %d: user ID. */ __( 'Confirm delete for user [%d]', 'wp-telepilot' ), $user_id ),
 				array(
 					'command'      => '/users',
 					'reply_markup' => $this->safe_reply_markup(

@@ -79,12 +79,14 @@ class Telepilot_AI_Session_Manager {
 
 	public static function purge( $all = false ) {
 		global $wpdb;
-		$rows = $wpdb->get_results( $wpdb->prepare( "SELECT user_id,meta_value FROM $wpdb->usermeta WHERE meta_key=%s", self::SESSION_PREFIX . get_current_blog_id() ), ARRAY_A );
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching -- Session maintenance reads current per-site user metadata before expiring stale sessions.
+		$rows = $wpdb->get_results( $wpdb->prepare( 'SELECT user_id,meta_value FROM %i WHERE meta_key=%s', $wpdb->usermeta, self::SESSION_PREFIX . get_current_blog_id() ), ARRAY_A );
 		foreach ( $rows as $row ) {
 			$session = maybe_unserialize( $row['meta_value'] );
 			if ( $all || ! is_array( $session ) || time() >= (int) ( $session['expires_at'] ?? 0 ) ) { self::erase_actor( $row['user_id'] ); }
 		}
-		$keys = $wpdb->get_col( $wpdb->prepare( "SELECT option_name FROM $wpdb->options WHERE option_name LIKE %s", $wpdb->esc_like( 'telepilot_ai_' ) . '%' ) );
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching -- Session maintenance reads current per-site user metadata before expiring stale sessions.
+		$keys = $wpdb->get_col( $wpdb->prepare( 'SELECT option_name FROM %i WHERE option_name LIKE %s', $wpdb->options, $wpdb->esc_like( 'telepilot_ai_' ) . '%' ) );
 		foreach ( $keys as $key ) { if ( preg_match( '/^telepilot_ai_(requests|tokens)_(\d{8})$/', $key, $match ) && $match[2] < gmdate( 'Ymd', time() - 7 * DAY_IN_SECONDS ) ) { delete_option( $key ); } }
 	}
 }

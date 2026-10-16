@@ -42,7 +42,7 @@ trait Telepilot_Pages_Command_Handler {
 
 			if ( is_wp_error( $pages ) ) { return Telepilot_Telegram_Response_Builder::error( $pages->get_error_message(), array( 'code' => $pages->get_error_code() ) ); }
 			return Telepilot_Telegram_Response_Builder::success_html(
-				$this->pages_service->render_page_message( $pages, sprintf( __( 'Page Search: %s', 'wp-telepilot' ), $term ) ),
+				$this->pages_service->render_page_message( $pages, sprintf( /* translators: %s: search keyword. */ __( 'Page Search: %s', 'wp-telepilot' ), $term ) ),
 				array(
 					'command'      => '/pages',
 					'reply_markup' => $this->safe_reply_markup(
@@ -164,7 +164,7 @@ trait Telepilot_Pages_Command_Handler {
 			}
 
 			$this->log_content_action( $identity, 'page_state_changed', 'page', $page_id, 'publish', $result );
-			return Telepilot_Telegram_Response_Builder::success( sprintf( __( 'Page #%1$d has been %2$s.', 'wp-telepilot' ), $page_id, $result['label'] ), array( 'command' => '/pages' ) );
+			return Telepilot_Telegram_Response_Builder::success( sprintf( /* translators: 1: page ID, 2: action result. */ __( 'Page #%1$d has been %2$s.', 'wp-telepilot' ), $page_id, $result['label'] ), array( 'command' => '/pages' ) );
 		}
 
 		if ( 'draft' === $subcommand ) {
@@ -184,7 +184,7 @@ trait Telepilot_Pages_Command_Handler {
 			}
 
 			$this->log_content_action( $identity, 'page_state_changed', 'page', $page_id, 'draft', $result );
-			return Telepilot_Telegram_Response_Builder::success( sprintf( __( 'Page #%1$d has been %2$s.', 'wp-telepilot' ), $page_id, $result['label'] ), array( 'command' => '/pages' ) );
+			return Telepilot_Telegram_Response_Builder::success( sprintf( /* translators: 1: page ID, 2: action result. */ __( 'Page #%1$d has been %2$s.', 'wp-telepilot' ), $page_id, $result['label'] ), array( 'command' => '/pages' ) );
 		}
 
 		if ( 'title' === $subcommand ) {
@@ -210,7 +210,7 @@ trait Telepilot_Pages_Command_Handler {
 
 			$this->log_content_action( $identity, 'page_updated', 'page', $page_id, 'title', $result );
 			return Telepilot_Telegram_Response_Builder::success(
-				sprintf( __( 'Page #%1$d title has been updated.', 'wp-telepilot' ), $page_id ),
+				sprintf( /* translators: %d: page ID. */ __( 'Page #%1$d title has been updated.', 'wp-telepilot' ), $page_id ),
 				array( 'command' => '/pages' )
 			);
 		}
@@ -238,7 +238,7 @@ trait Telepilot_Pages_Command_Handler {
 
 			$this->log_content_action( $identity, 'page_updated', 'page', $page_id, 'slug', $result );
 			return Telepilot_Telegram_Response_Builder::success(
-				sprintf( __( 'Page #%1$d slug has been updated.', 'wp-telepilot' ), $page_id ),
+				sprintf( /* translators: %d: page ID. */ __( 'Page #%1$d slug has been updated.', 'wp-telepilot' ), $page_id ),
 				array( 'command' => '/pages' )
 			);
 		}
@@ -273,7 +273,7 @@ trait Telepilot_Pages_Command_Handler {
 
 			$this->log_content_action( $identity, 'page_state_changed', 'page', $page_id, 'status', $result );
 			return Telepilot_Telegram_Response_Builder::success(
-				sprintf( __( 'Page #%1$d has been %2$s.', 'wp-telepilot' ), $page_id, $result['label'] ),
+				sprintf( /* translators: 1: page ID, 2: action result. */ __( 'Page #%1$d has been %2$s.', 'wp-telepilot' ), $page_id, $result['label'] ),
 				array( 'command' => '/pages' )
 			);
 		}
@@ -294,7 +294,7 @@ trait Telepilot_Pages_Command_Handler {
 			}
 
 			return Telepilot_Telegram_Response_Builder::success(
-				sprintf( __( 'Confirm %1$s for page #%2$d', 'wp-telepilot' ), $subcommand, $page_id ),
+				sprintf( /* translators: 1: requested action, 2: page ID. */ __( 'Confirm %1$s for page #%2$d', 'wp-telepilot' ), $subcommand, $page_id ),
 				array(
 					'command'      => '/pages',
 					'reply_markup' => $this->safe_reply_markup(

@@ -14,6 +14,28 @@ Tests use a disposable WordPress database, never a live installation. All HTTP i
 
 CI covers minimum PHP/WordPress and the current stable WordPress on PHP 8.5. Releases require the full suite. Existing tags/releases are never replaced; beta publishing requires explicit workflow opt-in. Live staging transport/provider and visual checks remain separate from offline PHPUnit tests.
 
+## WordPress.org Plugin Check
+
+The `plugin-check` CI job builds the allowlisted ZIP and scans its extraction on a disposable WordPress site using Plugin Check **2.1.0**, pinned by version and archive SHA256 in `scripts/plugin-check-policy.json`. It runs all default stable checks in new-submission mode, including runtime checks through `--require=.../plugin-check/cli.php`. No check categories, codes or severity levels are excluded. WP-CLI 2.12.0 is pinned as well.
+
+To repeat locally, install that checker on an isolated WordPress site, activate it, and extract a freshly built ZIP to a new directory. Run:
+
+```sh
+wp --path=/isolated/wordpress plugin list-checks --format=json > .test-env/plugin-check-checks.json
+wp --path=/isolated/wordpress --require=/isolated/wordpress/wp-content/plugins/plugin-check/cli.php plugin check /extracted/wp-telepilot --slug=wp-telepilot --mode=new --format=strict-json --fields=file,line,column,type,code,message,docs > .test-env/plugin-check.json
+TELEPILOT_CHECK_VERSION=2.1.0 TELEPILOT_CHECK_WP_VERSION=7.1 php scripts/check-plugin-report.php .test-env/plugin-check.json /extracted/wp-telepilot dist/plugin-check-report.json
+```
+
+Set `TELEPILOT_CHECK_WP_VERSION` to the core version actually used. PowerShell users should set the two `$env:` variables separately; on PowerShell 5, capture JSON with `| Set-Content -Encoding UTF8 path.json` instead of `>` (which writes UTF16). The gate accepts a UTF8 BOM. Use `strict-json`: ordinary `json` produces separate per-file arrays rather than one JSON document. Plugin Check's exit status alone does not reliably signal code findings; the report gate is required.
+
+The gate rejects every error, unknown/duplicate warning, changed message or source fingerprint, and stale exception. It also verifies that the entire extraction matches the release ZIP, then writes the commit, package checksum, tool/core/PHP versions and a reason for each accepted finding. It does not automatically expand the policy.
+
+The twelve reviewed warnings are three existing name/slug warnings (`wp` is explicitly allowed with a warning in the pinned checker's source), one recommendation to adopt the WordPress 7.0 AI Client while maintaining WordPress 6.6 compatibility, and eight native user-metadata query performance warnings. Each occurrence has its own file, message, source fingerprint and rationale. These findings remain visible in the raw and accounted JSON reports.
+
+Necessary direct SQL, fresh security/queue/privacy reads, transactions, versioned schema repair, immediate driver-error capture and cURL progress configuration have individual inline sniff exceptions explaining their purpose. Ordinary HTTP requests continue through the WordPress HTTP API. Read-only page/token routing is distinguished from nonce-protected mutations, and rich content retains the linked actor's `unfiltered_html` policy. There are no file-wide or ruleset-wide exclusions.
+
+`SubmissionReadinessTest` covers request token types/formats, nonce rejection without consuming a token, rich HTML/backslashes, statistics cache isolation/invalidation, audit filter combinations/pagination/erasure, and retain-data uninstall revocation. `PluginCheckGateTest` proves the gate rejects unreviewed or stale findings. Run these along with the existing queue, migration, privacy, concurrency and packaged-plugin suites. A passing check does not replace WordPress.org's manual review or the live staging checklist.
+
 The stabilization suite includes the twelve reproductions from the eleven-bug audit, with additional cases for authentication before `init`, re-enabling accounts, blocked queues beyond 100 jobs, competing claims, command ordering, validation errors, pagination ownership/expiry, Unicode callback byte lengths, complete privacy erasure and retries, text escaping, and default-category protection. Authentication workers use only the disposable database and block outbound HTTP.
 
 To test another core/test-library combination without replacing the minimum-version installation, set `TELEPILOT_TEST_WP_ROOT` to its extracted WordPress directory and `TELEPILOT_TEST_PHPUNIT_ROOT` to the matching `wp-phpunit/wp-phpunit` directory. Use the appropriate PHP binary and a separate disposable database. Set `TELEPILOT_TEST_MCP_PLUGIN` to the pinned official Adapter entrypoint for the current-version MCP transport test. Clear these overrides before generating minimum-version admin fixtures.

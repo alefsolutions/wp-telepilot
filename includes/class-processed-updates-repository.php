@@ -41,11 +41,9 @@ class Telepilot_Processed_Updates_Repository {
 			return false;
 		}
 
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching -- Telegram deduplication must read the current custom-table update ID.
 		$found = $wpdb->get_var(
-			$wpdb->prepare(
-				'SELECT telegram_update_id FROM ' . self::table_name() . ' WHERE telegram_update_id = %d LIMIT 1',
-				$update_id
-			)
+			$wpdb->prepare( 'SELECT telegram_update_id FROM %i WHERE telegram_update_id = %d LIMIT 1', self::table_name(), $update_id )
 		);
 
 		return ! empty( $found );
@@ -60,6 +58,7 @@ class Telepilot_Processed_Updates_Repository {
 			return;
 		}
 
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching -- Persist Telegram update deduplication in the plugin-owned table.
 		$wpdb->replace(
 			self::table_name(),
 			array(
@@ -79,11 +78,9 @@ class Telepilot_Processed_Updates_Repository {
 		$retention_days = max( 1, absint( $retention_days ) );
 		$cutoff         = gmdate( 'Y-m-d H:i:s', strtotime( '-' . $retention_days . ' days' ) );
 
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching -- Retention maintenance deletes expired deduplication rows.
 		$wpdb->query(
-			$wpdb->prepare(
-				'DELETE FROM ' . self::table_name() . ' WHERE processed_at < %s',
-				$cutoff
-			)
+			$wpdb->prepare( 'DELETE FROM %i WHERE processed_at < %s', self::table_name(), $cutoff )
 		);
 	}
 }

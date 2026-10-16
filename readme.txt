@@ -209,27 +209,33 @@ The admin panel now uses a compact header, plain resource links, smaller typogra
 
 = 0.4.0-beta.5 =
 
-AI chat now receives explicit site-management-only instructions and concise reply rules. Unsupported and denied tool requests stop without repeated confirmation. Existing queued continuations receive refreshed instructions. No new setting or database migration is required. Topic and reply-length compliance depend on model behavior; complete the documented staging evaluation before publication.
+
+AI chat now stays focused on site management with concise replies and terminal denial handling. No new setting or database migration is required. Complete the documented live model evaluation before publication.
 
 = 0.4.0-beta.4 =
 
-Telegram requests now use typing feedback instead of generic processing messages. Existing queued placeholders still receive their final results. Provider retry notices, confirmations and errors remain visible. No new setting or database migration is required. Typing can briefly lapse during blocking local work or unsupported HTTP transports.
+
+Telegram uses typing feedback instead of generic processing messages. Existing queued placeholders still receive final results. Retry notices, confirmations and errors remain visible. No migration is required; typing may lapse during blocking work or unsupported transports.
 
 = 0.4.0-beta.3 =
 
-Existing settings, linked accounts, content and queue outcomes are preserved. Suspended users cannot authenticate; re-enabling allows fresh browser logins and existing application passwords, while old browser sessions remain invalid. Uncertain operations still require administrator reconciliation through Queue Recovery. Expired search controls require a new search.
+
+Settings, accounts, content and queue outcomes are preserved. Suspended users cannot authenticate; re-enabling permits fresh logins while old sessions remain invalid. Reconcile uncertain operations through Queue Recovery. Expired search controls require a new search.
 
 = 0.4.0-beta.2 =
 
-Back up before installing. This repair preserves content, accounts, credentials and command syntax. If AI queue verification fails, ask your host to inspect database ALTER permissions and the queue schema, then use Retry Database Repair in WP Telepilot diagnostics. Failed AI requests are not automatically resent. Verify final read-only AI replies after upgrading before publication.
+
+Back up before upgrading. Existing data is preserved. If AI queue verification fails, ask your host to check ALTER permissions and the schema, then use Retry Database Repair. Failed AI requests are not resent. Verify final AI read replies on staging before publication.
 
 = 0.4.0-beta.1 =
 
-Back up before installing this beta. Content, ordinary settings and linked accounts are preserved. Unsafe legacy AI actions and sessions are invalidated; unsupported legacy keys require replacement. AI and MCP are separate opt-ins with administrator-only default grants. Recheck saved settings and complete live staging checks before release. The metadata version does not imply a published stable release.
+
+Back up before this beta. Existing content, settings and linked accounts are preserved. Legacy AI actions and sessions are invalidated; unsupported keys require replacement. AI and MCP are separate opt-ins. Recheck settings and complete staging checks before release.
 
 = 0.3.1 =
 
-Existing content, normal settings and linked accounts are preserved. Legacy pending operations are quarantined; legacy editor links and confirmations must be regenerated. Notifications now require an active linked private chat, not just an allowlisted ID. Review Queue Recovery and configure reliable WordPress cron for background delivery and retention.
+
+Existing data is preserved. Legacy pending operations are quarantined; regenerate old editor links and confirmations. Notifications require an active linked private chat. Review Queue Recovery and configure reliable WordPress cron for delivery and retention.
 
 = 0.3.0 =
 

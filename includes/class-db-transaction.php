@@ -7,19 +7,37 @@ class Telepilot_DB_Transaction {
 	public static function is_active() { return self::$depth > 0; }
 	public static function begin() {
 		global $wpdb;
-		$wpdb->query( self::$depth ? 'SAVEPOINT telepilot_' . self::$depth : 'START TRANSACTION' );
+		if ( self::$depth ) {
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching -- Queue and content writes share a real transaction with nested savepoints.
+			$wpdb->query( $wpdb->prepare( 'SAVEPOINT %i', 'telepilot_' . self::$depth ) );
+		} else {
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching -- Queue and content writes share a real transaction with nested savepoints.
+			$wpdb->query( 'START TRANSACTION' );
+		}
 		self::$depth++;
 	}
 	public static function commit() {
 		global $wpdb;
 		if ( self::$depth < 1 ) { return; }
 		self::$depth--;
-		$wpdb->query( self::$depth ? 'RELEASE SAVEPOINT telepilot_' . self::$depth : 'COMMIT' );
+		if ( self::$depth ) {
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching -- Release the nested savepoint or commit the owning database transaction.
+			$wpdb->query( $wpdb->prepare( 'RELEASE SAVEPOINT %i', 'telepilot_' . self::$depth ) );
+		} else {
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching -- Release the nested savepoint or commit the owning database transaction.
+			$wpdb->query( 'COMMIT' );
+		}
 	}
 	public static function rollback() {
 		global $wpdb;
 		if ( self::$depth < 1 ) { return; }
 		self::$depth--;
-		$wpdb->query( self::$depth ? 'ROLLBACK TO SAVEPOINT telepilot_' . self::$depth : 'ROLLBACK' );
+		if ( self::$depth ) {
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching -- Roll back only the nested savepoint or the owning database transaction.
+			$wpdb->query( $wpdb->prepare( 'ROLLBACK TO SAVEPOINT %i', 'telepilot_' . self::$depth ) );
+		} else {
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching -- Roll back only the nested savepoint or the owning database transaction.
+			$wpdb->query( 'ROLLBACK' );
+		}
 	}
 }

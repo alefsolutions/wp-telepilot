@@ -122,7 +122,7 @@ class Telepilot_Users_Service {
 			$roles      = implode( ', ', array_map( 'sanitize_text_field', $user->roles ) );
 			$is_disabled = $this->is_disabled( $user->ID ) ? __( 'disabled', 'wp-telepilot' ) : __( 'active', 'wp-telepilot' );
 			$lines[]    = sprintf(
-				__( '[%1$d] %2$s [%3$s] (%4$s)', 'wp-telepilot' ),
+				/* translators: 1: user ID, 2: WordPress login name, 3: roles, 4: account status. */ __( '[%1$d] %2$s [%3$s] (%4$s)', 'wp-telepilot' ),
 				$user->ID,
 				$user->user_login,
 				$roles ? $roles : __( 'no role', 'wp-telepilot' ),
@@ -140,7 +140,7 @@ class Telepilot_Users_Service {
 
 		$blocks   = array( Telepilot_Telegram_Response_Builder::bold( Telepilot_Telegram_Response_Builder::label( 'users', $heading ) ) );
 		$blocks[] = Telepilot_Telegram_Response_Builder::italic(
-			sprintf( __( 'Page %1$d of %2$d | %3$d items', 'wp-telepilot' ), $result['page'], $result['total_pages'], isset( $result['total_items'] ) ? (int) $result['total_items'] : count( $result['items'] ) )
+			sprintf( /* translators: 1: current page number, 2: total number of pages, 3: total number of items. */ __( 'Page %1$d of %2$d | %3$d items', 'wp-telepilot' ), $result['page'], $result['total_pages'], isset( $result['total_items'] ) ? (int) $result['total_items'] : count( $result['items'] ) )
 		);
 
 		foreach ( $result['items'] as $user ) {
@@ -167,16 +167,16 @@ class Telepilot_Users_Service {
 				Telepilot_Telegram_Response_Builder::label(
 					'users',
 					sprintf(
-						__( '[%1$d] %2$s', 'wp-telepilot' ),
+						/* translators: 1: user ID, 2: display title. */ __( '[%1$d] %2$s', 'wp-telepilot' ),
 						$user->ID,
 						Telepilot_Telegram_Response_Builder::escape( $title )
 					)
 				),
-				sprintf( __( 'Login: %s', 'wp-telepilot' ), Telepilot_Telegram_Response_Builder::escape( $user->user_login ) ),
-				sprintf( __( 'Status: %s', 'wp-telepilot' ), Telepilot_Telegram_Response_Builder::escape( $is_disabled ) ),
-				sprintf( __( 'Roles: %s', 'wp-telepilot' ), Telepilot_Telegram_Response_Builder::escape( $roles ? $roles : __( 'No role', 'wp-telepilot' ) ) ),
-				sprintf( __( 'Email: %s', 'wp-telepilot' ), Telepilot_Telegram_Response_Builder::escape( $user->user_email ) ),
-				sprintf( __( 'Registered: %s', 'wp-telepilot' ), Telepilot_Telegram_Response_Builder::escape( mysql2date( 'Y-m-d H:i:s', $user->user_registered ) ) ),
+				sprintf( /* translators: %s: WordPress login name. */ __( 'Login: %s', 'wp-telepilot' ), Telepilot_Telegram_Response_Builder::escape( $user->user_login ) ),
+				sprintf( /* translators: %s: account status. */ __( 'Status: %s', 'wp-telepilot' ), Telepilot_Telegram_Response_Builder::escape( $is_disabled ) ),
+				sprintf( /* translators: %s: roles. */ __( 'Roles: %s', 'wp-telepilot' ), Telepilot_Telegram_Response_Builder::escape( $roles ? $roles : __( 'No role', 'wp-telepilot' ) ) ),
+				sprintf( /* translators: %s: email address. */ __( 'Email: %s', 'wp-telepilot' ), Telepilot_Telegram_Response_Builder::escape( $user->user_email ) ),
+				sprintf( /* translators: %s: account registration date and time. */ __( 'Registered: %s', 'wp-telepilot' ), Telepilot_Telegram_Response_Builder::escape( mysql2date( 'Y-m-d H:i:s', $user->user_registered ) ) ),
 			)
 		);
 	}
@@ -233,24 +233,24 @@ class Telepilot_Users_Service {
 			implode(
 				"\n",
 				array(
-					sprintf( __( 'User: [%1$d] %2$s', 'wp-telepilot' ), $user->ID, Telepilot_Telegram_Response_Builder::escape( $user->user_login ) ),
-					sprintf( __( 'Display name: %s', 'wp-telepilot' ), Telepilot_Telegram_Response_Builder::escape( $user->display_name ) ),
-					sprintf( __( 'Email: %s', 'wp-telepilot' ), Telepilot_Telegram_Response_Builder::escape( $user->user_email ) ),
-					sprintf( __( 'Roles: %s', 'wp-telepilot' ), Telepilot_Telegram_Response_Builder::escape( $roles ? $roles : __( 'no role', 'wp-telepilot' ) ) ),
-					sprintf( __( 'Status: %s', 'wp-telepilot' ), Telepilot_Telegram_Response_Builder::escape( $this->is_disabled( $user->ID ) ? __( 'disabled', 'wp-telepilot' ) : __( 'active', 'wp-telepilot' ) ) ),
-					sprintf( __( 'Registered: %s', 'wp-telepilot' ), Telepilot_Telegram_Response_Builder::escape( mysql2date( 'Y-m-d H:i:s', $user->user_registered ) ) ),
+					sprintf( /* translators: 1: user ID, 2: WordPress login name. */ __( 'User: [%1$d] %2$s', 'wp-telepilot' ), $user->ID, Telepilot_Telegram_Response_Builder::escape( $user->user_login ) ),
+					sprintf( /* translators: %s: display name. */ __( 'Display name: %s', 'wp-telepilot' ), Telepilot_Telegram_Response_Builder::escape( $user->display_name ) ),
+					sprintf( /* translators: %s: email address. */ __( 'Email: %s', 'wp-telepilot' ), Telepilot_Telegram_Response_Builder::escape( $user->user_email ) ),
+					sprintf( /* translators: %s: roles. */ __( 'Roles: %s', 'wp-telepilot' ), Telepilot_Telegram_Response_Builder::escape( $roles ? $roles : __( 'no role', 'wp-telepilot' ) ) ),
+					sprintf( /* translators: %s: user ID. */ __( 'Status: %s', 'wp-telepilot' ), Telepilot_Telegram_Response_Builder::escape( $this->is_disabled( $user->ID ) ? __( 'disabled', 'wp-telepilot' ) : __( 'active', 'wp-telepilot' ) ) ),
+					sprintf( /* translators: %s: account registration date and time. */ __( 'Registered: %s', 'wp-telepilot' ), Telepilot_Telegram_Response_Builder::escape( mysql2date( 'Y-m-d H:i:s', $user->user_registered ) ) ),
 				)
 			),
 		);
 
 		if ( '' !== $telegram_user_id ) {
 			$link_lines = array(
-				sprintf( __( 'Telegram user ID: %s', 'wp-telepilot' ), Telepilot_Telegram_Response_Builder::escape( $telegram_user_id ) ),
-				sprintf( __( 'Chat ID: %s', 'wp-telepilot' ), Telepilot_Telegram_Response_Builder::escape( $telegram_chat_id ? $telegram_chat_id : __( 'Unknown', 'wp-telepilot' ) ) ),
+				sprintf( /* translators: %s: telegram user ID. */ __( 'Telegram user ID: %s', 'wp-telepilot' ), Telepilot_Telegram_Response_Builder::escape( $telegram_user_id ) ),
+				sprintf( /* translators: %s: telegram chat ID. */ __( 'Chat ID: %s', 'wp-telepilot' ), Telepilot_Telegram_Response_Builder::escape( $telegram_chat_id ? $telegram_chat_id : __( 'Unknown', 'wp-telepilot' ) ) ),
 			);
 
 			if ( '' !== $telegram_name ) {
-				$link_lines[] = sprintf( __( 'Telegram username: @%s', 'wp-telepilot' ), Telepilot_Telegram_Response_Builder::escape( $telegram_name ) );
+				$link_lines[] = sprintf( /* translators: %s: Telegram username. */ __( 'Telegram username: @%s', 'wp-telepilot' ), Telepilot_Telegram_Response_Builder::escape( $telegram_name ) );
 			}
 
 			$lines[] = implode( "\n", $link_lines );
@@ -259,7 +259,7 @@ class Telepilot_Users_Service {
 		}
 
 		$lines[] = sprintf(
-			__( 'Admin: %s', 'wp-telepilot' ),
+			/* translators: %s: formatted link to the requested admin or preview page. */ __( 'Admin: %s', 'wp-telepilot' ),
 			Telepilot_Telegram_Response_Builder::link( __( 'Open user in wp-admin', 'wp-telepilot' ), admin_url( 'user-edit.php?user_id=' . (int) $user->ID ) )
 		);
 
@@ -386,7 +386,7 @@ class Telepilot_Users_Service {
 			'user'         => $user,
 			'before_state' => array( 'roles' => $before_roles ),
 			'after_state'  => array( 'roles' => $user->roles ),
-			'label'        => sprintf( __( 'assigned role %s', 'wp-telepilot' ), $role ),
+			'label'        => sprintf( /* translators: %s: role. */ __( 'assigned role %s', 'wp-telepilot' ), $role ),
 		);
 	}
 
@@ -622,7 +622,7 @@ class Telepilot_Users_Service {
 
 		return Telepilot_Telegram_Response_Builder::append_rows(
 			Telepilot_Telegram_Response_Builder::confirmation_keyboard(
-				sprintf( __( 'Confirm %1$s [%2$d]', 'wp-telepilot' ), ucfirst( str_replace( '-', ' ', $action ) ), $user_id ),
+				sprintf( /* translators: 1: requested action, 2: user ID. */ __( 'Confirm %1$s [%2$d]', 'wp-telepilot' ), ucfirst( str_replace( '-', ' ', $action ) ), $user_id ),
 				'tp:user:' . $action . ':' . (int) $user_id . ':' . $token,
 				'/users list'
 			),
@@ -640,15 +640,15 @@ class Telepilot_Users_Service {
 
 			$rows[] = array(
 				array(
-					'text'          => Telepilot_Telegram_Response_Builder::label( 'details', sprintf( __( 'Details [%d]', 'wp-telepilot' ), $user->ID ) ),
+					'text'          => Telepilot_Telegram_Response_Builder::label( 'details', sprintf( /* translators: %d: user ID. */ __( 'Details [%d]', 'wp-telepilot' ), $user->ID ) ),
 					'callback_data' => '/users details ' . (int) $user->ID,
 				),
 				array(
-					'text'          => Telepilot_Telegram_Response_Builder::label( 'reset', sprintf( __( 'Reset [%d]', 'wp-telepilot' ), $user->ID ) ),
+					'text'          => Telepilot_Telegram_Response_Builder::label( 'reset', sprintf( /* translators: %d: user ID. */ __( 'Reset [%d]', 'wp-telepilot' ), $user->ID ) ),
 					'callback_data' => '/users reset-password ' . (int) $user->ID,
 				),
 				array(
-					'text'          => Telepilot_Telegram_Response_Builder::label( 'email', sprintf( __( 'Email Reset [%d]', 'wp-telepilot' ), $user->ID ) ),
+					'text'          => Telepilot_Telegram_Response_Builder::label( 'email', sprintf( /* translators: %d: user ID. */ __( 'Email Reset [%d]', 'wp-telepilot' ), $user->ID ) ),
 					'callback_data' => '/users email-reset-password ' . (int) $user->ID,
 				),
 			);
@@ -656,15 +656,15 @@ class Telepilot_Users_Service {
 			$rows[] = array(
 				$this->is_disabled( $user->ID )
 					? array(
-						'text'          => Telepilot_Telegram_Response_Builder::label( 'enable', sprintf( __( 'Enable [%d]', 'wp-telepilot' ), $user->ID ) ),
+						'text'          => Telepilot_Telegram_Response_Builder::label( 'enable', sprintf( /* translators: %d: user ID. */ __( 'Enable [%d]', 'wp-telepilot' ), $user->ID ) ),
 						'callback_data' => '/users enable ' . (int) $user->ID,
 					)
 					: array(
-						'text'          => Telepilot_Telegram_Response_Builder::label( 'disable', sprintf( __( 'Disable [%d]', 'wp-telepilot' ), $user->ID ) ),
+						'text'          => Telepilot_Telegram_Response_Builder::label( 'disable', sprintf( /* translators: %d: user ID. */ __( 'Disable [%d]', 'wp-telepilot' ), $user->ID ) ),
 						'callback_data' => '/users disable ' . (int) $user->ID,
 					),
 				array(
-					'text'          => Telepilot_Telegram_Response_Builder::label( 'welcome', sprintf( __( 'Welcome [%d]', 'wp-telepilot' ), $user->ID ) ),
+					'text'          => Telepilot_Telegram_Response_Builder::label( 'welcome', sprintf( /* translators: %d: user ID. */ __( 'Welcome [%d]', 'wp-telepilot' ), $user->ID ) ),
 					'callback_data' => '/users welcome-email ' . (int) $user->ID,
 				),
 			);

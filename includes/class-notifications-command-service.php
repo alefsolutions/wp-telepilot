@@ -47,7 +47,7 @@ class Telepilot_Notifications_Command_Service {
 
 		$blocks   = array( Telepilot_Telegram_Response_Builder::bold( Telepilot_Telegram_Response_Builder::label( 'notifications', __( 'Notifications', 'wp-telepilot' ) ) ) );
 		$blocks[] = Telepilot_Telegram_Response_Builder::italic(
-			sprintf( __( 'Page %1$d of %2$d', 'wp-telepilot' ), $result['page'], $result['total_pages'] )
+			sprintf( /* translators: 1: current page number, 2: total number of pages. */ __( 'Page %1$d of %2$d', 'wp-telepilot' ), $result['page'], $result['total_pages'] )
 		);
 
 		foreach ( $result['items'] as $item ) {
@@ -57,14 +57,14 @@ class Telepilot_Notifications_Command_Service {
 					Telepilot_Telegram_Response_Builder::label(
 						'notifications',
 						sprintf(
-							__( '[%1$d] %2$s [%3$s]', 'wp-telepilot' ),
+							/* translators: 1: plugin list number, 2: display label, 3: enabled or disabled state. */ __( '[%1$d] %2$s [%3$s]', 'wp-telepilot' ),
 							isset( $item['list_number'] ) ? (int) $item['list_number'] : 0,
 							Telepilot_Telegram_Response_Builder::escape( $item['label'] ),
 							Telepilot_Telegram_Response_Builder::escape( $item['enabled'] ? __( 'enabled', 'wp-telepilot' ) : __( 'disabled', 'wp-telepilot' ) )
 						)
 					),
 					sprintf(
-						__( 'Key: [%s]', 'wp-telepilot' ),
+						/* translators: %s: notification setting name. */ __( 'Key: [%s]', 'wp-telepilot' ),
 						Telepilot_Telegram_Response_Builder::escape( $item['key'] )
 					),
 				)
@@ -146,7 +146,7 @@ class Telepilot_Notifications_Command_Service {
 					'text'          => sprintf(
 						Telepilot_Telegram_Response_Builder::label(
 							$item['enabled'] ? 'disable' : 'enable',
-							sprintf( $item['enabled'] ? __( 'Disable [%d]', 'wp-telepilot' ) : __( 'Enable [%d]', 'wp-telepilot' ), $list_number )
+							sprintf( $item['enabled'] ? /* translators: %d: plugin list number. */ __( 'Disable [%d]', 'wp-telepilot' ) : /* translators: %d: plugin list number. */ __( 'Enable [%d]', 'wp-telepilot' ), $list_number )
 						)
 					),
 					'callback_data' => '/notifications ' . ( $item['enabled'] ? 'disable ' : 'enable ' ) . $item['key'],

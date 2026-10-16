@@ -540,7 +540,7 @@ class Telepilot_Core_Ability_Handlers {
 						'title'      => $title,
 						'categories' => array_values( array_filter( array_map( 'absint', isset( $arguments['categories'] ) ? (array) $arguments['categories'] : array() ) ) ),
 					),
-					'prompt'     => sprintf( __( 'You are about to create a new draft post titled "%s".', 'wp-telepilot' ), $title ),
+					'prompt'     => sprintf( /* translators: %s: display title. */ __( 'You are about to create a new draft post titled "%s".', 'wp-telepilot' ), $title ),
 					'risk_level' => 'low_write',
 				);
 
@@ -567,7 +567,7 @@ class Telepilot_Core_Ability_Handlers {
 						'title'   => $title,
 						'excerpt' => $excerpt,
 					), static function ( $value ) { return null !== $value; } ),
-					'prompt'     => sprintf( __( 'You are about to update draft post [%1$d] %2$s.', 'wp-telepilot' ), $post->ID, get_the_title( $post ) ),
+					'prompt'     => sprintf( /* translators: 1: post ID, 2: post title. */ __( 'You are about to update draft post [%1$d] %2$s.', 'wp-telepilot' ), $post->ID, get_the_title( $post ) ),
 					'risk_level' => 'low_write',
 				);
 
@@ -589,7 +589,7 @@ class Telepilot_Core_Ability_Handlers {
 						'post_id'      => (int) $post->ID,
 						'scheduled_at' => $scheduled_at->format( 'Y-m-d H:i:s' ),
 					),
-					'prompt'     => sprintf( __( 'You are about to schedule post [%1$d] %2$s for %3$s.', 'wp-telepilot' ), $post->ID, get_the_title( $post ), $scheduled_at->format( 'Y-m-d H:i:s' ) ),
+					'prompt'     => sprintf( /* translators: 1: post ID, 2: post title, 3: formatted date and time. */ __( 'You are about to schedule post [%1$d] %2$s for %3$s.', 'wp-telepilot' ), $post->ID, get_the_title( $post ), $scheduled_at->format( 'Y-m-d H:i:s' ) ),
 					'risk_level' => 'moderate_write',
 				);
 
@@ -606,7 +606,7 @@ class Telepilot_Core_Ability_Handlers {
 					'arguments'  => array(
 						'post_id' => (int) $post->ID,
 					),
-					'prompt'     => sprintf( __( 'You are about to publish post [%1$d] %2$s.', 'wp-telepilot' ), $post->ID, get_the_title( $post ) ),
+					'prompt'     => sprintf( /* translators: 1: post ID, 2: post title. */ __( 'You are about to publish post [%1$d] %2$s.', 'wp-telepilot' ), $post->ID, get_the_title( $post ) ),
 					'risk_level' => 'high_risk',
 				);
 
@@ -623,7 +623,7 @@ class Telepilot_Core_Ability_Handlers {
 					'arguments'  => array(
 						'post_id' => (int) $post->ID,
 					),
-					'prompt'     => sprintf( __( 'You are about to move post [%1$d] %2$s back to draft.', 'wp-telepilot' ), $post->ID, get_the_title( $post ) ),
+					'prompt'     => sprintf( /* translators: 1: post ID, 2: post title. */ __( 'You are about to move post [%1$d] %2$s back to draft.', 'wp-telepilot' ), $post->ID, get_the_title( $post ) ),
 					'risk_level' => 'moderate_write',
 				);
 
@@ -642,7 +642,7 @@ class Telepilot_Core_Ability_Handlers {
 					'arguments'  => array(
 						'comment_id' => (int) $comment->comment_ID,
 					),
-					'prompt'     => sprintf( __( 'You are about to %1$s comment [%2$d] by %3$s.', 'wp-telepilot' ), $action_label, $comment->comment_ID, $comment->comment_author ? $comment->comment_author : __( 'Anonymous', 'wp-telepilot' ) ),
+					'prompt'     => sprintf( /* translators: 1: action label, 2: comment ID, 3: comment author. */ __( 'You are about to %1$s comment [%2$d] by %3$s.', 'wp-telepilot' ), $action_label, $comment->comment_ID, $comment->comment_author ? $comment->comment_author : __( 'Anonymous', 'wp-telepilot' ) ),
 					'risk_level' => 'moderate_write',
 				);
 
@@ -663,7 +663,7 @@ class Telepilot_Core_Ability_Handlers {
 					'arguments'  => array(
 						'identifier' => (string) $plugin['identifier'],
 					),
-					'prompt'     => sprintf( __( 'You are about to %1$s plugin [%2$s] %3$s.', 'wp-telepilot' ), $action_label, $plugin['identifier'], $plugin['name'] ),
+					'prompt'     => sprintf( /* translators: 1: action label, 2: plugin identifier, 3: plugin name. */ __( 'You are about to %1$s plugin [%2$s] %3$s.', 'wp-telepilot' ), $action_label, $plugin['identifier'], $plugin['name'] ),
 					'risk_level' => in_array( $tool_name, array( 'telepilot_deactivate_plugin' ), true ) ? 'high_risk' : 'moderate_write',
 				);
 		}
@@ -771,7 +771,7 @@ class Telepilot_Core_Ability_Handlers {
 
 		return array(
 			'ok'      => true,
-			'summary' => sprintf( __( 'Draft post [%1$d] %2$s was created.', 'wp-telepilot' ), $result['post']->ID, get_the_title( $result['post'] ) ),
+			'summary' => sprintf( /* translators: 1: post ID, 2: post title. */ __( 'Draft post [%1$d] %2$s was created.', 'wp-telepilot' ), $result['post']->ID, get_the_title( $result['post'] ) ),
 			'data'    => array(
 				'post_id' => $result['post']->ID,
 				'title'   => get_the_title( $result['post'] ),
@@ -805,7 +805,7 @@ class Telepilot_Core_Ability_Handlers {
 
 		return array(
 			'ok'      => true,
-			'summary' => sprintf( __( 'Post [%1$d] %2$s was scheduled for %3$s.', 'wp-telepilot' ), $post->ID, get_the_title( $post ), $scheduled_at->format( 'Y-m-d H:i:s' ) ),
+			'summary' => sprintf( /* translators: 1: post ID, 2: post title, 3: formatted date and time. */ __( 'Post [%1$d] %2$s was scheduled for %3$s.', 'wp-telepilot' ), $post->ID, get_the_title( $post ), $scheduled_at->format( 'Y-m-d H:i:s' ) ),
 			'data'    => array(
 				'post_id'      => $post->ID,
 				'scheduled_at' => $scheduled_at->format( 'Y-m-d H:i:s' ),
@@ -826,7 +826,7 @@ class Telepilot_Core_Ability_Handlers {
 
 		return array(
 			'ok'      => true,
-			'summary' => sprintf( __( 'Post [%1$d] %2$s was published.', 'wp-telepilot' ), $post->ID, get_the_title( $post ) ),
+			'summary' => sprintf( /* translators: 1: post ID, 2: post title. */ __( 'Post [%1$d] %2$s was published.', 'wp-telepilot' ), $post->ID, get_the_title( $post ) ),
 			'data'    => array(
 				'post_id' => $post->ID,
 			),
@@ -846,7 +846,7 @@ class Telepilot_Core_Ability_Handlers {
 
 		return array(
 			'ok'      => true,
-			'summary' => sprintf( __( 'Post [%1$d] %2$s was moved back to draft.', 'wp-telepilot' ), $post->ID, get_the_title( $post ) ),
+			'summary' => sprintf( /* translators: 1: post ID, 2: post title. */ __( 'Post [%1$d] %2$s was moved back to draft.', 'wp-telepilot' ), $post->ID, get_the_title( $post ) ),
 			'data'    => array(
 				'post_id' => $post->ID,
 			),
@@ -866,7 +866,7 @@ class Telepilot_Core_Ability_Handlers {
 
 		return array(
 			'ok'      => true,
-			'summary' => sprintf( __( 'Comment [%1$d] was %2$s.', 'wp-telepilot' ), $comment->comment_ID, $result['label'] ),
+			'summary' => sprintf( /* translators: 1: comment ID, 2: action result. */ __( 'Comment [%1$d] was %2$s.', 'wp-telepilot' ), $comment->comment_ID, $result['label'] ),
 			'data'    => array(
 				'comment_id' => $comment->comment_ID,
 			),
@@ -899,7 +899,7 @@ class Telepilot_Core_Ability_Handlers {
 
 		return array(
 			'ok'      => true,
-			'summary' => sprintf( __( 'Plugin [%1$s] %2$s was %3$s.', 'wp-telepilot' ), $plugin['identifier'], $plugin['name'], $result['label'] ),
+			'summary' => sprintf( /* translators: 1: plugin identifier, 2: plugin name, 3: action result. */ __( 'Plugin [%1$s] %2$s was %3$s.', 'wp-telepilot' ), $plugin['identifier'], $plugin['name'], $result['label'] ),
 			'data'    => array(
 				'identifier' => $plugin['identifier'],
 			),

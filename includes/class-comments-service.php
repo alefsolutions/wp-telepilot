@@ -78,7 +78,7 @@ class Telepilot_Comments_Service {
 
 		$blocks   = array( Telepilot_Telegram_Response_Builder::bold( Telepilot_Telegram_Response_Builder::label( 'comments', $heading ) ) );
 		$blocks[] = Telepilot_Telegram_Response_Builder::italic(
-			sprintf( __( 'Page %1$d of %2$d | %3$d items', 'wp-telepilot' ), $result['page'], $result['total_pages'], isset( $result['total_items'] ) ? (int) $result['total_items'] : count( $result['items'] ) )
+			sprintf( /* translators: 1: current page number, 2: total number of pages, 3: total number of items. */ __( 'Page %1$d of %2$d | %3$d items', 'wp-telepilot' ), $result['page'], $result['total_pages'], isset( $result['total_items'] ) ? (int) $result['total_items'] : count( $result['items'] ) )
 		);
 
 		foreach ( $result['items'] as $comment ) {
@@ -128,20 +128,20 @@ class Telepilot_Comments_Service {
 		$lines   = array();
 		$lines[] = Telepilot_Telegram_Response_Builder::bold( Telepilot_Telegram_Response_Builder::label( 'comments', __( 'Comment Details', 'wp-telepilot' ) ) );
 		$lines[] = '';
-		$lines[] = sprintf( __( 'Comment: [%d]', 'wp-telepilot' ), $comment->comment_ID );
-		$lines[] = sprintf( __( 'Status: %s', 'wp-telepilot' ), Telepilot_Telegram_Response_Builder::escape( $status ) );
-		$lines[] = sprintf( __( 'Author: %s', 'wp-telepilot' ), Telepilot_Telegram_Response_Builder::escape( $comment->comment_author ? $comment->comment_author : __( 'Anonymous', 'wp-telepilot' ) ) );
+		$lines[] = sprintf( /* translators: %d: comment ID. */ __( 'Comment: [%d]', 'wp-telepilot' ), $comment->comment_ID );
+		$lines[] = sprintf( /* translators: %s: current status. */ __( 'Status: %s', 'wp-telepilot' ), Telepilot_Telegram_Response_Builder::escape( $status ) );
+		$lines[] = sprintf( /* translators: %s: comment author. */ __( 'Author: %s', 'wp-telepilot' ), Telepilot_Telegram_Response_Builder::escape( $comment->comment_author ? $comment->comment_author : __( 'Anonymous', 'wp-telepilot' ) ) );
 
 		if ( '' !== (string) $comment->comment_author_email ) {
-			$lines[] = sprintf( __( 'Email: %s', 'wp-telepilot' ), Telepilot_Telegram_Response_Builder::escape( $comment->comment_author_email ) );
+			$lines[] = sprintf( /* translators: %s: comment author email. */ __( 'Email: %s', 'wp-telepilot' ), Telepilot_Telegram_Response_Builder::escape( $comment->comment_author_email ) );
 		}
 
-		$lines[] = sprintf( __( 'Post: %s', 'wp-telepilot' ), Telepilot_Telegram_Response_Builder::escape( $post_title ? $post_title : __( 'Unknown Post', 'wp-telepilot' ) ) );
-		$lines[] = sprintf( __( 'Date: %s', 'wp-telepilot' ), Telepilot_Telegram_Response_Builder::escape( get_comment_date( 'Y-m-d H:i:s', $comment ) ) );
-		$lines[] = sprintf( __( 'Admin: %s', 'wp-telepilot' ), Telepilot_Telegram_Response_Builder::link( __( 'Open comment in wp-admin', 'wp-telepilot' ), $admin_url ) );
+		$lines[] = sprintf( /* translators: %s: post title. */ __( 'Post: %s', 'wp-telepilot' ), Telepilot_Telegram_Response_Builder::escape( $post_title ? $post_title : __( 'Unknown Post', 'wp-telepilot' ) ) );
+		$lines[] = sprintf( /* translators: %s: comment. */ __( 'Date: %s', 'wp-telepilot' ), Telepilot_Telegram_Response_Builder::escape( get_comment_date( 'Y-m-d H:i:s', $comment ) ) );
+		$lines[] = sprintf( /* translators: %s: formatted link to the requested admin or preview page. */ __( 'Admin: %s', 'wp-telepilot' ), Telepilot_Telegram_Response_Builder::link( __( 'Open comment in wp-admin', 'wp-telepilot' ), $admin_url ) );
 
 		if ( $post_url ) {
-			$lines[] = sprintf( __( 'Post: %s', 'wp-telepilot' ), Telepilot_Telegram_Response_Builder::link( __( 'Open post', 'wp-telepilot' ), $post_url ) );
+			$lines[] = sprintf( /* translators: %s: formatted link to the requested admin or preview page. */ __( 'Post: %s', 'wp-telepilot' ), Telepilot_Telegram_Response_Builder::link( __( 'Open post', 'wp-telepilot' ), $post_url ) );
 		}
 
 		$lines[] = '';
@@ -298,53 +298,53 @@ class Telepilot_Comments_Service {
 			$status = wp_get_comment_status( $comment );
 			$row    = array(
 				array(
-					'text'          => Telepilot_Telegram_Response_Builder::label( 'details', sprintf( __( 'Details [%d]', 'wp-telepilot' ), $comment->comment_ID ) ),
+					'text'          => Telepilot_Telegram_Response_Builder::label( 'details', sprintf( /* translators: %d: comment ID. */ __( 'Details [%d]', 'wp-telepilot' ), $comment->comment_ID ) ),
 					'callback_data' => '/comments details ' . (int) $comment->comment_ID,
 				),
 			);
 
 			if ( in_array( $status, array( 'hold', 'unapproved' ), true ) ) {
 				$row[] = array(
-					'text'          => Telepilot_Telegram_Response_Builder::label( 'enable', sprintf( __( 'Approve [%d]', 'wp-telepilot' ), $comment->comment_ID ) ),
+					'text'          => Telepilot_Telegram_Response_Builder::label( 'enable', sprintf( /* translators: %d: comment ID. */ __( 'Approve [%d]', 'wp-telepilot' ), $comment->comment_ID ) ),
 					'callback_data' => '/comments approve ' . (int) $comment->comment_ID,
 				);
 				$row[] = array(
-					'text'          => Telepilot_Telegram_Response_Builder::label( 'comments', sprintf( __( 'Spam [%d]', 'wp-telepilot' ), $comment->comment_ID ) ),
+					'text'          => Telepilot_Telegram_Response_Builder::label( 'comments', sprintf( /* translators: %d: comment ID. */ __( 'Spam [%d]', 'wp-telepilot' ), $comment->comment_ID ) ),
 					'callback_data' => '/comments spam ' . (int) $comment->comment_ID,
 				);
 				$row[] = array(
-					'text'          => Telepilot_Telegram_Response_Builder::label( 'trash', sprintf( __( 'Trash [%d]', 'wp-telepilot' ), $comment->comment_ID ) ),
+					'text'          => Telepilot_Telegram_Response_Builder::label( 'trash', sprintf( /* translators: %d: comment ID. */ __( 'Trash [%d]', 'wp-telepilot' ), $comment->comment_ID ) ),
 					'callback_data' => '/comments trash ' . (int) $comment->comment_ID,
 				);
 			} elseif ( 'approved' === $status ) {
 				$row[] = array(
-					'text'          => Telepilot_Telegram_Response_Builder::label( 'disable', sprintf( __( 'Reject [%d]', 'wp-telepilot' ), $comment->comment_ID ) ),
+					'text'          => Telepilot_Telegram_Response_Builder::label( 'disable', sprintf( /* translators: %d: comment ID. */ __( 'Reject [%d]', 'wp-telepilot' ), $comment->comment_ID ) ),
 					'callback_data' => '/comments reject ' . (int) $comment->comment_ID,
 				);
 				$row[] = array(
-					'text'          => Telepilot_Telegram_Response_Builder::label( 'comments', sprintf( __( 'Spam [%d]', 'wp-telepilot' ), $comment->comment_ID ) ),
+					'text'          => Telepilot_Telegram_Response_Builder::label( 'comments', sprintf( /* translators: %d: comment ID. */ __( 'Spam [%d]', 'wp-telepilot' ), $comment->comment_ID ) ),
 					'callback_data' => '/comments spam ' . (int) $comment->comment_ID,
 				);
 				$row[] = array(
-					'text'          => Telepilot_Telegram_Response_Builder::label( 'trash', sprintf( __( 'Trash [%d]', 'wp-telepilot' ), $comment->comment_ID ) ),
+					'text'          => Telepilot_Telegram_Response_Builder::label( 'trash', sprintf( /* translators: %d: comment ID. */ __( 'Trash [%d]', 'wp-telepilot' ), $comment->comment_ID ) ),
 					'callback_data' => '/comments trash ' . (int) $comment->comment_ID,
 				);
 			} elseif ( 'spam' === $status ) {
 				$row[] = array(
-					'text'          => Telepilot_Telegram_Response_Builder::label( 'restore', sprintf( __( 'Unspam [%d]', 'wp-telepilot' ), $comment->comment_ID ) ),
+					'text'          => Telepilot_Telegram_Response_Builder::label( 'restore', sprintf( /* translators: %d: comment ID. */ __( 'Unspam [%d]', 'wp-telepilot' ), $comment->comment_ID ) ),
 					'callback_data' => '/comments unspam ' . (int) $comment->comment_ID,
 				);
 				$row[] = array(
-					'text'          => Telepilot_Telegram_Response_Builder::label( 'delete', sprintf( __( 'Delete [%d]', 'wp-telepilot' ), $comment->comment_ID ) ),
+					'text'          => Telepilot_Telegram_Response_Builder::label( 'delete', sprintf( /* translators: %d: comment ID. */ __( 'Delete [%d]', 'wp-telepilot' ), $comment->comment_ID ) ),
 					'callback_data' => '/comments delete ' . (int) $comment->comment_ID,
 				);
 			} elseif ( 'trash' === $status ) {
 				$row[] = array(
-					'text'          => Telepilot_Telegram_Response_Builder::label( 'restore', sprintf( __( 'Restore [%d]', 'wp-telepilot' ), $comment->comment_ID ) ),
+					'text'          => Telepilot_Telegram_Response_Builder::label( 'restore', sprintf( /* translators: %d: comment ID. */ __( 'Restore [%d]', 'wp-telepilot' ), $comment->comment_ID ) ),
 					'callback_data' => '/comments restore ' . (int) $comment->comment_ID,
 				);
 				$row[] = array(
-					'text'          => Telepilot_Telegram_Response_Builder::label( 'delete', sprintf( __( 'Delete [%d]', 'wp-telepilot' ), $comment->comment_ID ) ),
+					'text'          => Telepilot_Telegram_Response_Builder::label( 'delete', sprintf( /* translators: %d: comment ID. */ __( 'Delete [%d]', 'wp-telepilot' ), $comment->comment_ID ) ),
 					'callback_data' => '/comments delete ' . (int) $comment->comment_ID,
 				);
 			}
@@ -374,7 +374,7 @@ class Telepilot_Comments_Service {
 
 		return Telepilot_Telegram_Response_Builder::append_rows(
 			Telepilot_Telegram_Response_Builder::confirmation_keyboard(
-				sprintf( __( 'Confirm %1$s [%2$d]', 'wp-telepilot' ), ucfirst( $action ), $comment_id ),
+				sprintf( /* translators: 1: requested action, 2: comment ID. */ __( 'Confirm %1$s [%2$d]', 'wp-telepilot' ), ucfirst( $action ), $comment_id ),
 				'tp:comment:' . $action . ':' . (int) $comment_id . ':' . $token,
 				'/comments pending'
 			),
@@ -477,15 +477,15 @@ class Telepilot_Comments_Service {
 				Telepilot_Telegram_Response_Builder::label(
 					'comments',
 					sprintf(
-						__( '[%1$d] %2$s', 'wp-telepilot' ),
+						/* translators: 1: comment ID, 2: comment author. */ __( '[%1$d] %2$s', 'wp-telepilot' ),
 						$comment->comment_ID,
 						Telepilot_Telegram_Response_Builder::escape( $comment->comment_author ? $comment->comment_author : __( 'Anonymous', 'wp-telepilot' ) )
 					)
 				),
-				sprintf( __( 'Status: %s', 'wp-telepilot' ), Telepilot_Telegram_Response_Builder::escape( ucfirst( $status ) ) ),
-				sprintf( __( 'Post: %s', 'wp-telepilot' ), Telepilot_Telegram_Response_Builder::escape( $post_title ? $post_title : __( 'Unknown Post', 'wp-telepilot' ) ) ),
-				sprintf( __( 'Date: %s', 'wp-telepilot' ), Telepilot_Telegram_Response_Builder::escape( get_comment_date( 'Y-m-d H:i:s', $comment ) ) ),
-				sprintf( __( 'Excerpt: %s', 'wp-telepilot' ), Telepilot_Telegram_Response_Builder::escape( $excerpt ? $excerpt : __( 'No visible content.', 'wp-telepilot' ) ) ),
+				sprintf( /* translators: %s: current status. */ __( 'Status: %s', 'wp-telepilot' ), Telepilot_Telegram_Response_Builder::escape( ucfirst( $status ) ) ),
+				sprintf( /* translators: %s: post title. */ __( 'Post: %s', 'wp-telepilot' ), Telepilot_Telegram_Response_Builder::escape( $post_title ? $post_title : __( 'Unknown Post', 'wp-telepilot' ) ) ),
+				sprintf( /* translators: %s: comment. */ __( 'Date: %s', 'wp-telepilot' ), Telepilot_Telegram_Response_Builder::escape( get_comment_date( 'Y-m-d H:i:s', $comment ) ) ),
+				sprintf( /* translators: %s: excerpt. */ __( 'Excerpt: %s', 'wp-telepilot' ), Telepilot_Telegram_Response_Builder::escape( $excerpt ? $excerpt : __( 'No visible content.', 'wp-telepilot' ) ) ),
 			)
 		);
 	}

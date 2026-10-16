@@ -12,7 +12,8 @@
   "scripts": {
     "test": "phpunit",
     "test:regressions": "phpunit --group stabilization",
-    "package": "@php scripts/package.php"
+    "package": "@php scripts/package.php",
+    "check:plugin": "@php scripts/check-plugin-report.php"
   },
   "config": {"sort-packages": true, "platform": {"php": "8.0.30"}}
 }

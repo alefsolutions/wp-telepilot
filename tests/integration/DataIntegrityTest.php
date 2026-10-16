@@ -4,7 +4,7 @@ class DataIntegrityTest extends Telepilot_TestCase {
     public function test_queue_erasure_failure_is_retryable_without_losing_identifiers() {
         $actor=$this->actor(); $service=new Telepilot_Telegram_Service();
         $job=$service->queue_notification($actor['chat_id'],'Private notice','read');
-        $fail=static function($sql) { return 0===strpos($sql,'UPDATE '.Telepilot_Jobs_Repository::table_name().' j LEFT JOIN') ? 'UPDATE telepilot_missing_privacy_jobs SET id=0' : $sql; };
+        $fail=static function($sql) { return 0===strpos(str_replace('`', '', $sql),'UPDATE '.Telepilot_Jobs_Repository::table_name().' j LEFT JOIN') ? 'UPDATE telepilot_missing_privacy_jobs SET id=0' : $sql; };
         add_filter('query',$fail);
         try {
             $this->assertFalse((new Telepilot_Privacy_Service())->erase_personal_data($actor['wp_user']->user_email)['done']);
@@ -16,7 +16,7 @@ class DataIntegrityTest extends Telepilot_TestCase {
     public function test_failed_privacy_update_preserves_identifiers_for_retry() {
         $actor=$this->actor();
         Telepilot_Audit_Log_Repository::log(array('action_name'=>'privacy_retry','wp_user_id'=>$actor['wp_user']->ID,'chat_id'=>$actor['chat_id']));
-        $fail=static function($sql) { return 0===strpos($sql,'UPDATE '.Telepilot_Audit_Log_Repository::table_name().' SET wp_user_id=NULL') ? 'UPDATE telepilot_missing_privacy_table SET id=0' : $sql; };
+        $fail=static function($sql) { return 0===strpos(str_replace('`', '', $sql),'UPDATE '.Telepilot_Audit_Log_Repository::table_name().' SET wp_user_id=NULL') ? 'UPDATE telepilot_missing_privacy_table SET id=0' : $sql; };
         add_filter('query',$fail);
         try {
             $result=(new Telepilot_Privacy_Service())->erase_personal_data($actor['wp_user']->user_email);

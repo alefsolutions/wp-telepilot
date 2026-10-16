@@ -26,7 +26,6 @@ class Telepilot_Bootstrap {
 	}
 
 	public function boot() {
-		load_plugin_textdomain( 'wp-telepilot', false, dirname( plugin_basename( TELEPILOT_FILE ) ) . '/languages' );
 		$this->maybe_upgrade_schema();
 		$this->ensure_settings_defaults();
 		$this->settings_page->register();
@@ -141,7 +140,8 @@ class Telepilot_Bootstrap {
 		Telepilot_Security_Records::create_table();
 		if ( version_compare( $current_version ?: '0', '0.3.1', '<' ) ) {
 			global $wpdb;
-			$wpdb->query( 'UPDATE ' . Telepilot_Audit_Log_Repository::table_name() . " SET before_state=NULL,after_state=NULL,context=NULL,ip_address=NULL,failure_reason=NULL,resource_id=IF(resource_id REGEXP '^[0-9]+$',resource_id,NULL)" );
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching -- A versioned lifecycle migration removes legacy state before new requests can execute.
+			$wpdb->query( $wpdb->prepare( 'UPDATE %i SET before_state=NULL,after_state=NULL,context=NULL,ip_address=NULL,failure_reason=NULL,resource_id=IF(resource_id REGEXP \'^[0-9]+$\',resource_id,NULL)', Telepilot_Audit_Log_Repository::table_name() ) );
 			update_option( 'telepilot_access_epoch', wp_generate_uuid4(), false );
 			foreach ( array( 'telepilot_transport_diagnostics', 'telepilot_command_diagnostics', 'telepilot_webhook_status' ) as $option ) {
 				update_option( $option, Telepilot_Data_Redactor::redact( get_option( $option, array() ) ), false );
@@ -150,7 +150,8 @@ class Telepilot_Bootstrap {
 		if ( version_compare( $current_version ?: '0', '0.4.0-beta.1', '<' ) ) {
 			global $wpdb;
 			Telepilot_AI_Session_Manager::purge( true );
-			$legacy = $wpdb->get_col( $wpdb->prepare( "SELECT option_name FROM $wpdb->options WHERE option_name LIKE %s", $wpdb->esc_like( '_transient_telepilot_ai_action' ) . '%' ) );
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching -- A versioned lifecycle migration removes legacy state before new requests can execute.
+			$legacy = $wpdb->get_col( $wpdb->prepare( 'SELECT option_name FROM %i WHERE option_name LIKE %s', $wpdb->options, $wpdb->esc_like( '_transient_telepilot_ai_action' ) . '%' ) );
 			foreach ( $legacy as $name ) { delete_transient( substr( $name, strlen( '_transient_' ) ) ); }
 			$settings = get_option( 'telepilot_settings', array() );
 			unset( $settings['ai_allow_manage_users'] );

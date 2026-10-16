@@ -27,6 +27,7 @@ class Telepilot_Security_Records {
 		global $wpdb;
 		$token = bin2hex( random_bytes( 12 ) );
 		$payload['_security_binding'] = array( 'actor_id' => (int) $actor_id, 'site_id' => get_current_blog_id(), 'generation' => Telepilot_Actor_Access::generation( $actor_id ) );
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery -- Persist hashed, actor-bound security tokens in the plugin-owned table.
 		$created = $wpdb->insert( self::table_name(), array( 'token_hash' => hash( 'sha256', $token ), 'purpose' => $purpose, 'actor_id' => $actor_id, 'payload' => wp_json_encode( $payload ), 'created_at' => gmdate( 'Y-m-d H:i:s' ), 'expires_at' => gmdate( 'Y-m-d H:i:s', time() + $ttl ) ) );
 		return $created ? $token : '';
 	}
@@ -34,7 +35,8 @@ class Telepilot_Security_Records {
 	public static function read( $token, $purpose ) {
 		global $wpdb;
 		if ( ! preg_match( '/^[a-f0-9]{24}$/D', (string) $token ) ) { return null; }
-		$row = $wpdb->get_row( $wpdb->prepare( 'SELECT * FROM ' . self::table_name() . ' WHERE token_hash=%s AND purpose=%s AND state=%s AND expires_at>%s', hash( 'sha256', $token ), $purpose, 'ready', gmdate( 'Y-m-d H:i:s' ) ), ARRAY_A );
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching -- Expiring security tokens and consumption state must be read fresh.
+		$row = $wpdb->get_row( $wpdb->prepare( 'SELECT * FROM %i WHERE token_hash=%s AND purpose=%s AND state=%s AND expires_at>%s', self::table_name(), hash( 'sha256', $token ), $purpose, 'ready', gmdate( 'Y-m-d H:i:s' ) ), ARRAY_A );
 		if ( ! $row ) { return null; }
 		$payload = json_decode( $row['payload'], true );
 		$binding = $payload['_security_binding'] ?? array();
@@ -45,16 +47,19 @@ class Telepilot_Security_Records {
 
 	public static function claim( $token, $purpose ) {
 		global $wpdb;
-		return 1 === $wpdb->query( $wpdb->prepare( 'UPDATE ' . self::table_name() . ' SET state=%s WHERE token_hash=%s AND purpose=%s AND state=%s AND expires_at>%s', 'consumed', hash( 'sha256', $token ), $purpose, 'ready', gmdate( 'Y-m-d H:i:s' ) ) );
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching -- Atomically consume the single-use token; a cached read or non-atomic API would allow replay.
+		return 1 === $wpdb->query( $wpdb->prepare( 'UPDATE %i SET state=%s WHERE token_hash=%s AND purpose=%s AND state=%s AND expires_at>%s', self::table_name(), 'consumed', hash( 'sha256', $token ), $purpose, 'ready', gmdate( 'Y-m-d H:i:s' ) ) );
 	}
 
 	public static function purge() {
 		global $wpdb;
-		$wpdb->query( $wpdb->prepare( 'DELETE FROM ' . self::table_name() . ' WHERE expires_at<=%s OR state=%s', gmdate( 'Y-m-d H:i:s' ), 'consumed' ) );
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching -- Retention maintenance deletes expired or consumed security tokens.
+		$wpdb->query( $wpdb->prepare( 'DELETE FROM %i WHERE expires_at<=%s OR state=%s', self::table_name(), gmdate( 'Y-m-d H:i:s' ), 'consumed' ) );
 	}
 
 	public static function erase_actor( $actor_id ) {
 		global $wpdb;
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching -- Privacy erasure removes the actor's security records immediately.
 		return $wpdb->delete( self::table_name(), array( 'actor_id' => $actor_id ) );
 	}
 }

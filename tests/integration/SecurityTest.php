@@ -106,7 +106,7 @@ class SecurityTest extends Telepilot_TestCase {
 		update_option( 'telepilot_settings', array( 'cleanup_on_uninstall' => 1 ) );
 		update_option( 'unrelated_plugin_setting', 'keep' );
 		if ( ! defined( 'WP_UNINSTALL_PLUGIN' ) ) { define( 'WP_UNINSTALL_PLUGIN', 'wp-telepilot/wp-telepilot.php' ); }
-		require dirname( __DIR__, 2 ) . '/uninstall.php';
+		require dirname( TELEPILOT_FILE ) . '/uninstall.php';
 		$this->assertFalse( get_option( 'telepilot_settings' ) );
 		$this->assertSame( 'keep', get_option( 'unrelated_plugin_setting' ) );
 		$this->assertNotNull( get_post( $post ) );

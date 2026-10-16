@@ -14,7 +14,8 @@ class Telepilot_OpenAI_Provider implements Telepilot_AI_Provider_Interface {
 		global $wpdb;
 		$key = 'telepilot_ai_' . $kind . '_' . gmdate( 'Ymd' );
 		add_option( $key, 0, '', false );
-		$changed = $wpdb->query( $wpdb->prepare( "UPDATE $wpdb->options SET option_value=CAST(option_value AS UNSIGNED)+%d WHERE option_name=%s AND CAST(option_value AS UNSIGNED)<%d", $amount, $key, $limit ) );
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery -- Atomic quota increments prevent concurrent requests exceeding the limit; invalidate the options cache immediately below.
+		$changed = $wpdb->query( $wpdb->prepare( 'UPDATE %i SET option_value=CAST(option_value AS UNSIGNED)+%d WHERE option_name=%s AND CAST(option_value AS UNSIGNED)<%d', $wpdb->options, $amount, $key, $limit ) );
 		wp_cache_delete( $key, 'options' );
 		return 1 === $changed;
 	}

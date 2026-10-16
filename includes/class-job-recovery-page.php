@@ -19,7 +19,8 @@ class Telepilot_Job_Recovery_Page {
 	public static function render() {
 		if ( ! current_user_can( 'manage_options' ) ) { return; }
 		global $wpdb;
-		$jobs = $wpdb->get_results( "SELECT id,command_name,status,last_error FROM " . Telepilot_Jobs_Repository::table_name() . " WHERE status IN ('pending','failed','uncertain') ORDER BY id DESC LIMIT 25", ARRAY_A );
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching -- Recovery must show current quarantined jobs and execution outcomes for administrator reconciliation.
+		$jobs = $wpdb->get_results( $wpdb->prepare( 'SELECT id,command_name,status,last_error FROM %i WHERE status IN (\'pending\',\'failed\',\'uncertain\') ORDER BY id DESC LIMIT 25', Telepilot_Jobs_Repository::table_name() ), ARRAY_A );
 		echo '<section class="telepilot-panel telepilot-panel-wide"><h2>' . esc_html__( 'Queue Recovery', 'wp-telepilot' ) . '</h2><p>' . esc_html__( 'An uncertain execution is never replayed automatically. Inspect its WordPress target, then cancel it to unblock that chat. Delivery failures do not repeat WordPress actions. Showing the latest 25 outstanding jobs.', 'wp-telepilot' ) . '</p><div style="max-height:360px;overflow:auto">';
 		foreach ( $jobs as $job ) {
 			echo '<form method="post" action="' . esc_url( admin_url( 'admin-post.php' ) ) . '"><p><strong>' . esc_html( '[' . $job['id'] . '] ' . $job['command_name'] . ' | ' . $job['status'] ) . '</strong><br>' . esc_html( Telepilot_Data_Redactor::redact( $job['last_error'] ) ) . '</p>';

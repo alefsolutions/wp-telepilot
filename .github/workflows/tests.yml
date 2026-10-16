@@ -7,6 +7,57 @@ on:
 permissions:
   contents: read
 jobs:
+  plugin-check:
+    runs-on: ubuntu-latest
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: test-only
+          MYSQL_DATABASE: telepilot_tests_pcp
+        ports: ['3306:3306']
+        options: --health-cmd="mysqladmin ping -ptest-only" --health-interval=10s --health-timeout=5s --health-retries=10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.0'
+          extensions: mysqli, mbstring, zip, openssl, curl
+          tools: wp-cli:2.12.0
+      - name: Build and extract the allowlisted plugin ZIP
+        run: |
+          php scripts/package.php
+          mkdir -p .test-env/package
+          unzip dist/wp-telepilot-*.zip -d .test-env/package
+      - name: Prepare isolated WordPress and pinned Plugin Check
+        run: |
+          set -euo pipefail
+          SITE="$PWD/.test-env/plugin-check-site"
+          wp core download --path="$SITE"
+          wp config create --path="$SITE" --dbname=telepilot_tests_pcp --dbuser=root --dbpass=test-only --dbhost=127.0.0.1:3306
+          wp config set DISABLE_WP_CRON true --raw --path="$SITE"
+          wp core install --path="$SITE" --url=http://telepilot.test --title='Plugin Check' --admin_user=checker --admin_password=disposable-test-only --admin_email=checker@example.test --skip-email
+          VERSION="$(php -r '$p=json_decode(file_get_contents("scripts/plugin-check-policy.json"),true); echo $p["plugin_check_version"];')"
+          curl -fsSL "https://downloads.wordpress.org/plugin/plugin-check.$VERSION.zip" -o .test-env/plugin-check-tool.zip
+          php -r '$p=json_decode(file_get_contents("scripts/plugin-check-policy.json"),true); if(!hash_equals($p["tool_archive_sha256"],hash_file("sha256",".test-env/plugin-check-tool.zip"))){fwrite(STDERR,"Plugin Check archive checksum mismatch\n");exit(1);}'
+          wp plugin install "$PWD/.test-env/plugin-check-tool.zip" --activate --path="$SITE"
+          echo "TELEPILOT_CHECK_VERSION=$(wp plugin get plugin-check --field=version --path="$SITE")" >> "$GITHUB_ENV"
+          echo "TELEPILOT_CHECK_WP_VERSION=$(wp core version --path="$SITE")" >> "$GITHUB_ENV"
+      - name: Run every default check including runtime checks, then enforce reviewed warnings
+        run: |
+          set -euo pipefail
+          SITE="$PWD/.test-env/plugin-check-site"
+          wp --path="$SITE" plugin list-checks --format=json > .test-env/plugin-check-checks.json
+          wp --path="$SITE" --require="$SITE/wp-content/plugins/plugin-check/cli.php" plugin check "$PWD/.test-env/package/wp-telepilot" --slug=wp-telepilot --mode=new --format=strict-json --fields=file,line,column,type,code,message,docs > .test-env/plugin-check.json
+          php scripts/check-plugin-report.php .test-env/plugin-check.json .test-env/package/wp-telepilot dist/plugin-check-report.json
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: plugin-check-report
+          path: |
+            dist/plugin-check-report.json
+            .test-env/plugin-check.json
+            .test-env/plugin-check-checks.json
   wordpress:
     runs-on: ubuntu-latest
     strategy:

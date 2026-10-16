@@ -74,7 +74,8 @@ class Telepilot_User_Linking_Service {
 		global $wpdb;
 		$verified_hash = (string) get_user_meta( $user->ID, self::META_LINK_CODE_HASH, true );
 		if ( (int) get_user_meta( $user->ID, self::META_LINK_EXPIRES, true ) <= time() ) { return Telepilot_Telegram_Response_Builder::error( __( 'This link code expired. Generate another code.', 'wp-telepilot' ) ); }
-		if ( ! $verified_hash || ! wp_check_password( $code, $verified_hash ) || 1 !== $wpdb->query( $wpdb->prepare( "DELETE FROM {$wpdb->usermeta} WHERE user_id=%d AND meta_key=%s AND meta_value=%s", $user->ID, self::META_LINK_CODE_HASH, $verified_hash ) ) ) {
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery -- Atomically consume the verified link-code hash; invalidate user_meta immediately below.
+		if ( ! $verified_hash || ! wp_check_password( $code, $verified_hash ) || 1 !== $wpdb->query( $wpdb->prepare( 'DELETE FROM %i WHERE user_id=%d AND meta_key=%s AND meta_value=%s', $wpdb->usermeta, $user->ID, self::META_LINK_CODE_HASH, $verified_hash ) ) ) {
 			return Telepilot_Telegram_Response_Builder::error( __( 'This link code has already been used. Generate another code.', 'wp-telepilot' ) );
 		}
 		wp_cache_delete( $user->ID, 'user_meta' );
@@ -107,18 +108,18 @@ class Telepilot_User_Linking_Service {
 		$lines        = array(
 			Telepilot_Telegram_Response_Builder::bold( __( 'Telegram Linked', 'wp-telepilot' ) ),
 			sprintf(
-				__( 'WordPress user: %s', 'wp-telepilot' ),
+				/* translators: %s: display name. */ __( 'WordPress user: %s', 'wp-telepilot' ),
 				Telepilot_Telegram_Response_Builder::escape( $display_name )
 			),
 			sprintf(
-				__( 'Role: %s', 'wp-telepilot' ),
+				/* translators: %s: roles. */ __( 'Role: %s', 'wp-telepilot' ),
 				Telepilot_Telegram_Response_Builder::escape( $roles )
 			),
 		);
 
 		if ( '' !== $username ) {
 			$lines[] = sprintf(
-				__( 'Telegram: @%s', 'wp-telepilot' ),
+				/* translators: %s: username. */ __( 'Telegram: @%s', 'wp-telepilot' ),
 				Telepilot_Telegram_Response_Builder::escape( $username )
 			);
 		}
@@ -155,7 +156,8 @@ class Telepilot_User_Linking_Service {
 		$cursor = 0;
 		do {
 			// Keyset pagination is unaffected when another request consumes an earlier code.
-			$ids = $wpdb->get_col( $wpdb->prepare( "SELECT DISTINCT h.user_id FROM $wpdb->usermeta h INNER JOIN $wpdb->usermeta e ON e.user_id=h.user_id AND e.meta_key=%s WHERE h.meta_key=%s AND h.user_id>%d AND CAST(e.meta_value AS UNSIGNED)>%d ORDER BY h.user_id LIMIT 50", self::META_LINK_EXPIRES, self::META_LINK_CODE_HASH, $cursor, time() ) );
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching -- Read unexpired link candidates in bounded keyset batches; cached codes could permit reuse.
+			$ids = $wpdb->get_col( $wpdb->prepare( 'SELECT DISTINCT h.user_id FROM %i h INNER JOIN %i e ON e.user_id=h.user_id AND e.meta_key=%s WHERE h.meta_key=%s AND h.user_id>%d AND CAST(e.meta_value AS UNSIGNED)>%d ORDER BY h.user_id LIMIT 50', $wpdb->usermeta, $wpdb->usermeta, self::META_LINK_EXPIRES, self::META_LINK_CODE_HASH, $cursor, time() ) );
 			foreach ( $ids as $id ) {
 				$cursor = (int) $id;
 				$user = get_user_by( 'id', $id );

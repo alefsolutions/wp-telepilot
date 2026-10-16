@@ -35,22 +35,22 @@ class Telepilot_Site_Settings_Command_Service {
 		$lines   = array();
 		$lines[] = Telepilot_Telegram_Response_Builder::bold( Telepilot_Telegram_Response_Builder::label( 'settings', __( 'WP Telepilot Settings', 'wp-telepilot' ) ) );
 		$lines[] = '';
-		$lines[] = sprintf( __( 'Admin: %s', 'wp-telepilot' ), Telepilot_Telegram_Response_Builder::link( __( 'Open settings', 'wp-telepilot' ), $summary['settings_url'] ) );
-		$lines[] = sprintf( __( 'Transport: %s', 'wp-telepilot' ), Telepilot_Telegram_Response_Builder::escape( ucfirst( (string) $summary['transport_mode'] ) ) );
-		$lines[] = sprintf( __( 'Linking: %s', 'wp-telepilot' ), Telepilot_Telegram_Response_Builder::escape( $summary['linking_enabled'] ? __( 'Enabled', 'wp-telepilot' ) : __( 'Disabled', 'wp-telepilot' ) ) );
-		$lines[] = sprintf( __( 'Uninstall cleanup: %s', 'wp-telepilot' ), Telepilot_Telegram_Response_Builder::escape( $summary['cleanup_on_uninstall'] ? __( 'Enabled', 'wp-telepilot' ) : __( 'Preserve data', 'wp-telepilot' ) ) );
-		$lines[] = sprintf( __( 'Notification types enabled: %d', 'wp-telepilot' ), (int) $summary['notifications_count'] );
-		$lines[] = sprintf( __( 'Allowed chats configured: %d', 'wp-telepilot' ), (int) $summary['allowed_chat_count'] );
-		$lines[] = sprintf( __( 'Log retention: %d days', 'wp-telepilot' ), (int) $summary['log_retention_days'] );
-		$lines[] = sprintf( __( 'Rate limit: %d commands/minute', 'wp-telepilot' ), (int) $summary['rate_limit_per_minute'] );
-		$lines[] = sprintf( __( 'Stale update window: %d seconds', 'wp-telepilot' ), (int) $summary['stale_update_window'] );
+		$lines[] = sprintf( /* translators: %s: formatted link to the requested admin or preview page. */ __( 'Admin: %s', 'wp-telepilot' ), Telepilot_Telegram_Response_Builder::link( __( 'Open settings', 'wp-telepilot' ), $summary['settings_url'] ) );
+		$lines[] = sprintf( /* translators: %s: transport mode. */ __( 'Transport: %s', 'wp-telepilot' ), Telepilot_Telegram_Response_Builder::escape( ucfirst( (string) $summary['transport_mode'] ) ) );
+		$lines[] = sprintf( /* translators: %s: linking enabled. */ __( 'Linking: %s', 'wp-telepilot' ), Telepilot_Telegram_Response_Builder::escape( $summary['linking_enabled'] ? __( 'Enabled', 'wp-telepilot' ) : __( 'Disabled', 'wp-telepilot' ) ) );
+		$lines[] = sprintf( /* translators: %s: cleanup on uninstall. */ __( 'Uninstall cleanup: %s', 'wp-telepilot' ), Telepilot_Telegram_Response_Builder::escape( $summary['cleanup_on_uninstall'] ? __( 'Enabled', 'wp-telepilot' ) : __( 'Preserve data', 'wp-telepilot' ) ) );
+		$lines[] = sprintf( /* translators: %d: notifications count. */ __( 'Notification types enabled: %d', 'wp-telepilot' ), (int) $summary['notifications_count'] );
+		$lines[] = sprintf( /* translators: %d: allowed chat count. */ __( 'Allowed chats configured: %d', 'wp-telepilot' ), (int) $summary['allowed_chat_count'] );
+		$lines[] = sprintf( /* translators: %d: log retention days. */ __( 'Log retention: %d days', 'wp-telepilot' ), (int) $summary['log_retention_days'] );
+		$lines[] = sprintf( /* translators: %d: rate limit per minute. */ __( 'Rate limit: %d commands/minute', 'wp-telepilot' ), (int) $summary['rate_limit_per_minute'] );
+		$lines[] = sprintf( /* translators: %d: stale update window. */ __( 'Stale update window: %d seconds', 'wp-telepilot' ), (int) $summary['stale_update_window'] );
 		$lines[] = '';
-		$lines[] = sprintf( __( 'Site title: %s', 'wp-telepilot' ), Telepilot_Telegram_Response_Builder::escape( $summary['blogname'] ) );
-		$lines[] = sprintf( __( 'Tagline: %s', 'wp-telepilot' ), Telepilot_Telegram_Response_Builder::escape( $summary['blogdescription'] ) );
-		$lines[] = sprintf( __( 'Admin email: %s', 'wp-telepilot' ), Telepilot_Telegram_Response_Builder::escape( $summary['admin_email'] ) );
-		$lines[] = sprintf( __( 'Timezone: %s', 'wp-telepilot' ), Telepilot_Telegram_Response_Builder::escape( $summary['timezone_string'] ? $summary['timezone_string'] : __( 'UTC', 'wp-telepilot' ) ) );
-		$lines[] = sprintf( __( 'Date format: %s', 'wp-telepilot' ), Telepilot_Telegram_Response_Builder::code( $summary['date_format'] ) );
-		$lines[] = sprintf( __( 'Time format: %s', 'wp-telepilot' ), Telepilot_Telegram_Response_Builder::code( $summary['time_format'] ) );
+		$lines[] = sprintf( /* translators: %s: site title. */ __( 'Site title: %s', 'wp-telepilot' ), Telepilot_Telegram_Response_Builder::escape( $summary['blogname'] ) );
+		$lines[] = sprintf( /* translators: %s: site tagline. */ __( 'Tagline: %s', 'wp-telepilot' ), Telepilot_Telegram_Response_Builder::escape( $summary['blogdescription'] ) );
+		$lines[] = sprintf( /* translators: %s: admin email. */ __( 'Admin email: %s', 'wp-telepilot' ), Telepilot_Telegram_Response_Builder::escape( $summary['admin_email'] ) );
+		$lines[] = sprintf( /* translators: %s: timezone string. */ __( 'Timezone: %s', 'wp-telepilot' ), Telepilot_Telegram_Response_Builder::escape( $summary['timezone_string'] ? $summary['timezone_string'] : __( 'UTC', 'wp-telepilot' ) ) );
+		$lines[] = sprintf( /* translators: %s: date format. */ __( 'Date format: %s', 'wp-telepilot' ), Telepilot_Telegram_Response_Builder::code( $summary['date_format'] ) );
+		$lines[] = sprintf( /* translators: %s: time format. */ __( 'Time format: %s', 'wp-telepilot' ), Telepilot_Telegram_Response_Builder::code( $summary['time_format'] ) );
 
 		return implode( "\n", $lines );
 	}

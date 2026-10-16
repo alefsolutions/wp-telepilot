@@ -4,7 +4,7 @@ Tags: telegram, bot, notifications, moderation, remote management
 Requires at least: 6.6
 Tested up to: 7.1
 Requires PHP: 8.0
-Stable tag: 0.4.0-beta.6
+Stable tag: 0.4.0-beta.7
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -27,7 +27,7 @@ WP Telepilot currently includes:
 * optional OpenAI chat with administrator-configured keys, task/role grants, usage limits, and confirmed writes
 * independently optional read-only MCP through the official WordPress MCP Adapter and Abilities API
 
-WP Telepilot 0.4.0-beta.6 is a beta candidate with a compact admin panel, site-management-only AI instructions, concise replies, terminal denial handling, and quieter Telegram feedback. It incorporates the 0.3.1 maintenance repairs, the AI continuation queue repair, and security, ordering, privacy, pagination and content fixes. Live staging checks are required before publication. Normal commands do not require OpenAI or MCP.
+WP Telepilot 0.4.0-beta.7 is a beta candidate with WordPress.org Plugin Check cleanup, a compact admin panel, site-management-only AI instructions, concise replies, terminal denial handling, and quieter Telegram feedback. It incorporates the 0.3.1 maintenance repairs, the AI continuation queue repair, and security, ordering, privacy, pagination and content fixes. Live staging checks are required before publication. Normal commands do not require OpenAI or MCP.
 
 Full command reference:
 https://github.com/alefsolutions/wp-telepilot/blob/v4/COMMANDS.md
@@ -116,6 +116,16 @@ Queued payloads and bounded AI context participate in privacy export/erasure. Se
 
 == Changelog ==
 
+= 0.4.0-beta.7 =
+
+* prepare SQL identifiers and values explicitly while preserving queue ordering, atomic claims, transactions, privacy erasure, and confirmation locks
+* add translator comments, translate literal queue repair messages, and use automatic WordPress.org translation loading
+* validate browser editor request types and token formats while preserving nonce checks, rich HTML permissions, and content backslashes
+* use native temporary-file cleanup, prefix uninstall variables, normalize source line endings, and shorten upgrade notices
+* add actor-scoped post statistics caching with native mutation invalidation and document necessary database and HTTP progress exceptions
+* add pinned Plugin Check CI validation with twelve occurrence-specific warning explanations, package checksum verification, and regression coverage
+* preserve existing branding, compatibility requirements, settings, and database schema
+
 = 0.4.0-beta.6 =
 
 * compact the branded admin header and move resource links into a plain text-link row directly below it
@@ -202,6 +212,10 @@ Queued payloads and bounded AI context participate in privacy export/erasure. Se
 * add linked-data and audit-log privacy anonymization flows
 
 == Upgrade Notice ==
+
+= 0.4.0-beta.7 =
+
+WordPress.org Plugin Check cleanup adds explicit SQL preparation, translation comments, editor input validation, and a pinned submission gate. Existing settings and data are preserved; no schema migration is required. Complete live staging checks before publication.
 
 = 0.4.0-beta.6 =
 

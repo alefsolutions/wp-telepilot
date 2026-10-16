@@ -1,10 +1,10 @@
-:root {
+.telepilot-admin {
   --telepilot-accent: #0ea5d3;
   --telepilot-accent-strong: #0b88af;
   --telepilot-action-ink: #086580;
   --telepilot-control-height: 44px;
-  --telepilot-control-radius: 999px;
-  --telepilot-section-gap: 24px;
+  --telepilot-control-radius: 8px;
+  --telepilot-section-gap: 16px;
   --telepilot-charcoal: #1f2933;
   --telepilot-ink: #1f2933;
   --telepilot-muted: #52606d;
@@ -16,19 +16,9 @@
   --telepilot-warn-bg: #fff8db;
   --telepilot-danger: #b42318;
   --telepilot-danger-bg: #fef3f2;
-}
-
-.telepilot-admin {
   margin: 0 0 0 -20px;
-}
-
-.telepilot-shell {
-  min-height: calc(100vh - 32px);
-  padding: 32px;
-  background:
-    radial-gradient(circle at top, rgba(14, 165, 211, 0.12), transparent 25rem),
-    linear-gradient(180deg, #f8fbfd 0%, #eef4f7 100%);
-  color: var(--telepilot-ink);
+  font-size: 13px;
+  line-height: 1.5;
 }
 
 .telepilot-admin *,
@@ -37,427 +27,363 @@
   box-sizing: border-box;
 }
 
-.telepilot-panel,
-.telepilot-panel-heading > *,
-.telepilot-hero > *,
-.telepilot-field,
-.telepilot-check,
-.telepilot-tab-panel {
+.telepilot-admin .telepilot-shell {
+  min-height: calc(100vh - 32px);
+  padding: 20px;
+  background: linear-gradient(180deg, #f8fbfd, #eef4f7);
+  color: var(--telepilot-ink);
+}
+
+.telepilot-admin .telepilot-content {
+  width: 100%;
+  max-width: 1200px;
+}
+
+.telepilot-admin .telepilot-panel,
+.telepilot-admin .telepilot-panel-heading > *,
+.telepilot-admin .telepilot-hero > *,
+.telepilot-admin .telepilot-field,
+.telepilot-admin .telepilot-check,
+.telepilot-admin .telepilot-tab-panel {
   min-width: 0;
   overflow-wrap: anywhere;
 }
 
-.telepilot-field input,
-.telepilot-field select,
-.telepilot-field textarea {
-  max-width: 100%;
-}
-
-.telepilot-hero {
+.telepilot-admin .telepilot-hero {
   display: grid;
-  grid-template-columns: minmax(0, 1.4fr) minmax(280px, 0.8fr);
-  gap: 24px;
-  margin-bottom: 24px;
-  padding: 32px;
-  border-radius: 32px;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 20px;
+  padding: 20px;
+  border-radius: 16px;
   background:
-    radial-gradient(circle at top right, rgba(14, 165, 211, 0.24), transparent 18rem),
+    radial-gradient(circle at top right, rgba(14, 165, 211, 0.18), transparent 18rem),
     linear-gradient(135deg, #1f2933, #111827);
   color: #fff;
-  box-shadow: 0 28px 70px rgba(15, 23, 42, 0.22);
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.12);
 }
 
-.telepilot-hero-copy {
+.telepilot-admin .telepilot-hero-heading {
   display: flex;
-  flex-direction: column;
-}
-
-.telepilot-hero-logo {
-  width: 72px;
-  height: auto;
-  margin-bottom: 18px;
-  filter: drop-shadow(0 10px 24px rgba(14, 165, 211, 0.24));
-}
-
-.telepilot-kicker,
-.telepilot-section-label {
-  margin: 0 0 12px;
-  font-size: 11px;
-  font-weight: 800;
-  letter-spacing: 0.24em;
-  text-transform: uppercase;
-}
-
-.telepilot-kicker {
-  color: rgba(255, 255, 255, 0.72);
-}
-
-.telepilot-hero h1,
-.telepilot-panel h2 {
-  margin: 0;
-  color: inherit;
-  font-family: "Sora", "Avenir Next", sans-serif;
-  font-weight: 800;
-  letter-spacing: -0.03em;
-}
-
-.telepilot-hero h1 {
-  font-size: 38px;
-  line-height: 1.1;
-}
-
-.telepilot-panel h2 {
-  color: var(--telepilot-charcoal);
-  font-size: 28px;
-}
-
-.telepilot-lead {
-  max-width: 48rem;
-  margin: 16px 0 0;
-  color: rgba(255, 255, 255, 0.82);
-  font-size: 16px;
-  line-height: 1.9;
-}
-
-.telepilot-hero-meta {
-  margin-top: 18px;
-  display: flex;
-  flex-wrap: wrap;
   align-items: center;
   gap: 12px;
 }
 
-.telepilot-hero-card,
-.telepilot-panel {
-  border: 1px solid var(--telepilot-border);
-  border-radius: 32px;
-  background: #fff;
-  box-shadow: 0 24px 70px rgba(15, 23, 42, 0.06);
-}
-
-.telepilot-hero-card {
-  padding: 24px;
-  color: var(--telepilot-ink);
-  background:
-    linear-gradient(180deg, rgba(14, 165, 211, 0.08), rgba(255, 255, 255, 0.94)),
-    #fff;
-}
-
-.telepilot-badge,
-.telepilot-status-pill {
-  display: inline-flex;
+.telepilot-admin .telepilot-hero-title {
+  display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  justify-content: center;
-  border-radius: 999px;
-  font-size: 11px;
-  font-weight: 800;
-  letter-spacing: 0.18em;
-  text-transform: uppercase;
+  gap: 8px 12px;
+  min-width: 0;
 }
 
-.telepilot-badge {
-  padding: 8px 14px;
-  background: var(--telepilot-success-bg);
-  color: var(--telepilot-success);
+.telepilot-admin .telepilot-hero-logo {
+  align-self: flex-start;
+  flex-shrink: 0;
+  width: 40px;
+  height: 40px;
+  object-fit: contain;
 }
 
-.telepilot-hero-metrics {
+.telepilot-admin .telepilot-hero h1,
+.telepilot-admin .telepilot-panel h2 {
+  margin: 0;
+  color: inherit;
+  font-family: "Sora", "Avenir Next", sans-serif;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1.3;
+}
+
+.telepilot-admin .telepilot-hero h1 {
+  min-width: 0;
+  font-size: 26px;
+}
+
+.telepilot-admin .telepilot-panel h2 {
+  color: var(--telepilot-charcoal);
+  font-size: 20px;
+}
+
+.telepilot-admin .telepilot-lead {
+  margin: 8px 0 0;
+  color: rgba(255, 255, 255, 0.82);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.telepilot-admin .telepilot-hero-metrics {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 14px;
+  gap: 16px;
+  max-width: 320px;
   padding: 0;
-  margin: 18px 0 0;
+  margin: 0;
   list-style: none;
 }
 
-.telepilot-hero-metrics li,
-.telepilot-check,
-.telepilot-status-list li {
-  border-radius: 24px;
-  border: 1px solid var(--telepilot-border);
-  background: #f8fbff;
+.telepilot-admin .telepilot-hero-metrics li {
+  min-width: 0;
+  margin: 0;
 }
 
-.telepilot-hero-metrics li {
-  padding: 18px 16px;
-}
-
-.telepilot-hero-metrics strong {
+.telepilot-admin .telepilot-hero-metrics strong {
   display: block;
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.telepilot-admin .telepilot-hero-metrics span {
+  display: block;
+  color: rgba(255, 255, 255, 0.72);
+  font-size: 12px;
+}
+
+.telepilot-admin .telepilot-utility-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 16px;
+  margin: 8px 0 16px;
+}
+
+.telepilot-admin .telepilot-utility-links a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 24px;
+  max-width: 100%;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: var(--telepilot-action-ink);
+  font-size: 13px;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  overflow-wrap: anywhere;
+}
+
+.telepilot-admin .telepilot-utility-links a:hover {
   color: var(--telepilot-charcoal);
-  font-size: 22px;
 }
 
-.telepilot-hero-metrics span {
-  display: block;
-  margin-top: 6px;
-  color: var(--telepilot-muted);
-}
-
-.telepilot-grid {
+.telepilot-admin .telepilot-grid {
   display: grid;
-  grid-template-columns: minmax(0, 1.4fr) minmax(320px, 0.8fr);
-  gap: 24px;
+  grid-template-columns: minmax(0, 1.4fr) minmax(0, 0.8fr);
+  align-items: start;
+  gap: var(--telepilot-section-gap);
 }
 
-.telepilot-panel {
-  padding: 28px;
+.telepilot-admin .telepilot-overview-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  align-items: start;
+  gap: var(--telepilot-section-gap);
+  grid-column: 1 / -1;
+  min-width: 0;
 }
 
-.telepilot-panel-nested {
-  padding: 24px;
-  border-radius: 24px;
+.telepilot-admin .telepilot-panel {
+  padding: 20px;
+  border: 1px solid var(--telepilot-border);
+  border-radius: 16px;
+  background: #fff;
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.04);
+}
+
+.telepilot-admin .telepilot-panel-nested {
+  padding: 16px;
+  border-radius: 12px;
   box-shadow: none;
 }
 
-.telepilot-panel h3 {
-  margin: 0 0 16px;
-  font-size: 18px;
+.telepilot-admin .telepilot-panel h3 {
+  margin: 0 0 12px;
+  font-size: 16px;
   line-height: 1.4;
   color: var(--telepilot-charcoal);
 }
 
-.telepilot-panel-heading h3 {
+.telepilot-admin .telepilot-panel p {
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.telepilot-admin .telepilot-panel p:last-child {
   margin-bottom: 0;
 }
 
-.telepilot-tab-panel > * + *,
-.telepilot-panel-nested > * + * {
+.telepilot-admin .telepilot-panel-heading h3 {
+  margin-bottom: 0;
+}
+
+.telepilot-admin .telepilot-tab-panel > * + *,
+.telepilot-admin .telepilot-panel-nested > * + * {
   margin-top: var(--telepilot-section-gap);
 }
 
-.telepilot-choice-group {
+.telepilot-admin .telepilot-choice-group {
   min-inline-size: 0;
   margin: 0;
   padding: 0;
   border: 0;
 }
 
-.telepilot-choice-group legend {
+.telepilot-admin .telepilot-choice-group legend {
   padding: 0;
-  margin-bottom: 12px;
-  font-weight: 700;
+  margin-bottom: 8px;
+  font-weight: 600;
 }
 
-.telepilot-panel-wide {
+.telepilot-admin .telepilot-panel-wide {
   grid-column: 1 / -1;
 }
 
-.telepilot-panel-heading {
+.telepilot-admin .telepilot-panel-heading {
   display: flex;
-  align-items: flex-start;
+  flex-wrap: wrap;
+  align-items: center;
   justify-content: space-between;
-  gap: 16px;
-  margin-bottom: 24px;
-  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 16px;
 }
 
-.telepilot-section-label {
-  color: var(--telepilot-accent);
-}
-
-.telepilot-tabs {
+.telepilot-admin .telepilot-tabs {
   display: flex;
   flex-wrap: wrap;
-  gap: 10px;
+  gap: 8px;
 }
 
-.telepilot-tab {
+.telepilot-admin .telepilot-tab {
   min-height: var(--telepilot-control-height);
   max-width: 100%;
-  padding: 10px 16px;
-  border: 1px solid rgba(31, 41, 51, 0.12);
-  border-radius: 999px;
+  padding: 8px 12px;
+  border: 1px solid var(--telepilot-border);
+  border-radius: var(--telepilot-control-radius);
   background: #fff;
   color: var(--telepilot-charcoal);
   cursor: pointer;
-  font-weight: 700;
+  font-size: 14px;
+  font-weight: 600;
   font-family: inherit;
   line-height: 1.4;
+  white-space: normal;
+  overflow-wrap: anywhere;
 }
 
-.telepilot-tab.is-active,
-.telepilot-tab:hover,
-.telepilot-tab:focus {
+.telepilot-admin .telepilot-tab.is-active,
+.telepilot-admin .telepilot-tab:hover,
+.telepilot-admin .telepilot-tab:focus {
   border-color: var(--telepilot-accent);
   color: var(--telepilot-action-ink);
   background: var(--telepilot-light);
 }
 
-.telepilot-tab-panel {
+.telepilot-admin .telepilot-tab-panel {
   display: none;
 }
 
-.telepilot-tab-panel.is-active {
+.telepilot-admin .telepilot-tab-panel.is-active {
   display: block;
 }
 
-.telepilot-field-grid,
-.telepilot-checkbox-grid {
+.telepilot-admin .telepilot-field-grid,
+.telepilot-admin .telepilot-checkbox-grid {
   display: grid;
-  gap: 16px;
-}
-
-.telepilot-field-grid {
   grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
 }
 
-.telepilot-field,
-.telepilot-check {
+.telepilot-admin .telepilot-field,
+.telepilot-admin .telepilot-check {
   display: flex;
   flex-direction: column;
-  gap: 10px;
-  padding: 18px;
+  gap: 6px;
+  padding: 0;
 }
 
-.telepilot-field-full {
+.telepilot-admin .telepilot-field-full {
   grid-column: 1 / -1;
 }
 
-.telepilot-field span,
-.telepilot-check span {
-  font-weight: 700;
+.telepilot-admin .telepilot-field span,
+.telepilot-admin .telepilot-check span {
+  font-weight: 600;
   color: var(--telepilot-charcoal);
 }
 
-.telepilot-field small,
-.telepilot-inline-note,
-.telepilot-empty-state {
+.telepilot-admin .telepilot-field small,
+.telepilot-admin .telepilot-panel .telepilot-inline-note,
+.telepilot-admin .telepilot-panel .telepilot-empty-state {
   color: var(--telepilot-muted);
-  line-height: 1.7;
+  font-size: 12px;
+  line-height: 1.5;
 }
 
-.telepilot-hero-note a,
-.telepilot-hero-links a,
-.telepilot-resource-links a {
-  color: inherit;
-  text-decoration-color: rgba(14, 165, 211, 0.45);
-  text-underline-offset: 3px;
-}
-
-.telepilot-hero-links,
-.telepilot-resource-links,
-.telepilot-field-actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-}
-
-.telepilot-hero-links a {
-  display: inline-flex;
-  align-items: center;
-  min-height: var(--telepilot-control-height);
-  padding: 8px 14px;
-  border: 1px solid rgba(255, 255, 255, 0.16);
-  border-radius: 999px;
-  color: rgba(255, 255, 255, 0.86);
-  text-decoration: none;
-  background: rgba(255, 255, 255, 0.08);
-  transition: background 0.2s ease, color 0.2s ease, border-color 0.2s ease;
-}
-
-.telepilot-hero-links a:hover,
-.telepilot-hero-links a:focus {
-  border-color: rgba(255, 255, 255, 0.34);
-  color: #fff;
-  background: rgba(255, 255, 255, 0.12);
-}
-
-.telepilot-resource-links {
-  margin-top: 18px;
-}
-
-.telepilot-resource-links a {
-  display: inline-flex;
-  align-items: center;
-  min-height: var(--telepilot-control-height);
-  padding: 8px 14px;
-  border: 1px solid rgba(14, 165, 211, 0.18);
-  border-radius: 999px;
-  color: var(--telepilot-action-ink);
-  text-decoration: none;
-  background: rgba(14, 165, 211, 0.08);
-  font-weight: 700;
-}
-
-.telepilot-resource-links a:hover,
-.telepilot-resource-links a:focus {
-  border-color: rgba(14, 165, 211, 0.34);
-  background: rgba(14, 165, 211, 0.14);
-  color: #075a73;
-}
-
-.telepilot-setup-list {
-  margin: 0;
-  padding-left: 22px;
-  color: var(--telepilot-ink);
-  line-height: 1.9;
-}
-
-.telepilot-setup-list li + li {
-  margin-top: 10px;
-}
-
-.telepilot-field input[type="text"],
-.telepilot-field input[type="password"],
-.telepilot-field input[type="number"],
-.telepilot-field select,
-.telepilot-field textarea {
+.telepilot-admin .telepilot-field input[type="text"],
+.telepilot-admin .telepilot-field input[type="password"],
+.telepilot-admin .telepilot-field input[type="number"],
+.telepilot-admin .telepilot-field select,
+.telepilot-admin .telepilot-field textarea {
   width: 100%;
+  max-width: 100%;
   min-width: 0;
   min-height: var(--telepilot-control-height);
-  padding: 14px 16px;
+  height: auto;
+  margin: 0;
+  padding: 8px 12px;
   border: 1px solid var(--telepilot-border);
-  border-radius: 18px;
-  background: var(--telepilot-light);
+  border-radius: var(--telepilot-control-radius);
+  background-color: var(--telepilot-light);
   box-shadow: none;
+  font-size: 14px;
+  line-height: 1.4;
 }
 
-.telepilot-field input:focus,
-.telepilot-field select:focus,
-.telepilot-field textarea:focus {
+.telepilot-admin .telepilot-field input:focus,
+.telepilot-admin .telepilot-field select:focus,
+.telepilot-admin .telepilot-field textarea:focus {
   border-color: var(--telepilot-accent);
   outline: none;
   box-shadow: 0 0 0 3px rgba(14, 165, 211, 0.14);
 }
 
-.telepilot-field-actions {
+.telepilot-admin .telepilot-field-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
   margin-top: 2px;
-  gap: 12px;
 }
 
-.telepilot-checkbox-grid {
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-}
-
-.telepilot-check {
-  gap: 12px;
+.telepilot-admin .telepilot-check {
+  min-height: var(--telepilot-control-height);
   flex-direction: row;
   align-items: center;
+  gap: 8px;
+  padding: 8px 0;
 }
 
-.telepilot-check-inline {
+.telepilot-admin .telepilot-check-inline {
   max-width: 40rem;
 }
 
-.telepilot-check input {
+.telepilot-admin .telepilot-check input {
   margin: 0;
   flex-shrink: 0;
 }
 
-.telepilot-actions,
-.telepilot-button-row {
+.telepilot-admin .telepilot-actions,
+.telepilot-admin .telepilot-button-row {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 12px;
+  gap: 8px;
 }
 
-.telepilot-actions {
+.telepilot-admin .telepilot-actions {
   margin-top: var(--telepilot-section-gap);
 }
 
-/* One control contract for settings, field tools and diagnostic actions. */
+/* Compact controls keep the same usable minimum height across every section. */
 .telepilot-admin .button {
   display: inline-flex;
   align-items: center;
@@ -466,7 +392,7 @@
   max-width: 100%;
   height: auto;
   margin: 0;
-  padding: 11px 18px;
+  padding: 8px 14px;
   border: 1px solid var(--telepilot-accent-strong);
   border-radius: var(--telepilot-control-radius);
   background: #f0f9fc;
@@ -507,17 +433,12 @@
 
 .telepilot-admin .button:focus,
 .telepilot-admin .button:focus-visible,
-.telepilot-tab:focus-visible,
-.telepilot-hero-links a:focus-visible,
-.telepilot-resource-links a:focus-visible,
-.telepilot-table-scroll:focus-visible {
+.telepilot-admin .telepilot-tab:focus-visible,
+.telepilot-admin .telepilot-utility-links a:focus-visible,
+.telepilot-admin .telepilot-table-scroll:focus-visible {
   outline: 3px solid var(--telepilot-action-ink);
   outline-offset: 3px;
   box-shadow: none;
-}
-
-.telepilot-hero-links a:focus-visible {
-  outline-color: #fff;
 }
 
 .telepilot-admin .button:disabled,
@@ -530,101 +451,141 @@
   cursor: not-allowed;
 }
 
-.telepilot-status-list {
+.telepilot-admin .telepilot-status-list {
   display: grid;
-  gap: 14px;
+  gap: 0;
   padding: 0;
   margin: 0;
   list-style: none;
 }
 
-.telepilot-status-list li {
+.telepilot-admin .telepilot-status-list li {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 14px;
-  padding: 16px 18px;
+  gap: 12px;
+  padding: 8px 0;
+  margin: 0;
+  border-bottom: 1px solid var(--telepilot-border);
 }
 
-.telepilot-status-list li span {
+.telepilot-admin .telepilot-status-list li:last-child {
+  border-bottom: 0;
+}
+
+.telepilot-admin .telepilot-status-list li span {
+  flex: 1;
+  min-width: 0;
   color: var(--telepilot-ink);
   font-weight: 600;
 }
 
-.telepilot-status-list li strong {
+.telepilot-admin .telepilot-status-list li strong {
   min-width: 0;
+  max-width: 55%;
   text-align: right;
   font-size: 12px;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
+  font-weight: 600;
 }
 
-.telepilot-status-list li.is-good strong,
-.telepilot-status-pill.is-good {
+.telepilot-admin .telepilot-status-list li.is-good strong,
+.telepilot-admin .telepilot-status-pill.is-good {
   color: var(--telepilot-success);
 }
 
-.telepilot-status-list li.is-warn strong {
+.telepilot-admin .telepilot-status-list li.is-warn strong {
   color: var(--telepilot-warn);
 }
 
-.telepilot-status-pill {
-  min-width: 90px;
-  padding: 7px 12px;
+.telepilot-admin .telepilot-status-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px 8px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.4;
 }
 
-.telepilot-status-pill.is-good {
+.telepilot-admin .telepilot-status-pill.is-good {
   background: var(--telepilot-success-bg);
 }
 
-.telepilot-status-pill.is-bad {
+.telepilot-admin .telepilot-status-pill.is-bad {
   color: var(--telepilot-danger);
   background: var(--telepilot-danger-bg);
 }
 
-.telepilot-table th {
-  color: var(--telepilot-charcoal);
+.telepilot-admin .telepilot-setup-list {
+  margin: 0;
+  padding-left: 20px;
+  color: var(--telepilot-ink);
+  line-height: 1.5;
 }
 
-.telepilot-table-scroll {
+.telepilot-admin .telepilot-setup-list li + li {
+  margin-top: 6px;
+}
+
+.telepilot-admin .telepilot-table-scroll {
   max-width: 100%;
   max-height: 420px;
   overflow: auto;
   border: 1px solid var(--telepilot-border);
-  border-radius: 24px;
+  border-radius: 12px;
   background: #fff;
 }
 
-.telepilot-table-scroll .telepilot-table {
+.telepilot-admin .telepilot-table-scroll .telepilot-table {
   min-width: 640px;
   margin: 0;
   border: 0;
 }
 
-.telepilot-table-scroll .telepilot-table thead th {
+.telepilot-admin .telepilot-table-scroll .telepilot-table thead th {
   position: sticky;
   top: 0;
   z-index: 1;
   background: #f8fbff;
 }
 
-.telepilot-hero-note {
-  margin: 18px 0 0;
-  color: var(--telepilot-muted);
-  line-height: 1.7;
+.telepilot-admin .telepilot-table td,
+.telepilot-admin .telepilot-table th {
+  padding-top: 8px;
+  padding-bottom: 8px;
+  font-size: 13px;
+  line-height: 1.5;
 }
 
-.telepilot-table td,
-.telepilot-table th {
-  padding-top: 14px;
-  padding-bottom: 14px;
+.telepilot-admin .telepilot-table th {
+  color: var(--telepilot-charcoal);
+}
+
+@media (max-width: 1199px) {
+  .telepilot-admin .telepilot-overview-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .telepilot-admin .telepilot-overview-grid > :last-child {
+    grid-column: 1 / -1;
+  }
 }
 
 @media (max-width: 1080px) {
-  .telepilot-grid,
-  .telepilot-hero,
-  .telepilot-field-grid,
-  .telepilot-checkbox-grid {
+  .telepilot-admin .telepilot-shell {
+    padding: 16px;
+  }
+
+  .telepilot-admin .telepilot-hero {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+}
+
+@media (max-width: 999px) {
+  .telepilot-admin .telepilot-grid,
+  .telepilot-admin .telepilot-overview-grid {
     grid-template-columns: 1fr;
   }
 }
@@ -634,89 +595,73 @@
     margin-left: -10px;
   }
 
-  .telepilot-shell {
+  .telepilot-admin .telepilot-shell {
     min-height: auto;
-    padding: 20px;
   }
 
-  .telepilot-panel,
-  .telepilot-hero {
-    padding: 22px;
-    border-radius: 24px;
+  .telepilot-admin .telepilot-panel,
+  .telepilot-admin .telepilot-hero {
+    padding: 16px;
   }
 
-  .telepilot-hero h1 {
-    font-size: 30px;
+  .telepilot-admin .telepilot-panel-nested {
+    padding: 16px;
   }
 
-  .telepilot-panel-heading {
+  .telepilot-admin .telepilot-hero h1 {
+    font-size: 24px;
+  }
+
+  .telepilot-admin .telepilot-panel-heading {
     flex-direction: column;
+    align-items: stretch;
   }
 
-  .telepilot-hero-meta {
-    align-items: flex-start;
-  }
-
-  .telepilot-hero-metrics {
+  .telepilot-admin .telepilot-field-grid,
+  .telepilot-admin .telepilot-checkbox-grid {
     grid-template-columns: 1fr;
   }
 
-  .telepilot-field select,
-  .telepilot-field input,
-  .telepilot-field textarea {
+  .telepilot-admin .telepilot-field select,
+  .telepilot-admin .telepilot-field input[type],
+  .telepilot-admin .telepilot-field textarea {
     font-size: 16px;
   }
 }
 
 @media (max-width: 480px) {
-  .telepilot-shell {
+  .telepilot-admin .telepilot-shell {
     padding: 12px;
   }
 
-  .telepilot-panel,
-  .telepilot-hero,
-  .telepilot-hero-card {
-    padding: 16px;
-    border-radius: 20px;
-  }
-
-  .telepilot-field,
-  .telepilot-check,
-  .telepilot-status-list li {
-    padding: 12px;
-  }
-
-  .telepilot-panel h2 {
-    font-size: 24px;
-  }
-
-  .telepilot-tabs {
+  .telepilot-admin .telepilot-tabs {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
     width: 100%;
   }
 
-  .telepilot-actions,
-  .telepilot-button-row,
-  .telepilot-field-actions {
+  .telepilot-admin .telepilot-actions,
+  .telepilot-admin .telepilot-button-row,
+  .telepilot-admin .telepilot-field-actions {
     width: 100%;
     flex-direction: column;
     align-items: stretch;
   }
 
-  .telepilot-actions .button,
-  .telepilot-button-row .button,
-  .telepilot-field-actions .button {
+  .telepilot-admin .telepilot-actions .button,
+  .telepilot-admin .telepilot-button-row .button,
+  .telepilot-admin .telepilot-field-actions .button {
     width: 100%;
   }
 
-  .telepilot-status-list li {
+  .telepilot-admin .telepilot-status-list li {
     align-items: flex-start;
     flex-direction: column;
-    gap: 8px;
+    gap: 4px;
   }
 
-  .telepilot-status-list li strong {
+  .telepilot-admin .telepilot-status-list li strong {
+    max-width: 100%;
     text-align: left;
   }
 }

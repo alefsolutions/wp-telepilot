@@ -189,11 +189,17 @@ MCP returns authorized WordPress data to the authenticated client you configure,
 - PHP mbstring; OpenSSL with AES-256-GCM for AI key storage
 - HTTPS for webhook mode
 - HTTPS and the optional dependencies above for MCP
-- Current development version: `0.4.0-beta.5`; maintenance candidate: `0.3.1`
+- Current development version: `0.4.0-beta.6`; maintenance candidate: `0.3.1`
 
 ## Project Status
 
-The `v4` branch targets `0.4.0-beta.5` and incorporates the `0.3.1` maintenance repairs. It is a beta candidate, not a stable-readiness declaration. Isolated tests cover standard/custom roles, native commands, mocked OpenAI/Telegram, confirmed writes, native plugin upgrades, real concurrent workers/editor saves, privacy, migrations, and the official MCP Adapter HTTP transport. The compatibility matrix is WordPress 6.6.2/PHP 8.0 and WordPress 7.1/PHP 8.5. Local desktop/mobile admin fixture checks complement, but do not replace, testing in a real wp-admin installation. Live staging Telegram/OpenAI/MCP checks remain required before publication.
+The `v4` branch targets `0.4.0-beta.6` and incorporates the `0.3.1` maintenance repairs. It is a beta candidate, not a stable-readiness declaration. Isolated tests cover standard/custom roles, native commands, mocked OpenAI/Telegram, confirmed writes, native plugin upgrades, real concurrent workers/editor saves, privacy, migrations, and the official MCP Adapter HTTP transport. The compatibility matrix is WordPress 6.6.2/PHP 8.0 and WordPress 7.1/PHP 8.5. Local desktop/mobile admin fixture checks complement, but do not replace, testing in a real wp-admin installation. Live staging Telegram/OpenAI/MCP checks remain required before publication.
+
+### Beta.6 Compact Admin Panel
+
+The admin panel uses a compact branded header, one plain resource-link row, smaller headings and spacing, and a 1200px content limit. Responsive card groupings follow their content height while preserving all six tabs, settings, diagnostics, warnings, actions, and minimum 44px controls. No settings or database schema changes are introduced.
+
+At 1440px, isolated WordPress fixture checks measured a 114px hero and the first Telegram input at 321px, down from 378px and 631px. All six tabs passed checks at eight widths from 320px to 1920px, including queue-repair warnings, keyboard access, wrapping, and separate save/provider-test forms. A live wp-admin review remains required before publication.
 
 ### Beta.5 AI Chat Policy
 

@@ -139,64 +139,39 @@ class Telepilot_Settings_Page {
 		?>
 		<div class="wrap telepilot-admin">
 			<div class="telepilot-shell">
+				<div class="telepilot-content">
 				<section class="telepilot-hero">
 					<div class="telepilot-hero-copy">
-						<?php if ( $logo_url ) : ?>
-							<img class="telepilot-hero-logo" src="<?php echo esc_url( $logo_url ); ?>" alt="<?php esc_attr_e( 'WP Telepilot logo', 'wp-telepilot' ); ?>" />
-						<?php endif; ?>
-						<p class="telepilot-kicker"><?php esc_html_e( 'Telegram-first WordPress operations', 'wp-telepilot' ); ?></p>
-						<h1><?php echo esc_html( $product_name ); ?><?php esc_html_e( ' Control Center', 'wp-telepilot' ); ?></h1>
-						<div class="telepilot-hero-meta">
-							<span class="telepilot-status-pill is-good"><?php echo esc_html( sprintf( __( 'Version %s', 'wp-telepilot' ), $product_version ) ); ?></span>
-							<div class="telepilot-hero-links">
-								<a href="<?php echo esc_url( $company_url ); ?>" target="_blank" rel="noopener noreferrer"><?php esc_html_e( 'Alef Digital Solutions', 'wp-telepilot' ); ?></a>
-								<a href="<?php echo esc_url( $product_url ); ?>" target="_blank" rel="noopener noreferrer"><?php esc_html_e( 'Product Page', 'wp-telepilot' ); ?></a>
-								<a href="<?php echo esc_url( $bugs_url ); ?>" target="_blank" rel="noopener noreferrer"><?php esc_html_e( 'Report Bugs', 'wp-telepilot' ); ?></a>
-								<a href="<?php echo esc_url( $license_url ); ?>" target="_blank" rel="noopener noreferrer"><?php esc_html_e( 'GPLv2 or later', 'wp-telepilot' ); ?></a>
+						<div class="telepilot-hero-heading">
+							<?php if ( $logo_url ) : ?>
+								<img class="telepilot-hero-logo" src="<?php echo esc_url( $logo_url ); ?>" alt="<?php esc_attr_e( 'WP Telepilot logo', 'wp-telepilot' ); ?>" />
+							<?php endif; ?>
+							<div class="telepilot-hero-title">
+								<h1><?php echo esc_html( $product_name ); ?><?php esc_html_e( ' Control Center', 'wp-telepilot' ); ?></h1>
+								<span class="telepilot-status-pill is-good"><?php echo esc_html( sprintf( __( 'Version %s', 'wp-telepilot' ), $product_version ) ); ?></span>
 							</div>
 						</div>
 						<p class="telepilot-lead">
-							<?php esc_html_e( 'Configure secure Telegram access, monitor transport health, and run WordPress operations from chat with a cleaner command experience.', 'wp-telepilot' ); ?>
+							<?php esc_html_e( 'Configure Telegram access and monitor site operations.', 'wp-telepilot' ); ?>
 						</p>
 					</div>
-					<div class="telepilot-hero-card">
-						<span class="telepilot-badge"><?php echo esc_html( sprintf( __( 'Release %s', 'wp-telepilot' ), $product_version ) ); ?></span>
-						<ul class="telepilot-hero-metrics">
-							<li><strong><?php echo esc_html( get_bloginfo( 'version' ) ); ?></strong><span><?php esc_html_e( 'WordPress', 'wp-telepilot' ); ?></span></li>
-							<li><strong><?php echo esc_html( PHP_VERSION ); ?></strong><span><?php esc_html_e( 'PHP', 'wp-telepilot' ); ?></span></li>
-							<li><strong><?php echo esc_html( (string) $linking_count ); ?></strong><span><?php esc_html_e( 'Linked users', 'wp-telepilot' ); ?></span></li>
-						</ul>
-						<p class="telepilot-hero-note">
-							<?php
-							printf(
-								/* translators: 1: linked creator name, 2: linked license label. */
-								wp_kses(
-									__( 'Created by <a href="%1$s" target="_blank" rel="noopener noreferrer">Alef Digital Solutions</a>. WP Telepilot is distributed under the <a href="%2$s" target="_blank" rel="noopener noreferrer">GPLv2 or later</a> license used by WordPress.', 'wp-telepilot' ),
-									array(
-										'a' => array(
-											'href'   => array(),
-											'target' => array(),
-											'rel'    => array(),
-										),
-									)
-								),
-								esc_url( $company_url ),
-								esc_url( $license_url )
-							);
-							?>
-						</p>
-						<div class="telepilot-resource-links">
-							<a href="<?php echo esc_url( $product_url ); ?>" target="_blank" rel="noopener noreferrer"><?php esc_html_e( 'View WP Telepilot page', 'wp-telepilot' ); ?></a>
-							<a href="<?php echo esc_url( $bugs_url ); ?>" target="_blank" rel="noopener noreferrer"><?php esc_html_e( 'Report a bug', 'wp-telepilot' ); ?></a>
-						</div>
-					</div>
+					<ul class="telepilot-hero-metrics">
+						<li><strong><?php echo esc_html( get_bloginfo( 'version' ) ); ?></strong><span><?php esc_html_e( 'WordPress', 'wp-telepilot' ); ?></span></li>
+						<li><strong><?php echo esc_html( PHP_VERSION ); ?></strong><span><?php esc_html_e( 'PHP', 'wp-telepilot' ); ?></span></li>
+						<li><strong><?php echo esc_html( (string) $linking_count ); ?></strong><span><?php esc_html_e( 'Linked users', 'wp-telepilot' ); ?></span></li>
+					</ul>
 				</section>
+				<nav class="telepilot-utility-links" aria-label="<?php esc_attr_e( 'WP Telepilot resources', 'wp-telepilot' ); ?>">
+					<a href="<?php echo esc_url( $company_url ); ?>" target="_blank" rel="noopener noreferrer"><?php esc_html_e( 'Alef Digital Solutions', 'wp-telepilot' ); ?></a>
+					<a href="<?php echo esc_url( $product_url ); ?>" target="_blank" rel="noopener noreferrer"><?php esc_html_e( 'Product Page', 'wp-telepilot' ); ?></a>
+					<a href="<?php echo esc_url( $bugs_url ); ?>" target="_blank" rel="noopener noreferrer"><?php esc_html_e( 'Report Bugs', 'wp-telepilot' ); ?></a>
+					<a href="<?php echo esc_url( $license_url ); ?>" target="_blank" rel="noopener noreferrer"><?php esc_html_e( 'GPLv2 or later', 'wp-telepilot' ); ?></a>
+				</nav>
 
 				<div class="telepilot-grid">
 					<section class="telepilot-panel telepilot-panel-wide">
 						<div class="telepilot-panel-heading">
 							<div>
-								<p class="telepilot-section-label"><?php esc_html_e( 'Settings', 'wp-telepilot' ); ?></p>
 								<h2><?php esc_html_e( 'Plugin Configuration', 'wp-telepilot' ); ?></h2>
 							</div>
 							<nav class="telepilot-tabs" aria-label="<?php esc_attr_e( 'Settings sections', 'wp-telepilot' ); ?>">
@@ -346,7 +321,6 @@ class Telepilot_Settings_Page {
 								<div class="telepilot-panel telepilot-panel-nested">
 									<div class="telepilot-panel-heading">
 										<div>
-											<p class="telepilot-section-label"><?php esc_html_e( 'Tool Permissions', 'wp-telepilot' ); ?></p>
 											<h3><?php esc_html_e( 'Allowed AI Tasks', 'wp-telepilot' ); ?></h3>
 										</div>
 									</div>
@@ -383,7 +357,6 @@ class Telepilot_Settings_Page {
 								<div class="telepilot-panel telepilot-panel-nested">
 									<div class="telepilot-panel-heading">
 										<div>
-											<p class="telepilot-section-label"><?php esc_html_e( 'MCP Integration', 'wp-telepilot' ); ?></p>
 											<h3><?php echo esc_html( $mcp_status['label'] ); ?></h3>
 										</div>
 									</div>
@@ -443,10 +416,10 @@ class Telepilot_Settings_Page {
 						</form>
 					</section>
 
+					<div class="telepilot-overview-grid">
 					<section class="telepilot-panel">
 						<div class="telepilot-panel-heading">
 							<div>
-								<p class="telepilot-section-label"><?php esc_html_e( 'Operations', 'wp-telepilot' ); ?></p>
 								<h2><?php esc_html_e( 'System Status', 'wp-telepilot' ); ?></h2>
 							</div>
 						</div>
@@ -514,7 +487,6 @@ class Telepilot_Settings_Page {
 					<section class="telepilot-panel">
 						<div class="telepilot-panel-heading">
 							<div>
-								<p class="telepilot-section-label"><?php esc_html_e( 'Release Prep', 'wp-telepilot' ); ?></p>
 								<h2><?php esc_html_e( 'Hardening Readiness', 'wp-telepilot' ); ?></h2>
 							</div>
 						</div>
@@ -574,7 +546,6 @@ class Telepilot_Settings_Page {
 					<section class="telepilot-panel">
 						<div class="telepilot-panel-heading">
 							<div>
-								<p class="telepilot-section-label"><?php esc_html_e( 'Snapshot', 'wp-telepilot' ); ?></p>
 								<h2><?php esc_html_e( 'Dashboard Preview', 'wp-telepilot' ); ?></h2>
 							</div>
 						</div>
@@ -598,10 +569,10 @@ class Telepilot_Settings_Page {
 						</ul>
 					</section>
 
+					</div>
 					<section class="telepilot-panel telepilot-panel-wide">
 						<div class="telepilot-panel-heading">
 							<div>
-								<p class="telepilot-section-label"><?php esc_html_e( 'Diagnostics', 'wp-telepilot' ); ?></p>
 								<h2><?php esc_html_e( 'Transport Health', 'wp-telepilot' ); ?></h2>
 							</div>
 						</div>
@@ -742,7 +713,6 @@ class Telepilot_Settings_Page {
 					<section class="telepilot-panel telepilot-panel-wide">
 						<div class="telepilot-panel-heading">
 							<div>
-								<p class="telepilot-section-label"><?php esc_html_e( 'Performance', 'wp-telepilot' ); ?></p>
 								<h2><?php esc_html_e( 'Recent Command Timings', 'wp-telepilot' ); ?></h2>
 							</div>
 						</div>
@@ -776,10 +746,9 @@ class Telepilot_Settings_Page {
 						<?php endif; ?>
 					</section>
 
-					<section class="telepilot-panel telepilot-panel-wide">
+					<section class="telepilot-panel">
 						<div class="telepilot-panel-heading">
 							<div>
-								<p class="telepilot-section-label"><?php esc_html_e( 'Quick Start', 'wp-telepilot' ); ?></p>
 								<h2><?php esc_html_e( 'First-Time Setup', 'wp-telepilot' ); ?></h2>
 							</div>
 						</div>
@@ -797,7 +766,6 @@ class Telepilot_Settings_Page {
 					<section class="telepilot-panel">
 						<div class="telepilot-panel-heading">
 							<div>
-								<p class="telepilot-section-label"><?php esc_html_e( 'Command Surface', 'wp-telepilot' ); ?></p>
 								<h2><?php esc_html_e( 'Primary Telegram Commands', 'wp-telepilot' ); ?></h2>
 							</div>
 						</div>
@@ -814,7 +782,6 @@ class Telepilot_Settings_Page {
 					<section class="telepilot-panel telepilot-panel-wide">
 						<div class="telepilot-panel-heading">
 							<div>
-								<p class="telepilot-section-label"><?php esc_html_e( 'Audit Trail', 'wp-telepilot' ); ?></p>
 								<h2><?php esc_html_e( 'Recent Activity', 'wp-telepilot' ); ?></h2>
 							</div>
 						</div>
@@ -854,6 +821,7 @@ class Telepilot_Settings_Page {
 						<?php endif; ?>
 					</section>
 					<?php Telepilot_Job_Recovery_Page::render(); ?>
+				</div>
 				</div>
 			</div>
 		</div>

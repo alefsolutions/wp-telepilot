@@ -4,7 +4,7 @@ Tags: telegram, bot, notifications, moderation, remote management
 Requires at least: 6.6
 Tested up to: 7.1
 Requires PHP: 8.0
-Stable tag: 0.4.0-beta.5
+Stable tag: 0.4.0-beta.6
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -27,7 +27,7 @@ WP Telepilot currently includes:
 * optional OpenAI chat with administrator-configured keys, task/role grants, usage limits, and confirmed writes
 * independently optional read-only MCP through the official WordPress MCP Adapter and Abilities API
 
-WP Telepilot 0.4.0-beta.5 is a beta candidate with explicit site-management-only AI instructions, concise replies, terminal denial handling, and quieter Telegram feedback. It incorporates the 0.3.1 maintenance repairs, the AI continuation queue repair, and security, ordering, privacy, pagination and content fixes. Live staging checks are required before publication. Normal commands do not require OpenAI or MCP.
+WP Telepilot 0.4.0-beta.6 is a beta candidate with a compact admin panel, site-management-only AI instructions, concise replies, terminal denial handling, and quieter Telegram feedback. It incorporates the 0.3.1 maintenance repairs, the AI continuation queue repair, and security, ordering, privacy, pagination and content fixes. Live staging checks are required before publication. Normal commands do not require OpenAI or MCP.
 
 Full command reference:
 https://github.com/alefsolutions/wp-telepilot/blob/v4/COMMANDS.md
@@ -116,6 +116,15 @@ Queued payloads and bounded AI context participate in privacy export/erasure. Se
 
 == Changelog ==
 
+= 0.4.0-beta.6 =
+
+* compact the branded admin header and move resource links into a plain text-link row directly below it
+* reduce heading sizes, panel padding, field spacing, and table padding within a 1200px content width
+* group status, readiness, dashboard, setup, and command cards into responsive layouts that follow their content height
+* preserve all six tabs, settings, diagnostics, warnings, actions, and minimum 44px controls
+* expand admin fixture checks for responsive layouts, resource links, keyboard access, wrapping, and isolated forms across eight viewport widths
+* keep existing settings and database schema unchanged
+
 = 0.4.0-beta.5 =
 
 * instruct AI chat to discuss only management of the connected WordPress site and brief, relevant WordPress guidance
@@ -193,6 +202,10 @@ Queued payloads and bounded AI context participate in privacy export/erasure. Se
 * add linked-data and audit-log privacy anonymization flows
 
 == Upgrade Notice ==
+
+= 0.4.0-beta.6 =
+
+The admin panel now uses a compact header, plain resource links, smaller typography and spacing, and responsive card groupings. All settings, diagnostics, warnings and actions remain available. No new setting or database migration is required. Complete a live wp-admin review before publication.
 
 = 0.4.0-beta.5 =
 

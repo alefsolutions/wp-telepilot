@@ -32,6 +32,8 @@ With Playwright installed under `.test-env/node_modules` and Edge available on W
 
 Repeat fixture generation with `TELEPILOT_TEST_QUEUE_REPAIR_FAILURE=1` to check the repair warning, safe reference ID and nonce-protected retry control at the same viewport sizes. Clear that environment variable before generating the healthy-state fixture.
 
+The compact layout checks also enforce the 1200px content cap, a hero no taller than 180px and first Telegram input above 420px at a 1440px viewport, four plain resource links immediately below the hero, responsive overview grouping, 44px controls, and compact scrolling tables. Desktop/mobile screenshots include the AI tab and overview cards. For a layout-only change, optionally set `TELEPILOT_UI_BASELINE_INVENTORY` to a captured JSON file containing `headings`, sorted named `fields`, and ordered `tabs` arrays to verify that no existing field, action, heading, or tab disappeared. Clear it when intentionally changing the settings surface; normal checks do not depend on ignored local baseline files.
+
 ## AI Chat Policy Checks
 
 `--filter 'AIChatPolicyTest|AIReadTest|AIWriteTest'` checks provider payloads, capability/schema agreement across roles and task grants, stale continuation prompt replacement, exhausted budgets, terminal denials without writes/proposals/continuations, error-code preservation for clarification, and valid confirmation proposals. Mocks prove the supplied policy and application behavior; they do not prove that a live model follows every topic or length instruction. Run compatibility suites sequentially on a shared database server: proposal locks use server-wide names even across separate test databases.
